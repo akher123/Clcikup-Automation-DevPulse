@@ -36,6 +36,14 @@ DevPulse/
 - Query filtered tasks by month and assignees
 - Blazor UI for account management
 
+## Phase 2 Features (Implemented)
+
+- Developer registry with cross-workspace ClickUp user ID mappings
+- Sync developers automatically from connected ClickUp workspaces (by email)
+- Unified developer-centric monthly task reports across all workspaces
+- Productivity summary: task counts, workspace breakdown, average completion time
+- Blazor UI for developer management and report generation
+
 ## Getting Started
 
 ### Prerequisites
@@ -51,7 +59,9 @@ cd e:\Clickup
 dotnet run --project src/DevPulse.Server
 ```
 
-Open the URL shown in the terminal (typically `https://localhost:7089`).
+Open the URL shown in the terminal (typically `http://localhost:5080`).
+
+> **Important:** Run `DevPulse.Server`, not `DevPulse.Client`. This is a hosted Blazor WASM app — the server hosts both the API and the UI.
 
 ### Get your ClickUp Workspace ID
 
@@ -74,6 +84,14 @@ Use the `id` field from the response as the **Workspace ID** when adding an acco
 | GET | `/api/clickup/accounts/{id}/members` | List workspace members |
 | GET | `/api/clickup/accounts/{id}/workspaces` | List authorized workspaces |
 | POST | `/api/clickup/accounts/{id}/tasks/query` | Query filtered tasks |
+| GET | `/api/developers` | List all developers |
+| POST | `/api/developers` | Create a developer |
+| GET | `/api/developers/{id}` | Get developer by ID |
+| PUT | `/api/developers/{id}` | Update developer |
+| DELETE | `/api/developers/{id}` | Delete developer |
+| POST | `/api/developers/{id}/mappings` | Add ClickUp workspace mapping |
+| POST | `/api/developers/sync` | Sync developers from all ClickUp accounts |
+| POST | `/api/reports/developer-tasks` | Generate unified developer task report |
 
 ### Example: Create account
 
@@ -94,10 +112,9 @@ POST /api/clickup/accounts
 
 ## Next Phases
 
-1. Developer registry and cross-workspace assignee mapping
-2. Unified monthly task report by selected developers
-3. Cursor Admin / Analytics API integration
-4. KPI dashboard with filters and export (PDF/Excel)
+1. Cursor Admin / Analytics API integration
+2. KPI dashboard with charts and export (PDF/Excel)
+3. Authentication (Azure AD / JWT) for production
 
 ## License
 

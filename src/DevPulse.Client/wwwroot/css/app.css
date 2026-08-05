@@ -139,3 +139,28 @@ code {
     border: 1px dashed #ced4da;
     background: #f8f9fa;
 }
+
+.developer-select {
+    max-height: 10rem;
+    overflow-y: auto;
+    background: #fff;
+}
+
+.summary-card {
+    border: 1px solid #e9ecef;
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.04);
+}
+
+.summary-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.summary-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #1b6ec2;
+}

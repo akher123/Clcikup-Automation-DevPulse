@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddDataProtection();
         services.AddScoped<ITokenProtector, DataProtectionTokenProtector>();
         services.AddScoped<IClickUpAccountRepository, ClickUpAccountRepository>();
+        services.AddScoped<IDeveloperRepository, DeveloperRepository>();
 
         services.AddHttpClient<IClickUpApiClient, ClickUpApiClient>(client =>
         {
@@ -40,5 +41,32 @@ public static class DependencyInjection
         await using var scope = serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<DevPulseDbContext>();
         await dbContext.Database.EnsureCreatedAsync();
+        await EnsureDeveloperTablesAsync(dbContext);
+    }
+
+    private static async Task EnsureDeveloperTablesAsync(DevPulseDbContext dbContext)
+    {
+        await dbContext.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS Developers (
+                Id TEXT NOT NULL PRIMARY KEY,
+                Name TEXT NOT NULL,
+                Email TEXT NULL,
+                IsActive INTEGER NOT NULL DEFAULT 1,
+                CreatedAtUtc TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS IX_Developers_Email ON Developers (Email);
+            CREATE TABLE IF NOT EXISTS DeveloperClickUpMappings (
+                Id TEXT NOT NULL PRIMARY KEY,
+                DeveloperId TEXT NOT NULL,
+                ClickUpAccountId TEXT NOT NULL,
+                ClickUpUserId INTEGER NOT NULL,
+                FOREIGN KEY (DeveloperId) REFERENCES Developers (Id) ON DELETE CASCADE,
+                FOREIGN KEY (ClickUpAccountId) REFERENCES ClickUpAccounts (Id) ON DELETE CASCADE
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS IX_DeveloperClickUpMappings_DeveloperId_ClickUpAccountId
+                ON DeveloperClickUpMappings (DeveloperId, ClickUpAccountId);
+            CREATE UNIQUE INDEX IF NOT EXISTS IX_DeveloperClickUpMappings_ClickUpAccountId_ClickUpUserId
+                ON DeveloperClickUpMappings (ClickUpAccountId, ClickUpUserId);
+            """);
     }
 }

@@ -170,8 +170,17 @@ public sealed class ClickUpAccountService : IClickUpAccountService
         }
 
         var (account, token) = accountResult.Value!;
-        var members = await _apiClient.GetWorkspaceMembersAsync(token, account.WorkspaceId, cancellationToken);
-        return Result<IReadOnlyList<ClickUpMemberDto>>.Success(members);
+
+        try
+        {
+            var members = await _apiClient.GetWorkspaceMembersAsync(token, account.WorkspaceId, cancellationToken);
+            return Result<IReadOnlyList<ClickUpMemberDto>>.Success(members);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "Failed to load ClickUp members for workspace {WorkspaceId}", account.WorkspaceId);
+            return Result<IReadOnlyList<ClickUpMemberDto>>.Failure(ex.Message);
+        }
     }
 
     public async Task<Result<IReadOnlyList<ClickUpWorkspaceDto>>> GetAuthorizedWorkspacesAsync(Guid id, CancellationToken cancellationToken = default)

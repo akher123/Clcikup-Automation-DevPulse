@@ -52,10 +52,14 @@ public sealed class ClickUpAccountApiClient : IClickUpAccountApiClient
 
     public async Task<IReadOnlyList<ClickUpMemberDto>> GetMembersAsync(Guid accountId, CancellationToken cancellationToken = default)
     {
-        var members = await _httpClient.GetFromJsonAsync<List<ClickUpMemberDto>>(
-            $"api/clickup/accounts/{accountId}/members",
-            cancellationToken);
+        var response = await _httpClient.GetAsync($"api/clickup/accounts/{accountId}/members", cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(ParseApiError(error, "Failed to load members"));
+        }
 
+        var members = await response.Content.ReadFromJsonAsync<List<ClickUpMemberDto>>(cancellationToken);
         return members ?? [];
     }
 
@@ -63,5 +67,23 @@ public sealed class ClickUpAccountApiClient : IClickUpAccountApiClient
     {
         var response = await _httpClient.DeleteAsync($"api/clickup/accounts/{accountId}", cancellationToken);
         response.EnsureSuccessStatusCode();
+    }
+
+    private static string ParseApiError(string rawError, string fallback)
+    {
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(rawError);
+            if (document.RootElement.TryGetProperty("error", out var errorProperty))
+            {
+                return errorProperty.GetString() ?? fallback;
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // Use raw body below.
+        }
+
+        return string.IsNullOrWhiteSpace(rawError) ? fallback : rawError;
     }
 }

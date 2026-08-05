@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using DevPulse.Application.Abstractions.ClickUp;
 using DevPulse.Infrastructure.ClickUp.Models;
 using DevPulse.Shared.Contracts.ClickUp;
@@ -14,6 +15,13 @@ namespace DevPulse.Infrastructure.ClickUp;
 /// </summary>
 public sealed class ClickUpApiClient : IClickUpApiClient
 {
+    private const int MemberPageSize = 100;
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     private readonly HttpClient _httpClient;
     private readonly ILogger<ClickUpApiClient> _logger;
 
@@ -38,19 +46,42 @@ public sealed class ClickUpApiClient : IClickUpApiClient
         string workspaceId,
         CancellationToken cancellationToken = default)
     {
-        var response = await SendAsync<ClickUpMembersResponse>(
-            HttpMethod.Get,
-            $"team/{workspaceId}/member",
+        // Official ClickUp API: GET /team returns workspaces with embedded members.
+        // GET /team/{id}/user is POST-only (invite) and returns 405 on GET.
+        // GET /team/{id}/member is not available on all plans/API versions.
+        var members = await TryGetMembersFromTeamsListAsync(accessToken, workspaceId, cancellationToken);
+        if (members.Count > 0)
+        {
+            return members;
+        }
+
+        members = await TryGetMembersFromPaginatedEndpointAsync(
             accessToken,
+            workspaceId,
+            "member",
             cancellationToken);
 
-        return response.Members
-            .Select(m => new ClickUpMemberDto(
-                m.User.Id,
-                m.User.Username,
-                m.User.Email,
-                m.User.ProfilePicture))
-            .ToList();
+        if (members.Count > 0)
+        {
+            return members;
+        }
+
+        var accessibleWorkspaces = await GetAuthorizedWorkspacesAsync(accessToken, cancellationToken);
+        var matchedWorkspace = accessibleWorkspaces.FirstOrDefault(w => w.Id == workspaceId);
+        if (matchedWorkspace is null)
+        {
+            var workspaceIds = string.Join(", ", accessibleWorkspaces.Select(w => w.Id));
+            throw new HttpRequestException(
+                $"Workspace '{workspaceId}' was not found for this token. Accessible workspace IDs: {workspaceIds}.",
+                null,
+                HttpStatusCode.NotFound);
+        }
+
+        throw new HttpRequestException(
+            $"ClickUp did not return members for workspace '{workspaceId}' ({matchedWorkspace.Name}). " +
+            "Large workspaces may omit members from GET /team; verify your token has workspace admin access.",
+            null,
+            HttpStatusCode.NotFound);
     }
 
     public async Task<ClickUpTaskQueryResponse> GetFilteredTasksAsync(
@@ -76,13 +107,84 @@ public sealed class ClickUpApiClient : IClickUpApiClient
             t.List?.Name,
             t.Url,
             t.DateCreated,
-            t.DateClosed,
+            t.DateDone ?? t.DateClosed,
             t.DueDate,
             t.Assignees?.Select(a => a.Email ?? a.Username).Where(x => !string.IsNullOrWhiteSpace(x)).ToList() ?? []))
             .ToList();
 
         return new ClickUpTaskQueryResponse(accountId, accountName, query.Page, tasks.Count, tasks);
     }
+
+    private async Task<IReadOnlyList<ClickUpMemberDto>> TryGetMembersFromPaginatedEndpointAsync(
+        string accessToken,
+        string workspaceId,
+        string resource,
+        CancellationToken cancellationToken)
+    {
+        var allMembers = new List<ClickUpMemberDto>();
+        var page = 0;
+
+        while (true)
+        {
+            var response = await TrySendAsync<ClickUpMembersResponse>(
+                HttpMethod.Get,
+                $"team/{workspaceId}/{resource}?page={page}",
+                accessToken,
+                cancellationToken);
+
+            if (response?.Members is null || response.Members.Count == 0)
+            {
+                break;
+            }
+
+            allMembers.AddRange(MapMembers(response.Members));
+
+            if (response.Members.Count < MemberPageSize)
+            {
+                break;
+            }
+
+            page++;
+        }
+
+        if (allMembers.Count == 0)
+        {
+            _logger.LogDebug(
+                "ClickUp workspace member endpoint team/{WorkspaceId}/{Resource} returned no members",
+                workspaceId,
+                resource);
+        }
+
+        return allMembers;
+    }
+
+    private async Task<IReadOnlyList<ClickUpMemberDto>> TryGetMembersFromTeamsListAsync(
+        string accessToken,
+        string workspaceId,
+        CancellationToken cancellationToken)
+    {
+        var response = await SendAsync<ClickUpTeamsResponse>(HttpMethod.Get, "team", accessToken, cancellationToken);
+        var team = response.Teams.FirstOrDefault(t => t.Id == workspaceId);
+        if (team?.Members is null || team.Members.Count == 0)
+        {
+            _logger.LogDebug(
+                "ClickUp GET /team did not include members for workspace {WorkspaceId}",
+                workspaceId);
+            return [];
+        }
+
+        return MapMembers(team.Members);
+    }
+
+    private static IReadOnlyList<ClickUpMemberDto> MapMembers(IEnumerable<ClickUpMemberItem> members) =>
+        members
+            .Where(m => m.User.Id > 0)
+            .Select(m => new ClickUpMemberDto(
+                m.User.Id,
+                m.User.Username,
+                m.User.Email,
+                m.User.ProfilePicture))
+            .ToList();
 
     private static string BuildTaskQueryString(ClickUpTaskQueryRequest query)
     {
@@ -108,15 +210,48 @@ public sealed class ClickUpApiClient : IClickUpApiClient
         return string.Join('&', parts);
     }
 
+    private async Task<T?> TrySendAsync<T>(
+        HttpMethod method,
+        string relativeUrl,
+        string accessToken,
+        CancellationToken cancellationToken)
+        where T : class
+    {
+        using var request = CreateRequest(method, relativeUrl, accessToken);
+        var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed)
+        {
+            _logger.LogDebug(
+                "ClickUp endpoint unavailable ({StatusCode}): {Url}",
+                (int)response.StatusCode,
+                relativeUrl);
+            return null;
+        }
+
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            _logger.LogWarning("ClickUp rate limit reached for {Url}", relativeUrl);
+            throw new HttpRequestException("ClickUp API rate limit exceeded.", null, HttpStatusCode.TooManyRequests);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogWarning("ClickUp API error {StatusCode} for {Url}: {Body}", (int)response.StatusCode, relativeUrl, body);
+            throw new HttpRequestException($"ClickUp API returned {(int)response.StatusCode}.", null, response.StatusCode);
+        }
+
+        return await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken);
+    }
+
     private async Task<T> SendAsync<T>(
         HttpMethod method,
         string relativeUrl,
         string accessToken,
         CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(method, relativeUrl);
-        request.Headers.Authorization = new AuthenticationHeaderValue(accessToken);
-
+        using var request = CreateRequest(method, relativeUrl, accessToken);
         var response = await _httpClient.SendAsync(request, cancellationToken);
 
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
@@ -132,7 +267,15 @@ public sealed class ClickUpApiClient : IClickUpApiClient
             throw new HttpRequestException($"ClickUp API returned {(int)response.StatusCode}.", null, response.StatusCode);
         }
 
-        var payload = await response.Content.ReadFromJsonAsync<T>(cancellationToken);
+        var payload = await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken);
         return payload ?? throw new InvalidOperationException("ClickUp API returned an empty response.");
+    }
+
+    private static HttpRequestMessage CreateRequest(HttpMethod method, string relativeUrl, string accessToken)
+    {
+        var request = new HttpRequestMessage(method, relativeUrl);
+        // ClickUp expects the raw token in Authorization (no Bearer prefix).
+        request.Headers.TryAddWithoutValidation("Authorization", accessToken);
+        return request;
     }
 }

@@ -87,7 +87,14 @@ public sealed class ClickUpAccountsController : ControllerBase
     public async Task<IActionResult> GetMembers(Guid id, CancellationToken cancellationToken)
     {
         var result = await _accountService.GetMembersAsync(id, cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : NotFound(new { error = result.Error });
+        if (result.IsSuccess)
+        {
+            return Ok(result.Value);
+        }
+
+        return result.Error!.Contains("not found", StringComparison.OrdinalIgnoreCase)
+            ? NotFound(new { error = result.Error })
+            : BadRequest(new { error = result.Error });
     }
 
     [HttpGet("{id:guid}/workspaces")]

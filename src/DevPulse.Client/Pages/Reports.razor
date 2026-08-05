@@ -1,0 +1,364 @@
+@page "/reports"
+@using DevPulse.Shared.Contracts.Reports
+@inject IDeveloperApiClient DeveloperApi
+@inject IReportApiClient ReportApi
+
+<PageTitle>Developer Reports - DevPulse</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Developer Reports</h1>
+        <p class="text-muted">Filter by developers and month to produce unified task and productivity reports.</p>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
+}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Report Filters</h5>
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Month</label>
+                <input type="month" class="form-control" @bind="_selectedMonth" @bind:format="yyyy-MM" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Developers</label>
+                @if (_isLoadingDevelopers)
+                {
+                    <p class="text-muted mb-0">Loading developers...</p>
+                }
+                else if (_developers.Count == 0)
+                {
+                    <p class="text-muted mb-0">
+                        No developers registered.
+                        <a href="developers">Sync from ClickUp</a> to get started.
+                    </p>
+                }
+                else
+                {
+                    <div class="developer-select border rounded p-2">
+                        <div class="form-check mb-1">
+                            <input class="form-check-input" type="checkbox" id="selectAll"
+                                   checked="@_selectAll"
+                                   @onchange="ToggleSelectAll" />
+                            <label class="form-check-label fw-semibold" for="selectAll">Select all</label>
+                        </div>
+                        @foreach (var developer in _developers.Where(d => d.IsActive))
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       id="dev-@developer.Id"
+                                       checked="@_selectedDeveloperIds.Contains(developer.Id)"
+                                       @onchange="() => ToggleDeveloper(developer.Id)" />
+                                <label class="form-check-label" for="dev-@developer.Id">
+                                    @developer.Name
+                                    @if (!string.IsNullOrWhiteSpace(developer.Email))
+                                    {
+                                        <span class="text-muted">(@developer.Email)</span>
+                                    }
+                                    @if (developer.Mappings.Count == 0)
+                                    {
+                                        <span class="badge text-bg-warning ms-1">No mappings</span>
+                                    }
+                                </label>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="col-md-3">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="includeClosed" @bind="_includeClosed" />
+                    <label class="form-check-label" for="includeClosed">Include closed tasks</label>
+                </div>
+                <button class="btn btn-primary w-100" disabled="@(_isBusy || _developers.Count == 0)" @onclick="GenerateReportAsync">
+                    @if (_isBusy)
+                    {
+                        <span>Generating...</span>
+                    }
+                    else
+                    {
+                        <span>Generate Report</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (_report is not null)
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="summary-card card h-100">
+                <div class="card-body">
+                    <div class="summary-label">Tasks Completed</div>
+                    <div class="summary-value">@_report.TotalTasksCompleted</div>
+                    <div class="text-muted small">@FormatMonth(_report.Month)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="summary-card card h-100">
+                <div class="card-body">
+                    <div class="summary-label">Developers</div>
+                    <div class="summary-value">@_report.Developers.Count(d => d.TotalTasks > 0)</div>
+                    <div class="text-muted small">with completed tasks</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="summary-card card h-100">
+                <div class="card-body">
+                    <div class="summary-label">Workspaces</div>
+                    <div class="summary-value">@_report.WorkspaceCount</div>
+                    <div class="text-muted small">queried across accounts</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (_report.Developers.Any(d => d.TotalTasks > 0))
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Productivity Summary</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Developer</th>
+                                <th>Tasks</th>
+                                <th>Workspaces</th>
+                                <th>Avg. Completion</th>
+                                <th>Breakdown</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var summary in _report.Developers.Where(d => d.TotalTasks > 0))
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@summary.DeveloperName</strong>
+                                        @if (!string.IsNullOrWhiteSpace(summary.Email))
+                                        {
+                                            <div class="small text-muted">@summary.Email</div>
+                                        }
+                                    </td>
+                                    <td><span class="badge text-bg-primary">@summary.TotalTasks</span></td>
+                                    <td>@summary.WorkspaceCount</td>
+                                    <td>
+                                        @if (summary.AverageCompletionDays.HasValue)
+                                        {
+                                            <span>@summary.AverageCompletionDays.Value days</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @foreach (var workspace in summary.ByWorkspace)
+                                        {
+                                            <span class="badge text-bg-light text-dark me-1 mb-1">
+                                                @workspace.AccountName: @workspace.TaskCount
+                                            </span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Task Details (@_report.Tasks.Count)</h5>
+            @if (_report.Tasks.Count == 0)
+            {
+                <p class="text-muted mb-0">No tasks completed in the selected month for the chosen developers.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Developer</th>
+                                <th>Workspace</th>
+                                <th>Task</th>
+                                <th>Status</th>
+                                <th>Completed</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var task in _report.Tasks)
+                            {
+                                <tr>
+                                    <td>@task.DeveloperName</td>
+                                    <td>@task.AccountName</td>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(task.Url))
+                                        {
+                                            <a href="@task.Url" target="_blank" rel="noopener">@task.TaskName</a>
+                                        }
+                                        else
+                                        {
+                                            @task.TaskName
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(task.ListName))
+                                        {
+                                            <div class="small text-muted">@task.ListName</div>
+                                        }
+                                    </td>
+                                    <td>@(task.Status ?? "—")</td>
+                                    <td>@FormatUnixDate(task.DateDone)</td>
+                                    <td>
+                                        @if (task.CompletionDays.HasValue)
+                                        {
+                                            <span>@task.CompletionDays.Value d</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private readonly List<DevPulse.Shared.Contracts.Developers.DeveloperDto> _developers = [];
+    private readonly HashSet<Guid> _selectedDeveloperIds = [];
+    private DeveloperReportResponse? _report;
+    private DateTime _selectedMonth = new(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+    private bool _includeClosed = true;
+    private bool _selectAll;
+    private bool _isLoadingDevelopers = true;
+    private bool _isBusy;
+    private bool _isError;
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDevelopersAsync();
+    }
+
+    private async Task LoadDevelopersAsync()
+    {
+        _isLoadingDevelopers = true;
+
+        try
+        {
+            var developers = await DeveloperApi.GetDevelopersAsync();
+            _developers.Clear();
+            _developers.AddRange(developers);
+
+            _selectedDeveloperIds.Clear();
+            foreach (var developer in _developers.Where(d => d.IsActive))
+            {
+                _selectedDeveloperIds.Add(developer.Id);
+            }
+            _selectAll = _selectedDeveloperIds.Count > 0;
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = $"Failed to load developers: {ex.Message}";
+        }
+        finally
+        {
+            _isLoadingDevelopers = false;
+        }
+    }
+
+    private void ToggleSelectAll(ChangeEventArgs args)
+    {
+        var isChecked = args.Value is true;
+        _selectAll = isChecked;
+        _selectedDeveloperIds.Clear();
+
+        if (isChecked)
+        {
+            foreach (var developer in _developers.Where(d => d.IsActive))
+            {
+                _selectedDeveloperIds.Add(developer.Id);
+            }
+        }
+    }
+
+    private void ToggleDeveloper(Guid developerId)
+    {
+        if (!_selectedDeveloperIds.Add(developerId))
+        {
+            _selectedDeveloperIds.Remove(developerId);
+        }
+
+        var activeCount = _developers.Count(d => d.IsActive);
+        _selectAll = activeCount > 0 && _selectedDeveloperIds.Count == activeCount;
+    }
+
+    private async Task GenerateReportAsync()
+    {
+        if (_selectedDeveloperIds.Count == 0)
+        {
+            _isError = true;
+            _message = "Select at least one developer.";
+            return;
+        }
+
+        var month = DateOnly.FromDateTime(_selectedMonth);
+
+        _isBusy = true;
+        _message = null;
+        _report = null;
+
+        try
+        {
+            var request = new DeveloperReportRequest(
+                _selectedDeveloperIds.ToList(),
+                month,
+                _includeClosed);
+
+            _report = await ReportApi.GenerateDeveloperReportAsync(request);
+            _isError = false;
+            _message = $"Report generated for {FormatMonth(month)}.";
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private static string FormatMonth(DateOnly month) =>
+        month.ToDateTime(TimeOnly.MinValue).ToString("MMMM yyyy");
+
+    private static string FormatUnixDate(long? unixMs)
+    {
+        if (!unixMs.HasValue)
+        {
+            return "—";
+        }
+
+        return DateTimeOffset.FromUnixTimeMilliseconds(unixMs.Value).ToLocalTime().ToString("MMM d, yyyy");
+    }
+}
