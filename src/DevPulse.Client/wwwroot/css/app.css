@@ -632,6 +632,20 @@ code {
     border-radius: var(--dp-radius) !important;
 }
 
+.developer-select:has(.developer-select-search) {
+    max-height: none;
+    overflow: visible;
+}
+
+.developer-select-search {
+    background: var(--dp-surface);
+}
+
+.developer-select-list {
+    max-height: 10rem;
+    overflow-y: auto;
+}
+
 .developer-select .form-check {
     padding-top: 0.125rem;
     padding-bottom: 0.125rem;

@@ -98,39 +98,53 @@
                         </AuthorizeView>
                     </p>
                 }
-                else if (!FilteredDevelopers().Any())
-                {
-                    <p class="text-muted mb-0">No developers mapped to the selected account(s).</p>
-                }
                 else
                 {
-                    <div class="developer-select border rounded p-2">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input" type="checkbox" id="selectAll"
-                                   checked="@_selectAll"
-                                   @onchange="ToggleSelectAll" />
-                            <label class="form-check-label fw-semibold" for="selectAll">Select all</label>
+                    <div class="developer-select border rounded">
+                        <div class="developer-select-search p-2 border-bottom">
+                            <input type="search"
+                                   class="form-control form-control-sm"
+                                   placeholder="Filter by name or email..."
+                                   autocomplete="off"
+                                   @bind="_developerSearch"
+                                   @bind:event="oninput"
+                                   @bind:after="UpdateSelectAllState" />
                         </div>
-                        @foreach (var developer in FilteredDevelopers())
-                        {
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox"
-                                       id="dev-@developer.Id"
-                                       checked="@_selectedDeveloperIds.Contains(developer.Id)"
-                                       @onchange="() => ToggleDeveloper(developer.Id)" />
-                                <label class="form-check-label" for="dev-@developer.Id">
-                                    @developer.Name
-                                    @if (!string.IsNullOrWhiteSpace(developer.Email))
-                                    {
-                                        <span class="text-muted">(@developer.Email)</span>
-                                    }
-                                    @if (developer.Mappings.Count == 0)
-                                    {
-                                        <span class="badge text-bg-warning ms-1">No mappings</span>
-                                    }
-                                </label>
+                        <div class="developer-select-list p-2">
+                            <div class="form-check mb-1">
+                                <input class="form-check-input" type="checkbox" id="selectAll"
+                                       checked="@_selectAll"
+                                       @onchange="ToggleSelectAll" />
+                                <label class="form-check-label fw-semibold" for="selectAll">Select all</label>
                             </div>
-                        }
+                            @if (!FilteredDevelopers().Any())
+                            {
+                                <p class="text-muted small mb-0">No developers match your filter.</p>
+                            }
+                            else
+                            {
+                                @foreach (var developer in FilteredDevelopers())
+                                {
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox"
+                                               id="dev-@developer.Id"
+                                               checked="@_selectedDeveloperIds.Contains(developer.Id)"
+                                               @onchange="() => ToggleDeveloper(developer.Id)" />
+                                        <label class="form-check-label" for="dev-@developer.Id">
+                                            @developer.Name
+                                            @if (!string.IsNullOrWhiteSpace(developer.Email))
+                                            {
+                                                <span class="text-muted">(@developer.Email)</span>
+                                            }
+                                            @if (developer.Mappings.Count == 0)
+                                            {
+                                                <span class="badge text-bg-warning ms-1">No mappings</span>
+                                            }
+                                        </label>
+                                    </div>
+                                }
+                            }
+                        </div>
                     </div>
                 }
             </div>
@@ -142,7 +156,7 @@
                 <BusyButton CssClass="btn btn-primary w-100"
                             IsBusy="_isBusy"
                             BusyText="Generating..."
-                            Disabled="@(!FilteredDevelopers().Any())"
+                            Disabled="@(!_developers.Any(d => d.IsActive))"
                             OnClick="GenerateReportAsync">
                     Generate Report
                 </BusyButton>
@@ -381,25 +395,30 @@
     private bool _isExporting;
     private bool _isError;
     private string? _message;
+    private string _developerSearch = string.Empty;
     private IJSObjectReference? _fileDownloadModule;
 
     protected override async Task OnInitializedAsync()
     {
         await Task.WhenAll(LoadAccountsAsync(), LoadDevelopersAsync());
-        SelectAllFilteredDevelopers();
+        SelectAllActiveDevelopers();
     }
+
+    private IEnumerable<DeveloperDto> ActiveDevelopers() =>
+        _developers.Where(d => d.IsActive);
 
     private IEnumerable<DeveloperDto> FilteredDevelopers()
     {
-        var active = _developers.Where(d => d.IsActive);
+        IEnumerable<DeveloperDto> results = ActiveDevelopers();
 
-        if (_selectedAccountIds.Count == 0)
+        if (!string.IsNullOrWhiteSpace(_developerSearch))
         {
-            return active;
+            results = results.Where(d =>
+                d.Name.Contains(_developerSearch, StringComparison.OrdinalIgnoreCase)
+                || (d.Email?.Contains(_developerSearch, StringComparison.OrdinalIgnoreCase) ?? false));
         }
 
-        return active.Where(d =>
-            d.Mappings.Any(m => _selectedAccountIds.Contains(m.ClickUpAccountId)));
+        return results;
     }
 
     private async Task LoadAccountsAsync()
@@ -451,16 +470,21 @@
         }
     }
 
-    private void SelectAllFilteredDevelopers()
+    private void SelectAllActiveDevelopers()
     {
         _selectedDeveloperIds.Clear();
-        foreach (var developer in FilteredDevelopers())
+        foreach (var developer in ActiveDevelopers())
         {
             _selectedDeveloperIds.Add(developer.Id);
         }
 
-        var filteredCount = FilteredDevelopers().Count();
-        _selectAll = filteredCount > 0 && _selectedDeveloperIds.Count == filteredCount;
+        UpdateSelectAllState();
+    }
+
+    private void UpdateSelectAllState()
+    {
+        var filtered = FilteredDevelopers().ToList();
+        _selectAll = filtered.Count > 0 && filtered.All(d => _selectedDeveloperIds.Contains(d.Id));
     }
 
     private void ToggleSelectAllAccounts(ChangeEventArgs args)
@@ -476,8 +500,6 @@
                 _selectedAccountIds.Add(account.Id);
             }
         }
-
-        SelectAllFilteredDevelopers();
     }
 
     private void ToggleAccount(Guid accountId)
@@ -489,21 +511,24 @@
 
         var activeCount = _accounts.Count(a => a.IsActive);
         _selectAllAccounts = activeCount > 0 && _selectedAccountIds.Count == activeCount;
-        SelectAllFilteredDevelopers();
     }
 
     private void ToggleSelectAll(ChangeEventArgs args)
     {
         var isChecked = args.Value is true;
         _selectAll = isChecked;
-        _selectedDeveloperIds.Clear();
+        var visibleIds = FilteredDevelopers().Select(d => d.Id).ToHashSet();
 
         if (isChecked)
         {
-            foreach (var developer in FilteredDevelopers())
+            foreach (var id in visibleIds)
             {
-                _selectedDeveloperIds.Add(developer.Id);
+                _selectedDeveloperIds.Add(id);
             }
+        }
+        else
+        {
+            _selectedDeveloperIds.RemoveWhere(visibleIds.Contains);
         }
     }
 
@@ -514,8 +539,7 @@
             _selectedDeveloperIds.Remove(developerId);
         }
 
-        var filteredCount = FilteredDevelopers().Count();
-        _selectAll = filteredCount > 0 && _selectedDeveloperIds.Count == filteredCount;
+        UpdateSelectAllState();
     }
 
     private async Task GenerateReportAsync()
