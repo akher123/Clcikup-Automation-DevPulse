@@ -98,6 +98,10 @@
                         </AuthorizeView>
                     </p>
                 }
+                else if (!AccountFilteredDevelopers().Any())
+                {
+                    <p class="text-muted mb-0">No developers mapped to the selected account(s).</p>
+                }
                 else
                 {
                     <div class="developer-select border rounded">
@@ -156,7 +160,7 @@
                 <BusyButton CssClass="btn btn-primary w-100"
                             IsBusy="_isBusy"
                             BusyText="Generating..."
-                            Disabled="@(!_developers.Any(d => d.IsActive))"
+                            Disabled="@(!AccountFilteredDevelopers().Any())"
                             OnClick="GenerateReportAsync">
                     Generate Report
                 </BusyButton>
@@ -401,15 +405,25 @@
     protected override async Task OnInitializedAsync()
     {
         await Task.WhenAll(LoadAccountsAsync(), LoadDevelopersAsync());
-        SelectAllActiveDevelopers();
+        SelectAllFilteredDevelopers();
     }
 
-    private IEnumerable<DeveloperDto> ActiveDevelopers() =>
-        _developers.Where(d => d.IsActive);
+    private IEnumerable<DeveloperDto> AccountFilteredDevelopers()
+    {
+        var active = _developers.Where(d => d.IsActive);
+
+        if (_selectedAccountIds.Count == 0)
+        {
+            return active;
+        }
+
+        return active.Where(d =>
+            d.Mappings.Any(m => _selectedAccountIds.Contains(m.ClickUpAccountId)));
+    }
 
     private IEnumerable<DeveloperDto> FilteredDevelopers()
     {
-        IEnumerable<DeveloperDto> results = ActiveDevelopers();
+        IEnumerable<DeveloperDto> results = AccountFilteredDevelopers();
 
         if (!string.IsNullOrWhiteSpace(_developerSearch))
         {
@@ -470,10 +484,10 @@
         }
     }
 
-    private void SelectAllActiveDevelopers()
+    private void SelectAllFilteredDevelopers()
     {
         _selectedDeveloperIds.Clear();
-        foreach (var developer in ActiveDevelopers())
+        foreach (var developer in AccountFilteredDevelopers())
         {
             _selectedDeveloperIds.Add(developer.Id);
         }
@@ -500,6 +514,8 @@
                 _selectedAccountIds.Add(account.Id);
             }
         }
+
+        SelectAllFilteredDevelopers();
     }
 
     private void ToggleAccount(Guid accountId)
@@ -511,6 +527,7 @@
 
         var activeCount = _accounts.Count(a => a.IsActive);
         _selectAllAccounts = activeCount > 0 && _selectedAccountIds.Count == activeCount;
+        SelectAllFilteredDevelopers();
     }
 
     private void ToggleSelectAll(ChangeEventArgs args)
