@@ -1,8 +1,10 @@
 @page "/developers"
 @attribute [Authorize(Roles = AppRoles.Admin)]
 @using DevPulse.Shared.Constants
+@using DevPulse.Shared.Contracts.ClickUp
 @using DevPulse.Shared.Contracts.Developers
 @inject IDeveloperApiClient DeveloperApi
+@inject IClickUpAccountApiClient ClickUpAccountApi
 
 <PageTitle>@AppBranding.PageTitle("Developers")</PageTitle>
 
@@ -40,6 +42,38 @@
             <div class="mt-3 d-flex gap-2">
                 <button class="btn btn-success" disabled="@_isBusy" @onclick="CreateDeveloperAsync">Save</button>
                 <button class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="HideAddForm">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_mappingDeveloperId.HasValue)
+{
+    <div class="form-card card">
+        <div class="card-body">
+            <h5 class="card-title">Map to ClickUp Workspace</h5>
+            <p class="text-muted small mb-3">
+                Resolves the ClickUp user ID from the email address and links it to this developer.
+            </p>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Workspace</label>
+                    <select class="form-select" @bind="_mappingForm.WorkspaceId">
+                        <option value="">Select workspace...</option>
+                        @foreach (var account in _clickUpAccounts)
+                        {
+                            <option value="@account.WorkspaceId">@account.Name (@account.WorkspaceId)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" @bind="_mappingForm.Email" placeholder="jane@example.com" />
+                </div>
+            </div>
+            <div class="mt-3 d-flex gap-2">
+                <button class="btn btn-success" disabled="@_isBusy" @onclick="AddMappingByEmailAsync">Resolve &amp; Map</button>
+                <button class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="CancelMappingForm">Cancel</button>
             </div>
         </div>
     </div>
@@ -106,6 +140,7 @@ else
                             }
                         </td>
                         <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary me-1" disabled="@_isBusy" @onclick="() => ShowMappingForm(developer)">Map Workspace</button>
                             <button class="btn btn-sm btn-outline-danger" disabled="@_isBusy" @onclick="() => DeleteDeveloperAsync(developer.Id)">Delete</button>
                         </td>
                     </tr>
@@ -119,7 +154,10 @@ else
 
 @code {
     private readonly List<DeveloperDto> _developers = [];
+    private readonly List<ClickUpAccountDto> _clickUpAccounts = [];
     private CreateDeveloperFormModel _newDeveloper = new();
+    private MappingFormModel _mappingForm = new();
+    private Guid? _mappingDeveloperId;
     private bool _showAddForm;
     private bool _isLoading = true;
     private bool _isBusy;
@@ -128,7 +166,22 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadDevelopersAsync();
+        await Task.WhenAll(LoadDevelopersAsync(), LoadClickUpAccountsAsync());
+    }
+
+    private async Task LoadClickUpAccountsAsync()
+    {
+        try
+        {
+            var accounts = await ClickUpAccountApi.GetAccountsAsync();
+            _clickUpAccounts.Clear();
+            _clickUpAccounts.AddRange(accounts.Where(a => a.IsActive));
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = $"Failed to load ClickUp workspaces: {ex.Message}";
+        }
     }
 
     private async Task LoadDevelopersAsync()
@@ -163,6 +216,71 @@ else
     private void HideAddForm()
     {
         _showAddForm = false;
+    }
+
+    private void ShowMappingForm(DeveloperDto developer)
+    {
+        _showAddForm = false;
+        _mappingDeveloperId = developer.Id;
+        _mappingForm = new MappingFormModel
+        {
+            Email = developer.Email ?? string.Empty,
+            WorkspaceId = _clickUpAccounts.Count == 1 ? _clickUpAccounts[0].WorkspaceId : string.Empty
+        };
+        _message = null;
+    }
+
+    private void CancelMappingForm()
+    {
+        _mappingDeveloperId = null;
+        _mappingForm = new MappingFormModel();
+    }
+
+    private async Task AddMappingByEmailAsync()
+    {
+        if (!_mappingDeveloperId.HasValue)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_mappingForm.WorkspaceId))
+        {
+            _isError = true;
+            _message = "Please select a workspace.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_mappingForm.Email))
+        {
+            _isError = true;
+            _message = "Email is required to resolve the ClickUp user.";
+            return;
+        }
+
+        _isBusy = true;
+        _message = null;
+
+        try
+        {
+            await DeveloperApi.AddMappingByEmailAsync(
+                _mappingDeveloperId.Value,
+                new AddDeveloperMappingByEmailRequest(_mappingForm.WorkspaceId.Trim(), _mappingForm.Email.Trim()));
+
+            _mappingDeveloperId = null;
+            _mappingForm = new MappingFormModel();
+            _isError = false;
+            _message = "Developer mapped to ClickUp workspace successfully.";
+            await LoadDevelopersAsync();
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
     }
 
     private async Task CreateDeveloperAsync()
@@ -243,5 +361,11 @@ else
         public string? Email { get; set; }
 
         public CreateDeveloperRequest ToRequest() => new(Name, Email);
+    }
+
+    private sealed class MappingFormModel
+    {
+        public string WorkspaceId { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
     }
 }

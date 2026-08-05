@@ -17,5 +17,10 @@ public interface IDeveloperService
 
     Task<Result<DeveloperDto>> AddMappingAsync(Guid developerId, AddDeveloperMappingRequest request, CancellationToken cancellationToken = default);
 
+    Task<Result<DeveloperDto>> AddMappingByEmailAsync(
+        Guid developerId,
+        AddDeveloperMappingByEmailRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<Result<SyncDevelopersResult>> SyncFromClickUpAsync(CancellationToken cancellationToken = default);
 }

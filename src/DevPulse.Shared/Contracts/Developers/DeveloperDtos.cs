@@ -27,6 +27,10 @@ public record AddDeveloperMappingRequest(
     Guid ClickUpAccountId,
     int ClickUpUserId);
 
+public record AddDeveloperMappingByEmailRequest(
+    string WorkspaceId,
+    string? Email = null);
+
 public record SyncDevelopersResult(
     int DevelopersCreated,
     int DevelopersUpdated,

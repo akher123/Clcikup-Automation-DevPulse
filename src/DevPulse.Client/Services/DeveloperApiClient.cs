@@ -13,6 +13,11 @@ public interface IDeveloperApiClient
 
     Task DeleteDeveloperAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<DeveloperDto?> AddMappingByEmailAsync(
+        Guid developerId,
+        AddDeveloperMappingByEmailRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<SyncDevelopersResult?> SyncFromClickUpAsync(CancellationToken cancellationToken = default);
 }
 
@@ -61,6 +66,25 @@ public sealed class DeveloperApiClient : IDeveloperApiClient
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task<DeveloperDto?> AddMappingByEmailAsync(
+        Guid developerId,
+        AddDeveloperMappingByEmailRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.PostAsJsonAsync(
+            $"api/developers/{developerId}/mappings/by-email",
+            request,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(ParseApiError(error, "Failed to map developer"));
+        }
+
+        return await response.Content.ReadFromJsonAsync<DeveloperDto>(cancellationToken);
+    }
+
     public async Task<SyncDevelopersResult?> SyncFromClickUpAsync(CancellationToken cancellationToken = default)
     {
         var response = await _httpClient.PostAsync("api/developers/sync", null, cancellationToken);
@@ -71,5 +95,23 @@ public sealed class DeveloperApiClient : IDeveloperApiClient
         }
 
         return await response.Content.ReadFromJsonAsync<SyncDevelopersResult>(cancellationToken);
+    }
+
+    private static string ParseApiError(string rawError, string fallback)
+    {
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(rawError);
+            if (document.RootElement.TryGetProperty("error", out var errorProperty))
+            {
+                return errorProperty.GetString() ?? fallback;
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // Use raw body below.
+        }
+
+        return string.IsNullOrWhiteSpace(rawError) ? fallback : rawError;
     }
 }

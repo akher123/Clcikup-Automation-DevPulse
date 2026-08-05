@@ -11,6 +11,8 @@ public interface IClickUpAccountRepository
 
     Task<ClickUpAccount?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<ClickUpAccount?> GetByWorkspaceIdAsync(string workspaceId, CancellationToken cancellationToken = default);
+
     Task<bool> ExistsByWorkspaceIdAsync(string workspaceId, Guid? excludeAccountId = null, CancellationToken cancellationToken = default);
 
     Task AddAsync(ClickUpAccount account, CancellationToken cancellationToken = default);

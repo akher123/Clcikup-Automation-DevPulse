@@ -33,6 +33,15 @@ public record ClickUpMemberDto(
     string? Email,
     string? ProfilePicture);
 
+public record ClickUpUserLookupDto(
+    int ClickUpUserId,
+    string Username,
+    string? Email,
+    string? ProfilePicture,
+    string WorkspaceId,
+    Guid AccountId,
+    string AccountName);
+
 public record ClickUpWorkspaceDto(
     string Id,
     string Name,

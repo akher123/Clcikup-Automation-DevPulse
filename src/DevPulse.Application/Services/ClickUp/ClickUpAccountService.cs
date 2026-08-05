@@ -199,6 +199,69 @@ public sealed class ClickUpAccountService : IClickUpAccountService
         }
     }
 
+    public async Task<Result<ClickUpUserLookupDto>> GetMemberByEmailAsync(
+        string workspaceId,
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(workspaceId))
+        {
+            return Result<ClickUpUserLookupDto>.Failure("Workspace ID is required.");
+        }
+
+        var normalizedEmail = NormalizeEmail(email);
+        if (normalizedEmail is null)
+        {
+            return Result<ClickUpUserLookupDto>.Failure("Email is required.");
+        }
+
+        var account = await _repository.GetByWorkspaceIdAsync(workspaceId.Trim(), cancellationToken);
+        if (account is null)
+        {
+            return Result<ClickUpUserLookupDto>.Failure("No ClickUp account is connected for this workspace.");
+        }
+
+        if (!account.IsActive)
+        {
+            return Result<ClickUpUserLookupDto>.Failure("ClickUp account for this workspace is inactive.");
+        }
+
+        if (DemoSeedData.IsDemoWorkspace(account.WorkspaceId))
+        {
+            return Result<ClickUpUserLookupDto>.Failure("Member lookup is not available for the demo workspace.");
+        }
+
+        try
+        {
+            var token = _tokenProtector.Unprotect(account.EncryptedAccessToken);
+            var member = await _apiClient.FindWorkspaceMemberByEmailAsync(
+                token,
+                account.WorkspaceId,
+                normalizedEmail,
+                cancellationToken);
+
+            if (member is null)
+            {
+                return Result<ClickUpUserLookupDto>.Failure(
+                    $"No workspace member found with email '{normalizedEmail}' in workspace '{account.WorkspaceId}'.");
+            }
+
+            return Result<ClickUpUserLookupDto>.Success(new ClickUpUserLookupDto(
+                member.ClickUpUserId,
+                member.Username,
+                member.Email,
+                member.ProfilePicture,
+                account.WorkspaceId,
+                account.Id,
+                account.Name));
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "Failed to look up ClickUp member by email for workspace {WorkspaceId}", account.WorkspaceId);
+            return Result<ClickUpUserLookupDto>.Failure(ex.Message);
+        }
+    }
+
     public async Task<Result<IReadOnlyList<ClickUpWorkspaceDto>>> GetAuthorizedWorkspacesAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var accountResult = await GetAccountWithTokenAsync(id, cancellationToken);
@@ -317,4 +380,7 @@ public sealed class ClickUpAccountService : IClickUpAccountService
             account.CreatedAtUtc,
             account.LastValidatedAtUtc,
             account.LastValidationMessage);
+
+    private static string? NormalizeEmail(string? email) =>
+        string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
 }

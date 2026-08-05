@@ -19,6 +19,11 @@ public interface IClickUpAccountService
 
     Task<Result<IReadOnlyList<ClickUpMemberDto>>> GetMembersAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<Result<ClickUpUserLookupDto>> GetMemberByEmailAsync(
+        string workspaceId,
+        string email,
+        CancellationToken cancellationToken = default);
+
     Task<Result<IReadOnlyList<ClickUpWorkspaceDto>>> GetAuthorizedWorkspacesAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<Result<ClickUpTaskQueryResponse>> GetTasksAsync(Guid id, ClickUpTaskQueryRequest query, CancellationToken cancellationToken = default);

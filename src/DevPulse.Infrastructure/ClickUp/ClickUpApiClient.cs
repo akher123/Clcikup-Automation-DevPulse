@@ -84,6 +84,26 @@ public sealed class ClickUpApiClient : IClickUpApiClient
             HttpStatusCode.NotFound);
     }
 
+    public async Task<ClickUpMemberDto?> FindWorkspaceMemberByEmailAsync(
+        string accessToken,
+        string workspaceId,
+        string normalizedEmail,
+        CancellationToken cancellationToken = default)
+    {
+        var fromTeamsList = await TryFindMemberInTeamsListAsync(accessToken, workspaceId, normalizedEmail, cancellationToken);
+        if (fromTeamsList is not null)
+        {
+            return fromTeamsList;
+        }
+
+        return await TryFindMemberInPaginatedEndpointAsync(
+            accessToken,
+            workspaceId,
+            "member",
+            normalizedEmail,
+            cancellationToken);
+    }
+
     public async Task<ClickUpTaskQueryResponse> GetFilteredTasksAsync(
         string accessToken,
         string workspaceId,
@@ -175,6 +195,72 @@ public sealed class ClickUpApiClient : IClickUpApiClient
 
         return MapMembers(team.Members);
     }
+
+    private async Task<ClickUpMemberDto?> TryFindMemberInTeamsListAsync(
+        string accessToken,
+        string workspaceId,
+        string normalizedEmail,
+        CancellationToken cancellationToken)
+    {
+        var response = await SendAsync<ClickUpTeamsResponse>(HttpMethod.Get, "team", accessToken, cancellationToken);
+        var team = response.Teams.FirstOrDefault(t => t.Id == workspaceId);
+        if (team?.Members is null || team.Members.Count == 0)
+        {
+            _logger.LogDebug(
+                "ClickUp GET /team did not include members for workspace {WorkspaceId}",
+                workspaceId);
+            return null;
+        }
+
+        return FindMemberByEmail(MapMembers(team.Members), normalizedEmail);
+    }
+
+    private async Task<ClickUpMemberDto?> TryFindMemberInPaginatedEndpointAsync(
+        string accessToken,
+        string workspaceId,
+        string resource,
+        string normalizedEmail,
+        CancellationToken cancellationToken)
+    {
+        var page = 0;
+
+        while (true)
+        {
+            var response = await TrySendAsync<ClickUpMembersResponse>(
+                HttpMethod.Get,
+                $"team/{workspaceId}/{resource}?page={page}",
+                accessToken,
+                cancellationToken);
+
+            if (response?.Members is null || response.Members.Count == 0)
+            {
+                break;
+            }
+
+            var members = MapMembers(response.Members);
+            var match = FindMemberByEmail(members, normalizedEmail);
+            if (match is not null)
+            {
+                return match;
+            }
+
+            if (response.Members.Count < MemberPageSize)
+            {
+                break;
+            }
+
+            page++;
+        }
+
+        return null;
+    }
+
+    private static ClickUpMemberDto? FindMemberByEmail(
+        IEnumerable<ClickUpMemberDto> members,
+        string normalizedEmail) =>
+        members.FirstOrDefault(m =>
+            !string.IsNullOrWhiteSpace(m.Email) &&
+            string.Equals(m.Email.Trim(), normalizedEmail, StringComparison.OrdinalIgnoreCase));
 
     private static IReadOnlyList<ClickUpMemberDto> MapMembers(IEnumerable<ClickUpMemberItem> members) =>
         members

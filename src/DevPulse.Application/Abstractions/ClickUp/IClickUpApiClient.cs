@@ -13,6 +13,12 @@ public interface IClickUpApiClient
         string workspaceId,
         CancellationToken cancellationToken = default);
 
+    Task<ClickUpMemberDto?> FindWorkspaceMemberByEmailAsync(
+        string accessToken,
+        string workspaceId,
+        string normalizedEmail,
+        CancellationToken cancellationToken = default);
+
     Task<ClickUpTaskQueryResponse> GetFilteredTasksAsync(
         string accessToken,
         string workspaceId,

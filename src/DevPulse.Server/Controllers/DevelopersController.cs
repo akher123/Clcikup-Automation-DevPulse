@@ -97,6 +97,27 @@ public sealed class DevelopersController : ControllerBase
         return Ok(result.Value);
     }
 
+    [HttpPost("{id:guid}/mappings/by-email")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(DeveloperDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddMappingByEmail(
+        Guid id,
+        [FromBody] AddDeveloperMappingByEmailRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _developerService.AddMappingByEmailAsync(id, request, cancellationToken);
+        if (result.IsFailure)
+        {
+            return result.Error!.Contains("not found", StringComparison.OrdinalIgnoreCase)
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error, errors = result.Errors });
+        }
+
+        return Ok(result.Value);
+    }
+
     [HttpPost("sync")]
     [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(SyncDevelopersResult), StatusCodes.Status200OK)]

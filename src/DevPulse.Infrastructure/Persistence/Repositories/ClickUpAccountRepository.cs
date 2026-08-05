@@ -29,6 +29,10 @@ public sealed class ClickUpAccountRepository : IClickUpAccountRepository
     public async Task<ClickUpAccount?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         await _dbContext.ClickUpAccounts.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
+    public async Task<ClickUpAccount?> GetByWorkspaceIdAsync(string workspaceId, CancellationToken cancellationToken = default) =>
+        await _dbContext.ClickUpAccounts
+            .FirstOrDefaultAsync(x => x.WorkspaceId == workspaceId, cancellationToken);
+
     public async Task<bool> ExistsByWorkspaceIdAsync(string workspaceId, Guid? excludeAccountId = null, CancellationToken cancellationToken = default)
     {
         var query = _dbContext.ClickUpAccounts.Where(x => x.WorkspaceId == workspaceId);

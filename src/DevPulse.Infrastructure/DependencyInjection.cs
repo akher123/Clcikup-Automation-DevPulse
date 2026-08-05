@@ -75,7 +75,7 @@ public static class DependencyInjection
         {
             client.BaseAddress = new Uri("https://api.clickup.com/api/v2/");
             client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-            client.Timeout = TimeSpan.FromSeconds(30);
+            client.Timeout = TimeSpan.FromDays(2);
         });
 
         return services;

@@ -14,6 +14,7 @@ public sealed class DeveloperService : IDeveloperService
 {
     private readonly IDeveloperRepository _developerRepository;
     private readonly IClickUpAccountRepository _accountRepository;
+    private readonly IClickUpAccountService _accountService;
     private readonly IClickUpApiClient _apiClient;
     private readonly ITokenProtector _tokenProtector;
     private readonly ILogger<DeveloperService> _logger;
@@ -21,12 +22,14 @@ public sealed class DeveloperService : IDeveloperService
     public DeveloperService(
         IDeveloperRepository developerRepository,
         IClickUpAccountRepository accountRepository,
+        IClickUpAccountService accountService,
         IClickUpApiClient apiClient,
         ITokenProtector tokenProtector,
         ILogger<DeveloperService> logger)
     {
         _developerRepository = developerRepository;
         _accountRepository = accountRepository;
+        _accountService = accountService;
         _apiClient = apiClient;
         _tokenProtector = tokenProtector;
         _logger = logger;
@@ -150,6 +153,52 @@ public sealed class DeveloperService : IDeveloperService
         };
 
         await _developerRepository.AddMappingAsync(mapping, cancellationToken);
+
+        var updated = await _developerRepository.GetByIdWithMappingsAsync(developerId, cancellationToken);
+        return Result<DeveloperDto>.Success(MapToDto(updated!));
+    }
+
+    public async Task<Result<DeveloperDto>> AddMappingByEmailAsync(
+        Guid developerId,
+        AddDeveloperMappingByEmailRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var developer = await _developerRepository.GetByIdWithMappingsAsync(developerId, cancellationToken);
+        if (developer is null)
+        {
+            return Result<DeveloperDto>.Failure("Developer was not found.");
+        }
+
+        var email = NormalizeEmail(request.Email) ?? NormalizeEmail(developer.Email);
+        if (email is null)
+        {
+            return Result<DeveloperDto>.Failure("Email is required to resolve the ClickUp user.");
+        }
+
+        var lookup = await _accountService.GetMemberByEmailAsync(request.WorkspaceId, email, cancellationToken);
+        if (lookup.IsFailure)
+        {
+            return Result<DeveloperDto>.Failure(lookup.Error!);
+        }
+
+        var member = lookup.Value!;
+        if (await _developerRepository.MappingExistsAsync(developerId, member.AccountId, cancellationToken))
+        {
+            return Result<DeveloperDto>.Failure("This developer is already mapped to the selected workspace.");
+        }
+
+        await _developerRepository.AddMappingAsync(new DeveloperClickUpMapping
+        {
+            DeveloperId = developerId,
+            ClickUpAccountId = member.AccountId,
+            ClickUpUserId = member.ClickUpUserId
+        }, cancellationToken);
+
+        _logger.LogInformation(
+            "Mapped developer {DeveloperId} to ClickUp user {ClickUpUserId} in workspace {WorkspaceId} via email lookup",
+            developerId,
+            member.ClickUpUserId,
+            member.WorkspaceId);
 
         var updated = await _developerRepository.GetByIdWithMappingsAsync(developerId, cancellationToken);
         return Result<DeveloperDto>.Success(MapToDto(updated!));

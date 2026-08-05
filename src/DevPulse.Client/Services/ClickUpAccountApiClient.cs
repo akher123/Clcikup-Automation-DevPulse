@@ -13,6 +13,11 @@ public interface IClickUpAccountApiClient
 
     Task<IReadOnlyList<ClickUpMemberDto>> GetMembersAsync(Guid accountId, CancellationToken cancellationToken = default);
 
+    Task<ClickUpUserLookupDto?> GetUserByEmailAsync(
+        string workspaceId,
+        string email,
+        CancellationToken cancellationToken = default);
+
     Task DeleteAccountAsync(Guid accountId, CancellationToken cancellationToken = default);
 }
 
@@ -61,6 +66,25 @@ public sealed class ClickUpAccountApiClient : IClickUpAccountApiClient
 
         var members = await response.Content.ReadFromJsonAsync<List<ClickUpMemberDto>>(cancellationToken);
         return members ?? [];
+    }
+
+    public async Task<ClickUpUserLookupDto?> GetUserByEmailAsync(
+        string workspaceId,
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        var encodedEmail = Uri.EscapeDataString(email);
+        var response = await _httpClient.GetAsync(
+            $"api/clickup/workspaces/{Uri.EscapeDataString(workspaceId)}/users/by-email?email={encodedEmail}",
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(ParseApiError(error, "Failed to look up ClickUp user"));
+        }
+
+        return await response.Content.ReadFromJsonAsync<ClickUpUserLookupDto>(cancellationToken);
     }
 
     public async Task DeleteAccountAsync(Guid accountId, CancellationToken cancellationToken = default)
