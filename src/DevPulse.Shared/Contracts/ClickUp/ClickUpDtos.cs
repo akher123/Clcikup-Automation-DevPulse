@@ -47,6 +47,10 @@ public record ClickUpWorkspaceDto(
     string Name,
     string? Color);
 
+public record ClickUpCustomTaskTypeDto(
+    int Id,
+    string Name);
+
 public record ClickUpTaskDto(
     string Id,
     string Name,
@@ -57,7 +61,11 @@ public record ClickUpTaskDto(
     long? DateCreated,
     long? DateDone,
     long? DueDate,
-    IReadOnlyList<string> AssigneeEmails);
+    IReadOnlyList<string> AssigneeEmails,
+    string? ParentTaskId = null,
+    int? CustomItemId = null,
+    string TaskTypeName = "Task",
+    bool IsSubtask = false);
 
 public record ClickUpTaskQueryRequest(
     Guid AccountId,
@@ -66,7 +74,18 @@ public record ClickUpTaskQueryRequest(
     bool IncludeClosed = true,
     int Page = 0,
     DateOnly? FromDate = null,
-    DateOnly? ToDate = null);
+    DateOnly? ToDate = null,
+    bool IncludeSubtasks = true,
+    IReadOnlyList<int>? CustomItemIds = null,
+    ClickUpDateFilterMode DateFilter = ClickUpDateFilterMode.DateDone);
+
+public enum ClickUpDateFilterMode
+{
+    None = 0,
+    DateDone = 1,
+    DateCreated = 2,
+    DateUpdated = 3
+}
 
 public record ClickUpTaskQueryResponse(
     Guid AccountId,

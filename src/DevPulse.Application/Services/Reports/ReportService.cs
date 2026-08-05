@@ -97,6 +97,12 @@ public sealed class ReportService : IReportService
 
             queriedWorkspaces.Add(account.Id);
 
+            string token = string.Empty;
+            if (!DemoSeedData.IsDemoWorkspace(account.WorkspaceId))
+            {
+                token = _tokenProtector.Unprotect(account.EncryptedAccessToken);
+            }
+
             foreach (var entry in developersForAccount)
             {
                 if (DemoSeedData.IsDemoWorkspace(account.WorkspaceId))
@@ -106,41 +112,28 @@ public sealed class ReportService : IReportService
                             request.FromDate,
                             request.ToDate,
                             account,
-                            entry.Developer));
+                            entry.Developer)
+                            .Where(IsTaskOrSubtask));
                     continue;
                 }
 
                 var mapping = entry.Mapping!;
-                var token = _tokenProtector.Unprotect(account.EncryptedAccessToken);
-                var query = new ClickUpTaskQueryRequest(
-                    account.Id,
-                    [mapping.ClickUpUserId],
-                    Month: null,
-                    request.IncludeClosed,
-                    Page: 0,
-                    request.FromDate,
-                    request.ToDate);
+                var developerTasks = await FetchDeveloperTasksAsync(
+                    token,
+                    account,
+                    mapping.ClickUpUserId,
+                    request,
+                    cancellationToken);
 
-                var tasks = await FetchAllTasksAsync(token, account, query, cancellationToken);
-
-                foreach (var task in tasks)
-                {
-                    reportTasks.Add(new DeveloperReportTaskDto(
-                        entry.Developer.Id,
-                        entry.Developer.Name,
-                        account.Id,
-                        account.Name,
-                        task.Id,
-                        task.Name,
-                        task.Status,
-                        task.ListName,
-                        task.Url,
-                        task.DateCreated,
-                        task.DateDone,
-                        CalculateCompletionDays(task.DateCreated, task.DateDone)));
-                }
+                reportTasks.AddRange(developerTasks.Select(task => ToReportTask(entry.Developer, account, task)));
             }
         }
+
+        // Prefer completed row when the same task appears in both queries.
+        reportTasks = reportTasks
+            .GroupBy(t => (t.DeveloperId, t.AccountId, t.TaskId))
+            .Select(g => g.OrderByDescending(t => t.IsCompleted).First())
+            .ToList();
 
         var summaries = activeDevelopers
             .Select(developer => BuildSummary(developer, reportTasks))
@@ -149,23 +142,102 @@ public sealed class ReportService : IReportService
             .ThenBy(s => s.DeveloperName)
             .ToList();
 
+        var completedCount = reportTasks.Count(t => t.IsCompleted);
+        var inProgressCount = reportTasks.Count(t => !t.IsCompleted);
+
         var response = new DeveloperReportResponse(
             request.FromDate,
             request.ToDate,
-            reportTasks.Count,
+            completedCount,
+            inProgressCount,
             queriedWorkspaces.Count,
             summaries,
-            reportTasks.OrderBy(t => t.DeveloperName).ThenBy(t => t.AccountName).ThenBy(t => t.TaskName).ToList());
+            reportTasks
+                .OrderBy(t => t.DeveloperName)
+                .ThenBy(t => t.IsCompleted)
+                .ThenBy(t => t.AccountName)
+                .ThenBy(t => t.TaskName)
+                .ToList());
 
         _logger.LogInformation(
-            "Generated developer report for {FromDate} to {ToDate}: {TaskCount} tasks across {WorkspaceCount} workspaces",
+            "Generated developer report for {FromDate} to {ToDate}: {CompletedCount} completed, {InProgressCount} in progress across {WorkspaceCount} workspaces",
             request.FromDate,
             request.ToDate,
             response.TotalTasksCompleted,
+            response.TotalInProgress,
             response.WorkspaceCount);
 
         return Result<DeveloperReportResponse>.Success(response);
     }
+
+    private async Task<IReadOnlyList<ClickUpTaskDto>> FetchDeveloperTasksAsync(
+        string token,
+        ClickUpAccount account,
+        int clickUpUserId,
+        DeveloperReportRequest request,
+        CancellationToken cancellationToken)
+    {
+        var fromMs = ToRangeStartMs(request.FromDate);
+        var toExclusiveMs = ToRangeEndExclusiveMs(request.ToDate);
+
+        // Completed tasks done within the selected date range.
+        var completedQuery = new ClickUpTaskQueryRequest(
+            account.Id,
+            [clickUpUserId],
+            Month: null,
+            request.IncludeClosed,
+            Page: 0,
+            request.FromDate,
+            request.ToDate,
+            IncludeSubtasks: true,
+            CustomItemIds: [0],
+            DateFilter: ClickUpDateFilterMode.DateDone);
+
+        // Open / in-progress tasks created within the selected date range.
+        var openQuery = new ClickUpTaskQueryRequest(
+            account.Id,
+            [clickUpUserId],
+            Month: null,
+            IncludeClosed: false,
+            Page: 0,
+            request.FromDate,
+            request.ToDate,
+            IncludeSubtasks: true,
+            CustomItemIds: [0],
+            DateFilter: ClickUpDateFilterMode.DateCreated);
+
+        var completed = await FetchAllTasksAsync(token, account, completedQuery, cancellationToken);
+        var open = await FetchAllTasksAsync(token, account, openQuery, cancellationToken);
+
+        return completed
+            .Concat(open)
+            .Where(t => !IsBugCustomItem(t.CustomItemId, t.TaskTypeName))
+            .Where(t => IsWithinSelectedDateRange(t, fromMs, toExclusiveMs))
+            .GroupBy(t => t.Id, StringComparer.Ordinal)
+            .Select(g => g.FirstOrDefault(t => IsCompletedTask(t)) ?? g.First())
+            .ToList();
+    }
+
+    private static bool IsWithinSelectedDateRange(ClickUpTaskDto task, long fromMs, long toExclusiveMs)
+    {
+        if (IsCompletedTask(task))
+        {
+            return task.DateDone.HasValue
+                && task.DateDone.Value >= fromMs
+                && task.DateDone.Value < toExclusiveMs;
+        }
+
+        // In-progress items must have been created inside the selected range.
+        return task.DateCreated.HasValue
+            && task.DateCreated.Value >= fromMs
+            && task.DateCreated.Value < toExclusiveMs;
+    }
+
+    private static long ToRangeStartMs(DateOnly fromDate) =>
+        new DateTimeOffset(fromDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
+
+    private static long ToRangeEndExclusiveMs(DateOnly toDate) =>
+        new DateTimeOffset(toDate.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
 
     private async Task<IReadOnlyList<ClickUpTaskDto>> FetchAllTasksAsync(
         string token,
@@ -200,6 +272,28 @@ public sealed class ReportService : IReportService
         return allTasks;
     }
 
+    private static DeveloperReportTaskDto ToReportTask(Developer developer, ClickUpAccount account, ClickUpTaskDto task)
+    {
+        var isCompleted = IsCompletedTask(task);
+        return new DeveloperReportTaskDto(
+            developer.Id,
+            developer.Name,
+            account.Id,
+            account.Name,
+            task.Id,
+            task.Name,
+            task.Status,
+            task.ListName,
+            task.Url,
+            task.DateCreated,
+            task.DateDone,
+            isCompleted ? CalculateCompletionDays(task.DateCreated, task.DateDone) : null,
+            task.IsSubtask,
+            task.ParentTaskId,
+            task.IsSubtask ? "Subtask" : "Task",
+            isCompleted);
+    }
+
     private static DeveloperReportSummaryDto BuildSummary(Developer developer, IReadOnlyList<DeveloperReportTaskDto> tasks)
     {
         var developerTasks = tasks.Where(t => t.DeveloperId == developer.Id).ToList();
@@ -210,7 +304,7 @@ public sealed class ReportService : IReportService
             .ToList();
 
         var completionDays = developerTasks
-            .Where(t => t.CompletionDays.HasValue)
+            .Where(t => t.IsCompleted && t.CompletionDays.HasValue)
             .Select(t => t.CompletionDays!.Value)
             .ToList();
 
@@ -219,10 +313,44 @@ public sealed class ReportService : IReportService
             developer.Name,
             developer.Email,
             developerTasks.Count,
+            developerTasks.Count(t => t.IsCompleted),
+            developerTasks.Count(t => !t.IsCompleted),
+            developerTasks.Count(t => t.IsSubtask),
             byWorkspace.Count,
             completionDays.Count > 0 ? Math.Round(completionDays.Average(), 1) : null,
             byWorkspace);
     }
+
+    private static bool IsCompletedTask(ClickUpTaskDto task)
+    {
+        if (task.DateDone.HasValue)
+        {
+            return true;
+        }
+
+        return IsCompletedStatus(task.Status);
+    }
+
+    private static bool IsCompletedStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return false;
+        }
+
+        var normalized = status.Trim();
+        return normalized.Equals("complete", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("completed", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("closed", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("done", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsTaskOrSubtask(DeveloperReportTaskDto task) =>
+        !task.TaskType.Contains("bug", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsBugCustomItem(int? customItemId, string taskTypeName) =>
+        customItemId is > 0 ||
+        taskTypeName.Contains("bug", StringComparison.OrdinalIgnoreCase);
 
     private static double? CalculateCompletionDays(long? dateCreated, long? dateDone)
     {

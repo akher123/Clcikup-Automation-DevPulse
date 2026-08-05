@@ -19,6 +19,11 @@ public interface IClickUpApiClient
         string normalizedEmail,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<ClickUpCustomTaskTypeDto>> GetCustomTaskTypesAsync(
+        string accessToken,
+        string workspaceId,
+        CancellationToken cancellationToken = default);
+
     Task<ClickUpTaskQueryResponse> GetFilteredTasksAsync(
         string accessToken,
         string workspaceId,

@@ -30,25 +30,34 @@ else if (_report is not null)
     </div>
 
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="summary-card card h-100">
                 <div class="card-body">
-                    <div class="summary-label">Tasks Completed</div>
+                    <div class="summary-label">Completed</div>
                     <div class="summary-value">@_report.TotalTasksCompleted</div>
                     <div class="text-muted small">across all workspaces</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
+            <div class="summary-card card h-100">
+                <div class="card-body">
+                    <div class="summary-label">In Progress</div>
+                    <div class="summary-value">@_report.TotalInProgress</div>
+                    <div class="text-muted small">created in selected dates</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
             <div class="summary-card card h-100">
                 <div class="card-body">
                     <div class="summary-label">Active Developers</div>
                     <div class="summary-value">@_report.Developers.Count(d => d.TotalTasks > 0)</div>
-                    <div class="text-muted small">with completed tasks in period</div>
+                    <div class="text-muted small">with work in period</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="summary-card card h-100">
                 <div class="card-body">
                     <div class="summary-label">Workspaces</div>
@@ -69,7 +78,10 @@ else if (_report is not null)
                         <thead>
                             <tr>
                                 <th>Developer</th>
-                                <th>Tasks</th>
+                                <th>Total</th>
+                                <th>Completed</th>
+                                <th>In Progress</th>
+                                <th>Subtasks</th>
                                 <th>Avg. Completion</th>
                                 <th>Workspaces</th>
                             </tr>
@@ -86,6 +98,9 @@ else if (_report is not null)
                                         }
                                     </td>
                                     <td><span class="badge text-bg-primary">@summary.TotalTasks</span></td>
+                                    <td><span class="badge text-bg-success">@summary.CompletedCount</span></td>
+                                    <td><span class="badge text-bg-warning">@summary.InProgressCount</span></td>
+                                    <td><span class="badge text-bg-secondary">@summary.ChildTaskCount</span></td>
                                     <td>
                                         @if (summary.AverageCompletionDays.HasValue)
                                         {

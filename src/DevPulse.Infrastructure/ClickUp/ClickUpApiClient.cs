@@ -104,6 +104,31 @@ public sealed class ClickUpApiClient : IClickUpApiClient
             cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ClickUpCustomTaskTypeDto>> GetCustomTaskTypesAsync(
+        string accessToken,
+        string workspaceId,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await TrySendAsync<ClickUpCustomItemsResponse>(
+            HttpMethod.Get,
+            $"team/{workspaceId}/custom_item",
+            accessToken,
+            cancellationToken);
+
+        if (response?.CustomItems is null || response.CustomItems.Count == 0)
+        {
+            _logger.LogDebug(
+                "ClickUp custom task types unavailable for workspace {WorkspaceId}",
+                workspaceId);
+            return [];
+        }
+
+        return response.CustomItems
+            .Where(item => !string.IsNullOrWhiteSpace(item.Name))
+            .Select(item => new ClickUpCustomTaskTypeDto(item.Id, item.Name.Trim()))
+            .ToList();
+    }
+
     public async Task<ClickUpTaskQueryResponse> GetFilteredTasksAsync(
         string accessToken,
         string workspaceId,
@@ -119,21 +144,37 @@ public sealed class ClickUpApiClient : IClickUpApiClient
             accessToken,
             cancellationToken);
 
-        var tasks = response.Tasks.Select(t => new ClickUpTaskDto(
-            t.Id,
-            t.Name,
-            t.Status?.Status,
-            accountName,
-            t.List?.Name,
-            t.Url,
-            t.DateCreated,
-            t.DateDone ?? t.DateClosed,
-            t.DueDate,
-            t.Assignees?.Select(a => a.Email ?? a.Username).Where(x => !string.IsNullOrWhiteSpace(x)).ToList() ?? []))
+        var tasks = response.Tasks.Select(t =>
+            {
+                var isSubtask = !string.IsNullOrWhiteSpace(t.Parent);
+                return new ClickUpTaskDto(
+                    t.Id,
+                    t.Name,
+                    t.Status?.Status,
+                    accountName,
+                    t.List?.Name,
+                    t.Url,
+                    t.DateCreated,
+                    t.DateDone ?? t.DateClosed,
+                    t.DueDate,
+                    t.Assignees?.Select(a => a.Email ?? a.Username).Where(x => !string.IsNullOrWhiteSpace(x)).ToList() ?? [],
+                    t.Parent,
+                    t.CustomItemId,
+                    ResolveBuiltInTaskTypeName(t.CustomItemId),
+                    isSubtask);
+            })
             .ToList();
 
         return new ClickUpTaskQueryResponse(accountId, accountName, query.Page, tasks.Count, tasks);
     }
+
+    private static string ResolveBuiltInTaskTypeName(int? customItemId) =>
+        customItemId switch
+        {
+            null or 0 => "Task",
+            1 => "Milestone",
+            _ => $"Type {customItemId.Value}"
+        };
 
     private async Task<IReadOnlyList<ClickUpMemberDto>> TryGetMembersFromPaginatedEndpointAsync(
         string accessToken,
@@ -277,22 +318,23 @@ public sealed class ClickUpApiClient : IClickUpApiClient
         var parts = new List<string>
         {
             $"page={query.Page}",
-            $"include_closed={(query.IncludeClosed ? "true" : "false")}"
+            $"include_closed={(query.IncludeClosed ? "true" : "false")}",
+            // ClickUp excludes child tasks unless subtasks=true.
+            $"subtasks={(query.IncludeSubtasks ? "true" : "false")}"
         };
 
-        if (query.FromDate.HasValue && query.ToDate.HasValue)
+        if (query.DateFilter != ClickUpDateFilterMode.None
+            && TryGetDateRangeBounds(query, out var startMs, out var endMs))
         {
-            var start = new DateTimeOffset(query.FromDate.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
-            var end = new DateTimeOffset(query.ToDate.Value.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
-            parts.Add($"date_done_gt={start}");
-            parts.Add($"date_done_lt={end}");
-        }
-        else if (query.Month.HasValue)
-        {
-            var start = new DateTimeOffset(query.Month.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
-            var end = new DateTimeOffset(query.Month.Value.AddMonths(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
-            parts.Add($"date_done_gt={start}");
-            parts.Add($"date_done_lt={end}");
+            var (gtParam, ltParam) = query.DateFilter switch
+            {
+                ClickUpDateFilterMode.DateCreated => ("date_created_gt", "date_created_lt"),
+                ClickUpDateFilterMode.DateUpdated => ("date_updated_gt", "date_updated_lt"),
+                _ => ("date_done_gt", "date_done_lt")
+            };
+
+            parts.Add($"{gtParam}={startMs}");
+            parts.Add($"{ltParam}={endMs}");
         }
 
         if (query.AssigneeIds is not null)
@@ -300,7 +342,34 @@ public sealed class ClickUpApiClient : IClickUpApiClient
             parts.AddRange(query.AssigneeIds.Select(id => $"assignees[]={id}"));
         }
 
+        // Include standard tasks (0), milestones (1), and workspace custom types such as Bug.
+        if (query.CustomItemIds is { Count: > 0 })
+        {
+            parts.AddRange(query.CustomItemIds.Distinct().Select(id => $"custom_items[]={id}"));
+        }
+
         return string.Join('&', parts);
+    }
+
+    private static bool TryGetDateRangeBounds(ClickUpTaskQueryRequest query, out long startMs, out long endMs)
+    {
+        if (query.FromDate.HasValue && query.ToDate.HasValue)
+        {
+            startMs = new DateTimeOffset(query.FromDate.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
+            endMs = new DateTimeOffset(query.ToDate.Value.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
+            return true;
+        }
+
+        if (query.Month.HasValue)
+        {
+            startMs = new DateTimeOffset(query.Month.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
+            endMs = new DateTimeOffset(query.Month.Value.AddMonths(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
+            return true;
+        }
+
+        startMs = 0;
+        endMs = 0;
+        return false;
     }
 
     private async Task<T?> TrySendAsync<T>(

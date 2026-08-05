@@ -68,6 +68,12 @@ internal sealed class ClickUpTaskItem
     [JsonPropertyName("url")]
     public string? Url { get; set; }
 
+    [JsonPropertyName("parent")]
+    public string? Parent { get; set; }
+
+    [JsonPropertyName("custom_item_id")]
+    public int? CustomItemId { get; set; }
+
     [JsonPropertyName("date_created")]
     [JsonConverter(typeof(UnixTimestampJsonConverter))]
     public long? DateCreated { get; set; }
@@ -92,6 +98,21 @@ internal sealed class ClickUpTaskItem
 
     [JsonPropertyName("list")]
     public ClickUpList? List { get; set; }
+}
+
+internal sealed class ClickUpCustomItemsResponse
+{
+    [JsonPropertyName("custom_items")]
+    public List<ClickUpCustomItem> CustomItems { get; set; } = [];
+}
+
+internal sealed class ClickUpCustomItem
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
 }
 
 internal sealed class ClickUpStatus

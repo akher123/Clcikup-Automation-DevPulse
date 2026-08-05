@@ -168,30 +168,39 @@
     </div>
 
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="summary-card card h-100">
                 <div class="card-body">
-                    <div class="summary-label">Tasks Completed</div>
+                    <div class="summary-label">Completed</div>
                     <div class="summary-value">@_report.TotalTasksCompleted</div>
                     <div class="text-muted small">@FormatPeriod(_report.FromDate, _report.ToDate)</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
+            <div class="summary-card card h-100">
+                <div class="card-body">
+                    <div class="summary-label">In Progress</div>
+                    <div class="summary-value">@_report.TotalInProgress</div>
+                    <div class="text-muted small">created in selected dates</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-card card h-100">
+                <div class="card-body">
+                    <div class="summary-label">Subtasks</div>
+                    <div class="summary-value">@_report.Tasks.Count(t => t.IsSubtask)</div>
+                    <div class="text-muted small">child tasks included</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
             <div class="summary-card card h-100">
                 <div class="card-body">
                     <div class="summary-label">Developers</div>
                     <div class="summary-value">@_report.Developers.Count(d => d.TotalTasks > 0)</div>
-                    <div class="text-muted small">with completed tasks</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="summary-card card h-100">
-                <div class="card-body">
-                    <div class="summary-label">Workspaces</div>
-                    <div class="summary-value">@_report.WorkspaceCount</div>
-                    <div class="text-muted small">queried across accounts</div>
+                    <div class="text-muted small">@_report.WorkspaceCount workspace(s)</div>
                 </div>
             </div>
         </div>
@@ -207,7 +216,10 @@
                         <thead>
                             <tr>
                                 <th>Developer</th>
-                                <th>Tasks</th>
+                                <th>Total</th>
+                                <th>Completed</th>
+                                <th>In Progress</th>
+                                <th>Subtasks</th>
                                 <th>Workspaces</th>
                                 <th>Avg. Completion</th>
                                 <th>Breakdown</th>
@@ -225,6 +237,9 @@
                                         }
                                     </td>
                                     <td><span class="badge text-bg-primary">@summary.TotalTasks</span></td>
+                                    <td><span class="badge text-bg-success">@summary.CompletedCount</span></td>
+                                    <td><span class="badge text-bg-warning">@summary.InProgressCount</span></td>
+                                    <td><span class="badge text-bg-secondary">@summary.ChildTaskCount</span></td>
                                     <td>@summary.WorkspaceCount</td>
                                     <td>
                                         @if (summary.AverageCompletionDays.HasValue)
@@ -268,6 +283,7 @@
                             <tr>
                                 <th>Developer</th>
                                 <th>Workspace</th>
+                                <th>Kind</th>
                                 <th>Task</th>
                                 <th>Status</th>
                                 <th>Completed</th>
@@ -281,6 +297,16 @@
                                     <td>@task.DeveloperName</td>
                                     <td>@task.AccountName</td>
                                     <td>
+                                        @if (task.IsSubtask)
+                                        {
+                                            <span class="badge text-bg-secondary">Subtask</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge text-bg-info">Task</span>
+                                        }
+                                    </td>
+                                    <td>
                                         @if (!string.IsNullOrWhiteSpace(task.Url))
                                         {
                                             <a href="@task.Url" target="_blank" rel="noopener">@task.TaskName</a>
@@ -293,9 +319,31 @@
                                         {
                                             <div class="small text-muted">@task.ListName</div>
                                         }
+                                        @if (task.IsSubtask && !string.IsNullOrWhiteSpace(task.ParentTaskId))
+                                        {
+                                            <div class="small text-muted">Parent: @task.ParentTaskId</div>
+                                        }
                                     </td>
-                                    <td>@(task.Status ?? "—")</td>
-                                    <td>@FormatUnixDate(task.DateDone)</td>
+                                    <td>
+                                        @if (task.IsCompleted)
+                                        {
+                                            <span class="badge text-bg-success">@(task.Status ?? "complete")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge text-bg-warning">@(task.Status ?? "in progress")</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (task.IsCompleted)
+                                        {
+                                            @FormatUnixDate(task.DateDone)
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
                                     <td>
                                         @if (task.CompletionDays.HasValue)
                                         {

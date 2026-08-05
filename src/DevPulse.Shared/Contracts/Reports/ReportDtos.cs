@@ -13,6 +13,7 @@ public record DeveloperReportResponse(
     [property: JsonPropertyName("fromDate")] DateOnly FromDate,
     [property: JsonPropertyName("toDate")] DateOnly ToDate,
     [property: JsonPropertyName("totalTasksCompleted")] int TotalTasksCompleted,
+    [property: JsonPropertyName("totalInProgress")] int TotalInProgress,
     [property: JsonPropertyName("workspaceCount")] int WorkspaceCount,
     [property: JsonPropertyName("developers")] IReadOnlyList<DeveloperReportSummaryDto> Developers,
     [property: JsonPropertyName("tasks")] IReadOnlyList<DeveloperReportTaskDto> Tasks);
@@ -22,6 +23,9 @@ public record DeveloperReportSummaryDto(
     [property: JsonPropertyName("developerName")] string DeveloperName,
     [property: JsonPropertyName("email")] string? Email,
     [property: JsonPropertyName("totalTasks")] int TotalTasks,
+    [property: JsonPropertyName("completedCount")] int CompletedCount,
+    [property: JsonPropertyName("inProgressCount")] int InProgressCount,
+    [property: JsonPropertyName("childTaskCount")] int ChildTaskCount,
     [property: JsonPropertyName("workspaceCount")] int WorkspaceCount,
     [property: JsonPropertyName("averageCompletionDays")] double? AverageCompletionDays,
     [property: JsonPropertyName("byWorkspace")] IReadOnlyList<DeveloperWorkspaceBreakdownDto> ByWorkspace);
@@ -43,4 +47,8 @@ public record DeveloperReportTaskDto(
     [property: JsonPropertyName("url")] string? Url,
     [property: JsonPropertyName("dateCreated")] long? DateCreated,
     [property: JsonPropertyName("dateDone")] long? DateDone,
-    [property: JsonPropertyName("completionDays")] double? CompletionDays);
+    [property: JsonPropertyName("completionDays")] double? CompletionDays,
+    [property: JsonPropertyName("isSubtask")] bool IsSubtask = false,
+    [property: JsonPropertyName("parentTaskId")] string? ParentTaskId = null,
+    [property: JsonPropertyName("taskType")] string TaskType = "Task",
+    [property: JsonPropertyName("isCompleted")] bool IsCompleted = true);

@@ -53,6 +53,8 @@ public sealed class ReportExcelExportService : IReportExportService
         var metrics = new (string Label, object Value)[]
         {
             ("Tasks Completed", report.TotalTasksCompleted),
+            ("In Progress", report.TotalInProgress),
+            ("Subtasks", report.Tasks.Count(t => t.IsSubtask)),
             ("Developers with Tasks", developersWithTasks),
             ("Workspaces Queried", report.WorkspaceCount),
             ("Total Task Records", report.Tasks.Count)
@@ -74,7 +76,7 @@ public sealed class ReportExcelExportService : IReportExportService
     private static void AddProductivitySheet(XLWorkbook workbook, DeveloperReportResponse report)
     {
         var ws = workbook.Worksheets.Add("Productivity Summary");
-        var headers = new[] { "Developer", "Email", "Tasks", "Workspaces", "Avg. Completion (days)", "Workspace Breakdown" };
+        var headers = new[] { "Developer", "Email", "Total", "Completed", "In Progress", "Subtasks", "Workspaces", "Avg. Completion (days)", "Workspace Breakdown" };
 
         for (var col = 0; col < headers.Length; col++)
         {
@@ -98,24 +100,30 @@ public sealed class ReportExcelExportService : IReportExportService
             ws.Cell(row, 1).Value = summary.DeveloperName;
             ws.Cell(row, 2).Value = summary.Email ?? string.Empty;
             ws.Cell(row, 3).Value = summary.TotalTasks;
-            ws.Cell(row, 4).Value = summary.WorkspaceCount;
+            ws.Cell(row, 4).Value = summary.CompletedCount;
+            ws.Cell(row, 5).Value = summary.InProgressCount;
+            ws.Cell(row, 6).Value = summary.ChildTaskCount;
+            ws.Cell(row, 7).Value = summary.WorkspaceCount;
 
             if (summary.AverageCompletionDays.HasValue)
             {
-                ws.Cell(row, 5).Value = summary.AverageCompletionDays.Value;
-                ws.Cell(row, 5).Style.NumberFormat.Format = "0.0";
+                ws.Cell(row, 8).Value = summary.AverageCompletionDays.Value;
+                ws.Cell(row, 8).Style.NumberFormat.Format = "0.0";
             }
 
-            ws.Cell(row, 6).Value = breakdown;
+            ws.Cell(row, 9).Value = breakdown;
             StyleDataRow(ws.Range(row, 1, row, headers.Length), i % 2 == 1);
         }
 
         ws.Column(1).Width = 24;
         ws.Column(2).Width = 28;
         ws.Column(3).Width = 10;
-        ws.Column(4).Width = 14;
-        ws.Column(5).Width = 22;
-        ws.Column(6).Width = 40;
+        ws.Column(4).Width = 12;
+        ws.Column(5).Width = 12;
+        ws.Column(6).Width = 12;
+        ws.Column(7).Width = 14;
+        ws.Column(8).Width = 22;
+        ws.Column(9).Width = 40;
         ws.Range(1, 1, Math.Max(1, summaries.Count + 1), headers.Length).SetAutoFilter();
         ws.SheetView.FreezeRows(1);
     }
@@ -123,7 +131,7 @@ public sealed class ReportExcelExportService : IReportExportService
     private static void AddTaskDetailsSheet(XLWorkbook workbook, DeveloperReportResponse report)
     {
         var ws = workbook.Worksheets.Add("Task Details");
-        var headers = new[] { "Developer", "Workspace", "Task", "List", "Status", "Completed", "Duration (days)", "Task URL" };
+        var headers = new[] { "Developer", "Workspace", "Kind", "Task", "List", "Status", "State", "Completed", "Duration (days)", "Parent Task ID", "Task URL" };
 
         for (var col = 0; col < headers.Length; col++)
         {
@@ -134,6 +142,7 @@ public sealed class ReportExcelExportService : IReportExportService
 
         var tasks = report.Tasks
             .OrderBy(t => t.DeveloperName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(t => t.IsCompleted)
             .ThenBy(t => t.AccountName, StringComparer.OrdinalIgnoreCase)
             .ThenByDescending(t => t.DateDone ?? 0)
             .ToList();
@@ -145,28 +154,32 @@ public sealed class ReportExcelExportService : IReportExportService
 
             ws.Cell(row, 1).Value = task.DeveloperName;
             ws.Cell(row, 2).Value = task.AccountName;
-            ws.Cell(row, 3).Value = task.TaskName;
-            ws.Cell(row, 4).Value = task.ListName ?? string.Empty;
-            ws.Cell(row, 5).Value = task.Status ?? string.Empty;
+            ws.Cell(row, 3).Value = task.IsSubtask ? "Subtask" : "Task";
+            ws.Cell(row, 4).Value = task.TaskName;
+            ws.Cell(row, 5).Value = task.ListName ?? string.Empty;
+            ws.Cell(row, 6).Value = task.Status ?? string.Empty;
+            ws.Cell(row, 7).Value = task.IsCompleted ? "Completed" : "In Progress";
 
             if (task.DateDone.HasValue)
             {
-                ws.Cell(row, 6).Value = DateTimeOffset.FromUnixTimeMilliseconds(task.DateDone.Value).LocalDateTime;
-                ws.Cell(row, 6).Style.DateFormat.Format = "MMM d, yyyy";
+                ws.Cell(row, 8).Value = DateTimeOffset.FromUnixTimeMilliseconds(task.DateDone.Value).LocalDateTime;
+                ws.Cell(row, 8).Style.DateFormat.Format = "MMM d, yyyy";
             }
 
             if (task.CompletionDays.HasValue)
             {
-                ws.Cell(row, 7).Value = task.CompletionDays.Value;
-                ws.Cell(row, 7).Style.NumberFormat.Format = "0.0";
+                ws.Cell(row, 9).Value = task.CompletionDays.Value;
+                ws.Cell(row, 9).Style.NumberFormat.Format = "0.0";
             }
+
+            ws.Cell(row, 10).Value = task.ParentTaskId ?? string.Empty;
 
             if (!string.IsNullOrWhiteSpace(task.Url))
             {
-                ws.Cell(row, 8).Value = task.Url;
-                ws.Cell(row, 3).SetHyperlink(new XLHyperlink(task.Url));
-                ws.Cell(row, 3).Style.Font.FontColor = XLColor.FromHtml("#0563C1");
-                ws.Cell(row, 3).Style.Font.Underline = XLFontUnderlineValues.Single;
+                ws.Cell(row, 11).Value = task.Url;
+                ws.Cell(row, 4).SetHyperlink(new XLHyperlink(task.Url));
+                ws.Cell(row, 4).Style.Font.FontColor = XLColor.FromHtml("#0563C1");
+                ws.Cell(row, 4).Style.Font.Underline = XLFontUnderlineValues.Single;
             }
 
             StyleDataRow(ws.Range(row, 1, row, headers.Length), i % 2 == 1);
@@ -174,12 +187,15 @@ public sealed class ReportExcelExportService : IReportExportService
 
         ws.Column(1).Width = 22;
         ws.Column(2).Width = 20;
-        ws.Column(3).Width = 36;
-        ws.Column(4).Width = 22;
-        ws.Column(5).Width = 14;
+        ws.Column(3).Width = 12;
+        ws.Column(4).Width = 36;
+        ws.Column(5).Width = 22;
         ws.Column(6).Width = 16;
-        ws.Column(7).Width = 16;
-        ws.Column(8).Width = 40;
+        ws.Column(7).Width = 14;
+        ws.Column(8).Width = 16;
+        ws.Column(9).Width = 16;
+        ws.Column(10).Width = 16;
+        ws.Column(11).Width = 40;
         ws.Range(1, 1, Math.Max(1, tasks.Count + 1), headers.Length).SetAutoFilter();
         ws.SheetView.FreezeRows(1);
     }
