@@ -122,9 +122,11 @@ public sealed class DevelopersController : ControllerBase
     [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(SyncDevelopersResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> SyncFromClickUp(CancellationToken cancellationToken)
+    public async Task<IActionResult> SyncFromClickUp(
+        [FromBody] SyncFromClickUpRequest? request,
+        CancellationToken cancellationToken)
     {
-        var result = await _developerService.SyncFromClickUpAsync(cancellationToken);
+        var result = await _developerService.SyncFromClickUpAsync(request, cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 }

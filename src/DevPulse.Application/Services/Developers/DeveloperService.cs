@@ -204,12 +204,33 @@ public sealed class DeveloperService : IDeveloperService
         return Result<DeveloperDto>.Success(MapToDto(updated!));
     }
 
-    public async Task<Result<SyncDevelopersResult>> SyncFromClickUpAsync(CancellationToken cancellationToken = default)
+    public async Task<Result<SyncDevelopersResult>> SyncFromClickUpAsync(
+        SyncFromClickUpRequest? request = null,
+        CancellationToken cancellationToken = default)
     {
-        var accounts = await _accountRepository.GetActiveAsync(cancellationToken);
-        if (accounts.Count == 0)
+        IReadOnlyList<ClickUpAccount> accounts;
+        if (request?.ClickUpAccountId is Guid accountId)
         {
-            return Result<SyncDevelopersResult>.Failure("No active ClickUp accounts configured.");
+            var account = await _accountRepository.GetByIdAsync(accountId, cancellationToken);
+            if (account is null)
+            {
+                return Result<SyncDevelopersResult>.Failure("ClickUp account was not found.");
+            }
+
+            if (!account.IsActive)
+            {
+                return Result<SyncDevelopersResult>.Failure("The selected ClickUp account is inactive.");
+            }
+
+            accounts = [account];
+        }
+        else
+        {
+            accounts = await _accountRepository.GetActiveAsync(cancellationToken);
+            if (accounts.Count == 0)
+            {
+                return Result<SyncDevelopersResult>.Failure("No active ClickUp accounts configured.");
+            }
         }
 
         var created = 0;

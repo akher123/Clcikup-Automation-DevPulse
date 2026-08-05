@@ -35,3 +35,5 @@ public record SyncDevelopersResult(
     int DevelopersCreated,
     int DevelopersUpdated,
     int MappingsAdded);
+
+public record SyncFromClickUpRequest(Guid? ClickUpAccountId = null);

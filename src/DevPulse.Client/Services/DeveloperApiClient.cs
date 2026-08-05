@@ -18,7 +18,9 @@ public interface IDeveloperApiClient
         AddDeveloperMappingByEmailRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<SyncDevelopersResult?> SyncFromClickUpAsync(CancellationToken cancellationToken = default);
+    Task<SyncDevelopersResult?> SyncFromClickUpAsync(
+        SyncFromClickUpRequest? request = null,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class DeveloperApiClient : IDeveloperApiClient
@@ -85,13 +87,15 @@ public sealed class DeveloperApiClient : IDeveloperApiClient
         return await response.Content.ReadFromJsonAsync<DeveloperDto>(cancellationToken);
     }
 
-    public async Task<SyncDevelopersResult?> SyncFromClickUpAsync(CancellationToken cancellationToken = default)
+    public async Task<SyncDevelopersResult?> SyncFromClickUpAsync(
+        SyncFromClickUpRequest? request = null,
+        CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.PostAsync("api/developers/sync", null, cancellationToken);
+        var response = await _httpClient.PostAsJsonAsync("api/developers/sync", request ?? new SyncFromClickUpRequest(), cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var error = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new InvalidOperationException($"Failed to sync developers: {error}");
+            throw new InvalidOperationException(ParseApiError(error, "Failed to sync developers"));
         }
 
         return await response.Content.ReadFromJsonAsync<SyncDevelopersResult>(cancellationToken);

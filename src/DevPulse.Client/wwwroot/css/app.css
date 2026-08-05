@@ -405,6 +405,68 @@ code {
     margin-bottom: 0;
 }
 
+.sync-account-select {
+    min-width: 12rem;
+    max-width: 18rem;
+}
+
+.searchable-select {
+    position: relative;
+    min-width: 12rem;
+    max-width: 18rem;
+}
+
+.searchable-select-toggle {
+    width: 100%;
+    cursor: pointer;
+}
+
+.searchable-select-menu {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    background: var(--dp-surface);
+    overflow: hidden;
+}
+
+.searchable-select-search {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+}
+
+.searchable-select-options {
+    max-height: 10rem;
+    overflow-y: auto;
+}
+
+.searchable-select-option {
+    display: block;
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    border: none;
+    background: transparent;
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--dp-text);
+    cursor: pointer;
+}
+
+.searchable-select-option:hover,
+.searchable-select-option.active {
+    background: var(--dp-primary-light);
+    color: var(--dp-primary);
+}
+
+.developer-filter-bar {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--dp-border);
+    background: var(--dp-surface);
+}
+
 /* Hero (Home) */
 .hero {
     position: relative;

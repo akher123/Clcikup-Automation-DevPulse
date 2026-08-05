@@ -22,5 +22,7 @@ public interface IDeveloperService
         AddDeveloperMappingByEmailRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<Result<SyncDevelopersResult>> SyncFromClickUpAsync(CancellationToken cancellationToken = default);
+    Task<Result<SyncDevelopersResult>> SyncFromClickUpAsync(
+        SyncFromClickUpRequest? request = null,
+        CancellationToken cancellationToken = default);
 }
