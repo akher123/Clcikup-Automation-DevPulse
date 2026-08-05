@@ -27,3 +27,5 @@ public sealed record UpdateUserRequest(
     bool IsActive);
 
 public sealed record ChangePasswordRequest(string NewPassword);
+
+public sealed record SelfChangePasswordRequest(string CurrentPassword, string NewPassword);

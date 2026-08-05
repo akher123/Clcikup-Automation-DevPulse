@@ -89,4 +89,26 @@ public sealed class AuthController : ControllerBase
 
         return Ok(new UserDto(id, email, displayName, role, true, DateTime.UtcNow));
     }
+
+    [Authorize]
+    [HttpPut("change-password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword([FromBody] SelfChangePasswordRequest request, CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out var id))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _authService.ChangeOwnPasswordAsync(id, request, cancellationToken);
+        if (result.IsFailure)
+        {
+            return BadRequest(new { error = result.Error, errors = result.Errors });
+        }
+
+        return NoContent();
+    }
 }

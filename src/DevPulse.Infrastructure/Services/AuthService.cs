@@ -45,6 +45,30 @@ public sealed class AuthService : IAuthService
         return Result<LoginResponse>.Success(new LoginResponse(token, expiresAtUtc, userDto));
     }
 
+    public async Task<Result> ChangeOwnPasswordAsync(Guid userId, SelfChangePasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+        {
+            return Result.Failure("Current password is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            return Result.Failure("New password is required.");
+        }
+
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null || !user.IsActive)
+        {
+            return Result.Failure("User not found.");
+        }
+
+        var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        return result.Succeeded
+            ? Result.Success()
+            : Result.Failure(result.Errors.Select(e => e.Description));
+    }
+
     internal static UserDto MapToDto(ApplicationUser user, string role) =>
         new(user.Id, user.Email ?? string.Empty, user.DisplayName, role, user.IsActive, user.CreatedAtUtc);
 }

@@ -11,6 +11,8 @@ public interface IAuthService
     Task<UserDto?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
 
     Task LogoutAsync(CancellationToken cancellationToken = default);
+
+    Task ChangePasswordAsync(SelfChangePasswordRequest request, CancellationToken cancellationToken = default);
 }
 
 public sealed class AuthService : IAuthService
@@ -49,14 +51,39 @@ public sealed class AuthService : IAuthService
         _authStateProvider.NotifyAuthenticationStateChanged();
     }
 
-    private static string ParseError(string raw)
+    public async Task ChangePasswordAsync(SelfChangePasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.PutAsJsonAsync("api/auth/change-password", request, _jsonOptions, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(ParseError(error, "Failed to change password."));
+        }
+    }
+
+    private static string ParseError(string raw, string fallback = "Login failed.")
     {
         try
         {
             using var document = JsonDocument.Parse(raw);
             if (document.RootElement.TryGetProperty("error", out var errorProperty))
             {
-                return errorProperty.GetString() ?? "Login failed.";
+                return errorProperty.GetString() ?? fallback;
+            }
+
+            if (document.RootElement.TryGetProperty("errors", out var errorsProperty)
+                && errorsProperty.ValueKind == JsonValueKind.Array
+                && errorsProperty.GetArrayLength() > 0)
+            {
+                var messages = errorsProperty.EnumerateArray()
+                    .Select(e => e.GetString())
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .ToList();
+
+                if (messages.Count > 0)
+                {
+                    return string.Join(" ", messages);
+                }
             }
         }
         catch (JsonException)
@@ -64,6 +91,6 @@ public sealed class AuthService : IAuthService
             // Fall through.
         }
 
-        return string.IsNullOrWhiteSpace(raw) ? "Login failed." : raw;
+        return string.IsNullOrWhiteSpace(raw) ? fallback : raw;
     }
 }

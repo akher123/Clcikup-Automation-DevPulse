@@ -80,6 +80,9 @@
                             <div class="nav-user-name">@context.User.Identity?.Name</div>
                             <div class="nav-user-role">@context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</div>
                         </div>
+                        <NavLink class="btn btn-sm btn-outline-light w-100 mt-2" href="change-password" title="Change Password" @onclick="HandleNavigate">
+                            Change Password
+                        </NavLink>
                         <BusyButton CssClass="btn btn-sm btn-outline-light w-100 mt-2"
                                     IsBusy="_isLoggingOut"
                                     BusyText="Signing out..."
@@ -89,6 +92,9 @@
                     }
                     else
                     {
+                        <NavLink class="nav-logout-icon" href="change-password" title="Change Password" aria-label="Change Password" @onclick="HandleNavigate">
+                            <span class="nav-icon bi-key" aria-hidden="true"></span>
+                        </NavLink>
                         <button type="button"
                                 class="nav-logout-icon"
                                 title="Sign Out"

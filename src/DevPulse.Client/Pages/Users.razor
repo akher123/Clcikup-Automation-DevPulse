@@ -24,6 +24,35 @@
     <LoadingIndicator Text="Processing..." />
 }
 
+@if (_resetPasswordUserId.HasValue)
+{
+    <div class="form-card card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Reset Password</h5>
+            <p class="text-muted small mb-3">
+                Set a new password for <strong>@_resetPasswordDisplayName</strong> (@_resetPasswordEmail).
+            </p>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">New Password</label>
+                    <input type="password" class="form-control" @bind="_resetPassword" autocomplete="new-password" />
+                    <div class="form-text">At least 8 characters with uppercase, lowercase, digit, and special character.</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" class="form-control" @bind="_resetPasswordConfirm" autocomplete="new-password" />
+                </div>
+            </div>
+            <div class="mt-3 d-flex gap-2">
+                <BusyButton CssClass="btn btn-warning" IsBusy="_isBusy" BusyText="Resetting..." OnClick="ResetPasswordAsync">
+                    Reset Password
+                </BusyButton>
+                <button class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="HideResetPasswordForm">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
 @if (_showAddForm)
 {
     <div class="form-card card mb-4">
@@ -115,6 +144,7 @@ else
                                 <td>@user.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy")</td>
                                 <td class="text-end">
                                     <button class="btn btn-sm btn-outline-primary me-1" disabled="@_isBusy" @onclick="() => EditUser(user)">Edit</button>
+                                    <button class="btn btn-sm btn-outline-warning me-1" disabled="@_isBusy" @onclick="() => ShowResetPasswordForm(user)">Reset Password</button>
                                     <button class="btn btn-sm btn-outline-danger" disabled="@_isBusy" @onclick="() => DeleteUserAsync(user.Id)">Delete</button>
                                 </td>
                             </tr>
@@ -135,6 +165,11 @@ else
     private bool _isError;
     private bool _editIsActive = true;
     private Guid? _editingUserId;
+    private Guid? _resetPasswordUserId;
+    private string _resetPasswordDisplayName = string.Empty;
+    private string _resetPasswordEmail = string.Empty;
+    private string _resetPassword = string.Empty;
+    private string _resetPasswordConfirm = string.Empty;
     private string? _message;
 
     protected override async Task OnInitializedAsync()
@@ -165,6 +200,7 @@ else
 
     private void ShowAddForm()
     {
+        HideResetPasswordForm();
         _editingUserId = null;
         _newUser.Email = string.Empty;
         _newUser.Password = string.Empty;
@@ -177,6 +213,7 @@ else
 
     private void EditUser(UserDto user)
     {
+        HideResetPasswordForm();
         _editingUserId = user.Id;
         _newUser.Email = user.Email;
         _newUser.DisplayName = user.DisplayName;
@@ -190,6 +227,68 @@ else
     {
         _showAddForm = false;
         _editingUserId = null;
+    }
+
+    private void ShowResetPasswordForm(UserDto user)
+    {
+        HideForm();
+        _resetPasswordUserId = user.Id;
+        _resetPasswordDisplayName = user.DisplayName;
+        _resetPasswordEmail = user.Email;
+        _resetPassword = string.Empty;
+        _resetPasswordConfirm = string.Empty;
+        _message = null;
+    }
+
+    private void HideResetPasswordForm()
+    {
+        _resetPasswordUserId = null;
+        _resetPasswordDisplayName = string.Empty;
+        _resetPasswordEmail = string.Empty;
+        _resetPassword = string.Empty;
+        _resetPasswordConfirm = string.Empty;
+    }
+
+    private async Task ResetPasswordAsync()
+    {
+        if (!_resetPasswordUserId.HasValue)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_resetPassword))
+        {
+            _isError = true;
+            _message = "New password is required.";
+            return;
+        }
+
+        if (_resetPassword != _resetPasswordConfirm)
+        {
+            _isError = true;
+            _message = "Passwords do not match.";
+            return;
+        }
+
+        _isBusy = true;
+        _message = null;
+
+        try
+        {
+            await UserApi.ChangePasswordAsync(_resetPasswordUserId.Value, new ChangePasswordRequest(_resetPassword));
+            _isError = false;
+            _message = $"Password reset for {_resetPasswordDisplayName}.";
+            HideResetPasswordForm();
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
     }
 
     private async Task SaveUserAsync()
