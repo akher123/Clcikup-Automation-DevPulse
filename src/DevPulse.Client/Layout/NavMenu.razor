@@ -65,7 +65,12 @@
                     <div class="nav-user-name">@context.User.Identity?.Name</div>
                     <div class="nav-user-role">@context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</div>
                 </div>
-                <button class="btn btn-sm btn-outline-light w-100 mt-2" @onclick="LogoutAsync">Sign Out</button>
+                <BusyButton CssClass="btn btn-sm btn-outline-light w-100 mt-2"
+                            IsBusy="_isLoggingOut"
+                            BusyText="Signing out..."
+                            OnClick="LogoutAsync">
+                    Sign Out
+                </BusyButton>
             </Authorized>
         </AuthorizeView>
     </div>
@@ -75,6 +80,8 @@
     [Parameter]
     public EventCallback OnNavigate { get; set; }
 
+    private bool _isLoggingOut;
+
     private async Task HandleNavigate()
     {
         await OnNavigate.InvokeAsync();
@@ -82,7 +89,16 @@
 
     private async Task LogoutAsync()
     {
-        await AuthService.LogoutAsync();
-        Navigation.NavigateTo("login", replace: true);
+        _isLoggingOut = true;
+
+        try
+        {
+            await AuthService.LogoutAsync();
+            Navigation.NavigateTo("login", replace: true);
+        }
+        finally
+        {
+            _isLoggingOut = false;
+        }
     }
 }

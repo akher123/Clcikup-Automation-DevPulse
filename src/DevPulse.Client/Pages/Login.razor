@@ -33,7 +33,17 @@
                     <InputText id="password" type="password" class="form-control" @bind-Value="_model.Password" autocomplete="current-password" />
                 </div>
                 <button class="btn btn-primary w-100" disabled="@_isBusy" type="submit">
-                    @(_isBusy ? "Signing in..." : "Sign In")
+                    <span class="btn-busy-content">
+                        @if (_isBusy)
+                        {
+                            <span class="spinner spinner-btn" aria-hidden="true"></span>
+                            <span>Signing in...</span>
+                        }
+                        else
+                        {
+                            <span>Sign In</span>
+                        }
+                    </span>
                 </button>
             </EditForm>
         </div>

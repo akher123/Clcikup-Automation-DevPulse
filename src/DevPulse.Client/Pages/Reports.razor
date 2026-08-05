@@ -36,7 +36,7 @@
                 <label class="form-label">ClickUp Accounts</label>
                 @if (_isLoadingAccounts)
                 {
-                    <p class="text-muted mb-0">Loading accounts...</p>
+                    <LoadingIndicator Text="Loading accounts..." Compact="true" />
                 }
                 else if (_accounts.Count == 0)
                 {
@@ -78,7 +78,7 @@
                 <label class="form-label">Developers</label>
                 @if (_isLoadingDevelopers)
                 {
-                    <p class="text-muted mb-0">Loading developers...</p>
+                    <LoadingIndicator Text="Loading developers..." Compact="true" />
                 }
                 else if (_developers.Count == 0)
                 {
@@ -135,34 +135,32 @@
                     <input class="form-check-input" type="checkbox" id="includeClosed" @bind="_includeClosed" />
                     <label class="form-check-label" for="includeClosed">Include closed tasks</label>
                 </div>
-                <button class="btn btn-primary w-100" disabled="@(_isBusy || !FilteredDevelopers().Any())" @onclick="GenerateReportAsync">
-                    @if (_isBusy)
-                    {
-                        <span>Generating...</span>
-                    }
-                    else
-                    {
-                        <span>Generate Report</span>
-                    }
-                </button>
+                <BusyButton CssClass="btn btn-primary w-100"
+                            IsBusy="_isBusy"
+                            BusyText="Generating..."
+                            Disabled="@(!FilteredDevelopers().Any())"
+                            OnClick="GenerateReportAsync">
+                    Generate Report
+                </BusyButton>
             </div>
         </div>
     </div>
 </div>
 
+@if (_isBusy && _report is null)
+{
+    <LoadingIndicator Text="Generating report..." />
+}
+
 @if (_report is not null)
 {
     <div class="d-flex justify-content-end mb-3">
-        <button class="btn btn-success" disabled="@_isExporting" @onclick="ExportToExcelAsync">
-            @if (_isExporting)
-            {
-                <span>Exporting...</span>
-            }
-            else
-            {
-                <span>Export to Excel</span>
-            }
-        </button>
+        <BusyButton CssClass="btn btn-success"
+                    IsBusy="_isExporting"
+                    BusyText="Exporting..."
+                    OnClick="ExportToExcelAsync">
+            Export to Excel
+        </BusyButton>
     </div>
 
     <div class="row g-3 mb-4">

@@ -353,6 +353,24 @@ a:hover, .btn-link:hover {
     border-top-color: var(--dp-primary);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+.loading-inline-compact {
+    padding: 0;
+    gap: 0.5rem;
+}
+
+.spinner-btn {
+    width: 1rem;
+    height: 1rem;
+}
+
+.btn-busy-content {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
 @keyframes spin {

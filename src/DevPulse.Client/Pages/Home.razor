@@ -20,7 +20,7 @@
 
 @if (_isLoadingReport)
 {
-    <div class="text-muted mb-4">Loading developer work summary...</div>
+    <LoadingIndicator Text="Loading developer work summary..." />
 }
 else if (_report is not null)
 {
