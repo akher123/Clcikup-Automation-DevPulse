@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DevPulse.Application/DevPulse.Application.csproj" />
+    <Project Path="src/DevPulse.Client/DevPulse.Client.csproj" />
+    <Project Path="src/DevPulse.Domain/DevPulse.Domain.csproj" />
+    <Project Path="src/DevPulse.Infrastructure/DevPulse.Infrastructure.csproj" />
+    <Project Path="src/DevPulse.Server/DevPulse.Server.csproj" />
+    <Project Path="src/DevPulse.Shared/DevPulse.Shared.csproj" />
+  </Folder>
+</Solution>
