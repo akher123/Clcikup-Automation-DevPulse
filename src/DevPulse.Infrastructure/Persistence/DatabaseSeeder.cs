@@ -30,8 +30,8 @@ public static class DatabaseSeeder
             }
         }
 
-        await SeedAdminUserAsync(userManager, seedSettings, logger);
-        await SeedDemoClickUpAccountsAsync(dbContext, tokenProtector, logger);
+       // await SeedAdminUserAsync(userManager, seedSettings, logger);
+       // await SeedDemoClickUpAccountsAsync(dbContext, tokenProtector, logger);
     }
 
     private static async Task SeedAdminUserAsync(
