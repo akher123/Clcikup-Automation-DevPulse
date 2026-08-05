@@ -254,10 +254,14 @@ public sealed class DeveloperService : IDeveloperService
                 {
                     continue;
                 }
-
+                if (string.IsNullOrEmpty(member.Username))
+                {
+                    continue;
+                }
                 var developer = await _developerRepository.GetByEmailAsync(normalizedEmail, cancellationToken);
                 if (developer is null)
                 {
+                  
                     developer = new Developer
                     {
                         Name = member.Username.Trim(),
