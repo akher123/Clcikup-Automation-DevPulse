@@ -4,12 +4,14 @@ namespace DevPulse.Shared.Contracts.Reports;
 
 public record DeveloperReportRequest(
     [property: JsonPropertyName("developerIds")] IReadOnlyList<Guid> DeveloperIds,
-    [property: JsonPropertyName("month")] DateOnly Month,
+    [property: JsonPropertyName("fromDate")] DateOnly FromDate,
+    [property: JsonPropertyName("toDate")] DateOnly ToDate,
     [property: JsonPropertyName("includeClosed")] bool IncludeClosed = true,
     [property: JsonPropertyName("accountIds")] IReadOnlyList<Guid>? AccountIds = null);
 
 public record DeveloperReportResponse(
-    [property: JsonPropertyName("month")] DateOnly Month,
+    [property: JsonPropertyName("fromDate")] DateOnly FromDate,
+    [property: JsonPropertyName("toDate")] DateOnly ToDate,
     [property: JsonPropertyName("totalTasksCompleted")] int TotalTasksCompleted,
     [property: JsonPropertyName("workspaceCount")] int WorkspaceCount,
     [property: JsonPropertyName("developers")] IReadOnlyList<DeveloperReportSummaryDto> Developers,

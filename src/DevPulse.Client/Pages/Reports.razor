@@ -15,7 +15,7 @@
 <div class="page-header">
     <div>
         <h1>Developer Reports</h1>
-        <p class="text-muted">Filter by ClickUp account and developers, then generate unified task and productivity reports.</p>
+        <p class="text-muted">Filter by date range, ClickUp account, and developers, then generate unified task and productivity reports.</p>
     </div>
 </div>
 
@@ -29,8 +29,12 @@
         <h5 class="card-title">Report Filters</h5>
         <div class="row g-3 align-items-start">
             <div class="col-md-2">
-                <label class="form-label">Month</label>
-                <input type="month" class="form-control" @bind="_selectedMonth" @bind:format="yyyy-MM" />
+                <label class="form-label">From</label>
+                <input type="date" class="form-control" @bind="_fromDate" @bind:format="yyyy-MM-dd" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">To</label>
+                <input type="date" class="form-control" @bind="_toDate" @bind:format="yyyy-MM-dd" />
             </div>
             <div class="col-md-3">
                 <label class="form-label">ClickUp Accounts</label>
@@ -74,7 +78,7 @@
                     </div>
                 }
             </div>
-            <div class="col-md-5">
+            <div class="col-md-3">
                 <label class="form-label">Developers</label>
                 @if (_isLoadingDevelopers)
                 {
@@ -169,7 +173,7 @@
                 <div class="card-body">
                     <div class="summary-label">Tasks Completed</div>
                     <div class="summary-value">@_report.TotalTasksCompleted</div>
-                    <div class="text-muted small">@FormatMonth(_report.Month)</div>
+                    <div class="text-muted small">@FormatPeriod(_report.FromDate, _report.ToDate)</div>
                 </div>
             </div>
         </div>
@@ -254,7 +258,7 @@
             <h5 class="card-title card-title-bar">Task Details (@_report.Tasks.Count)</h5>
             @if (_report.Tasks.Count == 0)
             {
-                <p class="text-muted mb-0 p-4">No tasks completed in the selected month for the chosen developers.</p>
+                <p class="text-muted mb-0 p-4">No tasks completed in the selected date range for the chosen developers.</p>
             }
             else
             {
@@ -318,7 +322,8 @@
     private readonly HashSet<Guid> _selectedAccountIds = [];
     private readonly HashSet<Guid> _selectedDeveloperIds = [];
     private DeveloperReportResponse? _report;
-    private DateTime _selectedMonth = new(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+    private DateTime _fromDate = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime _toDate = DateTime.Today;
     private bool _includeClosed = true;
     private bool _selectAllAccounts;
     private bool _selectAll;
@@ -474,7 +479,15 @@
             return;
         }
 
-        var month = DateOnly.FromDateTime(_selectedMonth);
+        var fromDate = DateOnly.FromDateTime(_fromDate);
+        var toDate = DateOnly.FromDateTime(_toDate);
+
+        if (fromDate > toDate)
+        {
+            _isError = true;
+            _message = "From date must be on or before to date.";
+            return;
+        }
 
         _isBusy = true;
         _message = null;
@@ -488,13 +501,14 @@
 
             var request = new DeveloperReportRequest(
                 _selectedDeveloperIds.ToList(),
-                month,
+                fromDate,
+                toDate,
                 _includeClosed,
                 accountIds);
 
             _report = await ReportApi.GenerateDeveloperReportAsync(request);
             _isError = false;
-            _message = $"Report generated for {FormatMonth(month)}.";
+            _message = $"Report generated for {FormatPeriod(fromDate, toDate)}.";
         }
         catch (Exception ex)
         {
@@ -520,7 +534,7 @@
         try
         {
             var fileBytes = await ReportApi.ExportDeveloperReportToExcelAsync(_report);
-            var fileName = $"{AppBranding.CompanyName}-Developer-Work-{_report.Month:yyyy-MM}.xlsx";
+            var fileName = $"{AppBranding.CompanyName}-Developer-Work-{_report.FromDate:yyyy-MM-dd}_to_{_report.ToDate:yyyy-MM-dd}.xlsx";
             const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             var base64 = Convert.ToBase64String(fileBytes);
             var module = await GetFileDownloadModuleAsync();
@@ -539,8 +553,21 @@
         }
     }
 
-    private static string FormatMonth(DateOnly month) =>
-        month.ToDateTime(TimeOnly.MinValue).ToString("MMMM yyyy");
+    private static string FormatPeriod(DateOnly fromDate, DateOnly toDate)
+    {
+        if (fromDate == toDate)
+        {
+            return fromDate.ToString("MMM d, yyyy");
+        }
+
+        if (fromDate.Year == toDate.Year && fromDate.Month == toDate.Month && fromDate.Day == 1
+            && toDate.Day == DateTime.DaysInMonth(toDate.Year, toDate.Month))
+        {
+            return fromDate.ToString("MMMM yyyy");
+        }
+
+        return $"{fromDate:MMM d, yyyy} – {toDate:MMM d, yyyy}";
+    }
 
     private static string FormatUnixDate(long? unixMs)
     {

@@ -10,7 +10,7 @@
 <div class="hero">
     <h1>@AppBranding.CompanyName Developer Work</h1>
     <p class="lead">
-        Unified monthly developer performance across ClickUp workspaces — track completed tasks, productivity trends, and workspace breakdowns for the @AppBranding.CompanyName team.
+        Unified developer performance across ClickUp workspaces — track completed tasks, productivity trends, and workspace breakdowns for the @AppBranding.CompanyName team.
     </p>
     <div class="hero-actions">
         <a class="btn btn-primary btn-lg" href="reports">View Full Reports</a>
@@ -25,7 +25,7 @@
 else if (_report is not null)
 {
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h4 mb-0">@FormatMonth(_report.Month) Overview</h2>
+        <h2 class="h4 mb-0">@FormatPeriod(_report.FromDate, _report.ToDate) Overview</h2>
         <a class="btn btn-sm btn-outline-primary" href="reports">Open Reports</a>
     </div>
 
@@ -44,7 +44,7 @@ else if (_report is not null)
                 <div class="card-body">
                     <div class="summary-label">Active Developers</div>
                     <div class="summary-value">@_report.Developers.Count(d => d.TotalTasks > 0)</div>
-                    <div class="text-muted small">with completed tasks this month</div>
+                    <div class="text-muted small">with completed tasks in period</div>
                 </div>
             </div>
         </div>
@@ -200,9 +200,10 @@ else if (_report is not null)
                 return;
             }
 
-            var month = new DateOnly(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var fromDate = new DateOnly(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var toDate = DateOnly.FromDateTime(DateTime.Today);
             _report = await ReportApi.GenerateDeveloperReportAsync(
-                new DeveloperReportRequest(activeDeveloperIds, month, IncludeClosed: true));
+                new DeveloperReportRequest(activeDeveloperIds, fromDate, toDate, IncludeClosed: true));
         }
         catch
         {
@@ -214,6 +215,19 @@ else if (_report is not null)
         }
     }
 
-    private static string FormatMonth(DateOnly month) =>
-        month.ToString("MMMM yyyy");
+    private static string FormatPeriod(DateOnly fromDate, DateOnly toDate)
+    {
+        if (fromDate == toDate)
+        {
+            return fromDate.ToString("MMM d, yyyy");
+        }
+
+        if (fromDate.Year == toDate.Year && fromDate.Month == toDate.Month && fromDate.Day == 1
+            && toDate.Day == DateTime.DaysInMonth(toDate.Year, toDate.Month))
+        {
+            return fromDate.ToString("MMMM yyyy");
+        }
+
+        return $"{fromDate:MMM d, yyyy} – {toDate:MMM d, yyyy}";
+    }
 }

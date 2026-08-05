@@ -44,6 +44,11 @@ public sealed class ReportService : IReportService
             return Result<DeveloperReportResponse>.Failure("Select at least one developer.");
         }
 
+        if (request.FromDate > request.ToDate)
+        {
+            return Result<DeveloperReportResponse>.Failure("From date must be on or before to date.");
+        }
+
         var developers = await _developerRepository.GetByIdsWithMappingsAsync(request.DeveloperIds, cancellationToken);
         if (developers.Count == 0)
         {
@@ -97,7 +102,11 @@ public sealed class ReportService : IReportService
                 if (DemoSeedData.IsDemoWorkspace(account.WorkspaceId))
                 {
                     reportTasks.AddRange(
-                        DemoReportDataProvider.GetTasksForMonth(request.Month, account, entry.Developer));
+                        DemoReportDataProvider.GetTasksForDateRange(
+                            request.FromDate,
+                            request.ToDate,
+                            account,
+                            entry.Developer));
                     continue;
                 }
 
@@ -106,9 +115,11 @@ public sealed class ReportService : IReportService
                 var query = new ClickUpTaskQueryRequest(
                     account.Id,
                     [mapping.ClickUpUserId],
-                    request.Month,
+                    Month: null,
                     request.IncludeClosed,
-                    Page: 0);
+                    Page: 0,
+                    request.FromDate,
+                    request.ToDate);
 
                 var tasks = await FetchAllTasksAsync(token, account, query, cancellationToken);
 
@@ -139,15 +150,17 @@ public sealed class ReportService : IReportService
             .ToList();
 
         var response = new DeveloperReportResponse(
-            request.Month,
+            request.FromDate,
+            request.ToDate,
             reportTasks.Count,
             queriedWorkspaces.Count,
             summaries,
             reportTasks.OrderBy(t => t.DeveloperName).ThenBy(t => t.AccountName).ThenBy(t => t.TaskName).ToList());
 
         _logger.LogInformation(
-            "Generated developer report for {Month}: {TaskCount} tasks across {WorkspaceCount} workspaces",
-            request.Month,
+            "Generated developer report for {FromDate} to {ToDate}: {TaskCount} tasks across {WorkspaceCount} workspaces",
+            request.FromDate,
+            request.ToDate,
             response.TotalTasksCompleted,
             response.WorkspaceCount);
 

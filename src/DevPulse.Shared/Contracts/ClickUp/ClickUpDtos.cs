@@ -64,7 +64,9 @@ public record ClickUpTaskQueryRequest(
     IReadOnlyList<int>? AssigneeIds,
     DateOnly? Month,
     bool IncludeClosed = true,
-    int Page = 0);
+    int Page = 0,
+    DateOnly? FromDate = null,
+    DateOnly? ToDate = null);
 
 public record ClickUpTaskQueryResponse(
     Guid AccountId,

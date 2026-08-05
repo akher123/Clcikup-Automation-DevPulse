@@ -50,6 +50,7 @@
     --dp-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --dp-header-height: 4rem;
     --dp-sidebar-width: 16.5rem;
+    --dp-sidebar-collapsed-width: 4rem;
 }
 
 *, *::before, *::after {

@@ -3,80 +3,111 @@
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 
-<div class="nav-brand">
-    <a class="brand-link" href="">
-        <span class="brand-logo-wrap">
-            <img class="brand-logo" src="images/datavanced-logo.svg" alt="@AppBranding.CompanyName" />
-        </span>
-        <span class="brand-sub">@AppBranding.NavSubtitle</span>
-    </a>
-</div>
+<div class="nav-menu @(IsCollapsed ? "collapsed" : null)">
+    <div class="nav-brand">
+        <a class="brand-link" href="" title="@AppBranding.CompanyName">
+            <span class="brand-logo-wrap">
+                <img class="brand-logo" src="images/datavanced-logo.svg" alt="@AppBranding.CompanyName" />
+            </span>
+            @if (!IsCollapsed)
+            {
+                <span class="brand-sub">@AppBranding.NavSubtitle</span>
+            }
+        </a>
+    </div>
 
-<div class="nav-scrollable">
-    <nav class="nav flex-column">
-        <AuthorizeView Roles="@AppRoles.Admin">
-            <Authorized>
-                <div class="nav-section-label">Main</div>
+    <div class="nav-scrollable">
+        <nav class="nav flex-column">
+            <AuthorizeView Roles="@AppRoles.Admin">
+                <Authorized>
+                    @if (!IsCollapsed)
+                    {
+                        <div class="nav-section-label">Main</div>
+                    }
 
-                <div class="nav-item">
-                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All" @onclick="HandleNavigate">
-                        <span class="nav-icon bi-house" aria-hidden="true"></span>
-                        <span>Dashboard</span>
-                    </NavLink>
-                </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="" Match="NavLinkMatch.All" title="Dashboard" @onclick="HandleNavigate">
+                            <span class="nav-icon bi-house" aria-hidden="true"></span>
+                            <span class="nav-label">Dashboard</span>
+                        </NavLink>
+                    </div>
 
-                <div class="nav-section-label">Management</div>
+                    @if (!IsCollapsed)
+                    {
+                        <div class="nav-section-label">Management</div>
+                    }
 
-                <div class="nav-item">
-                    <NavLink class="nav-link" href="clickup-accounts" @onclick="HandleNavigate">
-                        <span class="nav-icon bi-plug" aria-hidden="true"></span>
-                        <span>ClickUp Accounts</span>
-                    </NavLink>
-                </div>
-                <div class="nav-item">
-                    <NavLink class="nav-link" href="developers" @onclick="HandleNavigate">
-                        <span class="nav-icon bi-people" aria-hidden="true"></span>
-                        <span>Developers</span>
-                    </NavLink>
-                </div>
-                <div class="nav-item">
-                    <NavLink class="nav-link" href="users" @onclick="HandleNavigate">
-                        <span class="nav-icon bi-shield" aria-hidden="true"></span>
-                        <span>Users</span>
-                    </NavLink>
-                </div>
-            </Authorized>
-        </AuthorizeView>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="clickup-accounts" title="ClickUp Accounts" @onclick="HandleNavigate">
+                            <span class="nav-icon bi-plug" aria-hidden="true"></span>
+                            <span class="nav-label">ClickUp Accounts</span>
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="developers" title="Developers" @onclick="HandleNavigate">
+                            <span class="nav-icon bi-people" aria-hidden="true"></span>
+                            <span class="nav-label">Developers</span>
+                        </NavLink>
+                    </div>
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="users" title="Users" @onclick="HandleNavigate">
+                            <span class="nav-icon bi-shield" aria-hidden="true"></span>
+                            <span class="nav-label">Users</span>
+                        </NavLink>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
 
-        <div class="nav-section-label">Analytics</div>
+            @if (!IsCollapsed)
+            {
+                <div class="nav-section-label">Analytics</div>
+            }
 
-        <div class="nav-item">
-            <NavLink class="nav-link" href="reports" @onclick="HandleNavigate">
-                <span class="nav-icon bi-chart" aria-hidden="true"></span>
-                <span>Reports</span>
-            </NavLink>
+            <div class="nav-item">
+                <NavLink class="nav-link" href="reports" title="Reports" @onclick="HandleNavigate">
+                    <span class="nav-icon bi-chart" aria-hidden="true"></span>
+                    <span class="nav-label">Reports</span>
+                </NavLink>
+            </div>
+        </nav>
+
+        <div class="nav-footer">
+            <AuthorizeView>
+                <Authorized>
+                    @if (!IsCollapsed)
+                    {
+                        <div class="nav-user-info">
+                            <div class="nav-user-name">@context.User.Identity?.Name</div>
+                            <div class="nav-user-role">@context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</div>
+                        </div>
+                        <BusyButton CssClass="btn btn-sm btn-outline-light w-100 mt-2"
+                                    IsBusy="_isLoggingOut"
+                                    BusyText="Signing out..."
+                                    OnClick="LogoutAsync">
+                            Sign Out
+                        </BusyButton>
+                    }
+                    else
+                    {
+                        <button type="button"
+                                class="nav-logout-icon"
+                                title="Sign Out"
+                                aria-label="Sign Out"
+                                disabled="@_isLoggingOut"
+                                @onclick="LogoutAsync">
+                            <span class="nav-icon bi-logout" aria-hidden="true"></span>
+                        </button>
+                    }
+                </Authorized>
+            </AuthorizeView>
         </div>
-    </nav>
-
-    <div class="nav-footer">
-        <AuthorizeView>
-            <Authorized>
-                <div class="nav-user-info">
-                    <div class="nav-user-name">@context.User.Identity?.Name</div>
-                    <div class="nav-user-role">@context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</div>
-                </div>
-                <BusyButton CssClass="btn btn-sm btn-outline-light w-100 mt-2"
-                            IsBusy="_isLoggingOut"
-                            BusyText="Signing out..."
-                            OnClick="LogoutAsync">
-                    Sign Out
-                </BusyButton>
-            </Authorized>
-        </AuthorizeView>
     </div>
 </div>
 
 @code {
+    [Parameter]
+    public bool IsCollapsed { get; set; }
+
     [Parameter]
     public EventCallback OnNavigate { get; set; }
 

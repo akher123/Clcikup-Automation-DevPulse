@@ -280,7 +280,14 @@ public sealed class ClickUpApiClient : IClickUpApiClient
             $"include_closed={(query.IncludeClosed ? "true" : "false")}"
         };
 
-        if (query.Month.HasValue)
+        if (query.FromDate.HasValue && query.ToDate.HasValue)
+        {
+            var start = new DateTimeOffset(query.FromDate.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
+            var end = new DateTimeOffset(query.ToDate.Value.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
+            parts.Add($"date_done_gt={start}");
+            parts.Add($"date_done_lt={end}");
+        }
+        else if (query.Month.HasValue)
         {
             var start = new DateTimeOffset(query.Month.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
             var end = new DateTimeOffset(query.Month.Value.AddMonths(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();

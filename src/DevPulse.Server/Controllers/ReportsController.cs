@@ -56,7 +56,7 @@ public sealed class ReportsController : ControllerBase
         try
         {
             var fileBytes = _reportExportService.ExportDeveloperReportToExcel(report);
-            var fileName = $"{AppBranding.CompanyName}-Developer-Work-{report.Month:yyyy-MM}.xlsx";
+            var fileName = $"{AppBranding.CompanyName}-Developer-Work-{report.FromDate:yyyy-MM-dd}_to_{report.ToDate:yyyy-MM-dd}.xlsx";
             const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             return File(fileBytes, contentType, fileName);
         }

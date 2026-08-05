@@ -1,13 +1,16 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="app-shell">
-    <aside class="sidebar @(_sidebarOpen ? "open" : null)">
-        <NavMenu OnNavigate="CloseSidebar" />
+<div class="app-shell @(_sidebarCollapsed ? "sidebar-collapsed" : null)">
+    <aside class="sidebar @(_sidebarCollapsed ? "collapsed" : null)">
+        <NavMenu IsCollapsed="_sidebarCollapsed" OnNavigate="OnNavNavigate" />
     </aside>
 
     <div class="main-wrapper">
         <header class="app-header">
-            <button class="sidebar-toggle d-lg-none" @onclick="ToggleSidebar" aria-label="Toggle navigation">
+            <button class="sidebar-toggle"
+                    @onclick="ToggleSidebar"
+                    aria-label="@(_sidebarCollapsed ? "Expand navigation" : "Collapse navigation")"
+                    title="@(_sidebarCollapsed ? "Expand navigation" : "Collapse navigation")">
                 <span class="toggle-bar"></span>
                 <span class="toggle-bar"></span>
                 <span class="toggle-bar"></span>
@@ -18,22 +21,20 @@
         </header>
 
         <main class="app-content">
-            <div class="content-container">
+            <div class="container-fluid px-0 px-md-2 px-xl-3">
                 @Body
             </div>
         </main>
     </div>
-
-    @if (_sidebarOpen)
-    {
-        <div class="sidebar-backdrop d-lg-none" @onclick="ToggleSidebar"></div>
-    }
 </div>
 
 @code {
-    private bool _sidebarOpen;
+    private bool _sidebarCollapsed;
 
-    private void ToggleSidebar() => _sidebarOpen = !_sidebarOpen;
+    private void ToggleSidebar() => _sidebarCollapsed = !_sidebarCollapsed;
 
-    private void CloseSidebar() => _sidebarOpen = false;
+    private void OnNavNavigate()
+    {
+        // Keep icon-rail behavior; no-op for desktop collapse mode.
+    }
 }

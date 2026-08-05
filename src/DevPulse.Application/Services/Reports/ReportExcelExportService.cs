@@ -31,7 +31,7 @@ public sealed class ReportExcelExportService : IReportExportService
     private static void AddOverviewSheet(XLWorkbook workbook, DeveloperReportResponse report)
     {
         var ws = workbook.Worksheets.Add("Overview");
-        var monthLabel = report.Month.ToDateTime(TimeOnly.MinValue).ToString("MMMM yyyy");
+        var periodLabel = FormatPeriod(report.FromDate, report.ToDate);
         var developersWithTasks = report.Developers.Count(d => d.TotalTasks > 0);
 
         ws.Cell(1, 1).Value = $"{AppBranding.CompanyName} Developer Work Report";
@@ -39,7 +39,7 @@ public sealed class ReportExcelExportService : IReportExportService
         StyleTitleRow(ws.Range(1, 1, 1, 4));
 
         ws.Cell(3, 1).Value = "Report Period";
-        ws.Cell(3, 2).Value = monthLabel;
+        ws.Cell(3, 2).Value = periodLabel;
         ws.Cell(4, 1).Value = "Generated";
         ws.Cell(4, 2).Value = DateTime.Now;
         ws.Cell(4, 2).Style.DateFormat.Format = "MMM d, yyyy h:mm tt";
@@ -182,6 +182,22 @@ public sealed class ReportExcelExportService : IReportExportService
         ws.Column(8).Width = 40;
         ws.Range(1, 1, Math.Max(1, tasks.Count + 1), headers.Length).SetAutoFilter();
         ws.SheetView.FreezeRows(1);
+    }
+
+    private static string FormatPeriod(DateOnly fromDate, DateOnly toDate)
+    {
+        if (fromDate == toDate)
+        {
+            return fromDate.ToString("MMM d, yyyy");
+        }
+
+        if (fromDate.Year == toDate.Year && fromDate.Month == toDate.Month && fromDate.Day == 1
+            && toDate.Day == DateTime.DaysInMonth(toDate.Year, toDate.Month))
+        {
+            return fromDate.ToString("MMMM yyyy");
+        }
+
+        return $"{fromDate:MMM d, yyyy} – {toDate:MMM d, yyyy}";
     }
 
     private static void StyleTitleRow(IXLRange range)

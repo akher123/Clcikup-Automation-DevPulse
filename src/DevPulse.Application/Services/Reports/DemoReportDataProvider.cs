@@ -40,6 +40,35 @@ public static class DemoReportDataProvider
         new(MarcusWebbId(), DemoSeedData.AcmeAccountId, "dv-4003", "Validate API contract changes", "Acme QA", 6, 10, 4.0),
     ];
 
+    public static IReadOnlyList<DeveloperReportTaskDto> GetTasksForDateRange(
+        DateOnly fromDate,
+        DateOnly toDate,
+        ClickUpAccount account,
+        Developer developer)
+    {
+        if (!DemoSeedData.IsDemoWorkspace(account.WorkspaceId) || fromDate > toDate)
+        {
+            return [];
+        }
+
+        var fromMs = new DateTimeOffset(fromDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
+        var toExclusiveMs = new DateTimeOffset(toDate.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
+
+        var tasks = new List<DeveloperReportTaskDto>();
+        var monthCursor = new DateOnly(fromDate.Year, fromDate.Month, 1);
+        var endMonth = new DateOnly(toDate.Year, toDate.Month, 1);
+
+        while (monthCursor <= endMonth)
+        {
+            tasks.AddRange(GetTasksForMonth(monthCursor, account, developer));
+            monthCursor = monthCursor.AddMonths(1);
+        }
+
+        return tasks
+            .Where(t => t.DateDone.HasValue && t.DateDone.Value >= fromMs && t.DateDone.Value < toExclusiveMs)
+            .ToList();
+    }
+
     public static IReadOnlyList<DeveloperReportTaskDto> GetTasksForMonth(
         DateOnly month,
         ClickUpAccount account,
