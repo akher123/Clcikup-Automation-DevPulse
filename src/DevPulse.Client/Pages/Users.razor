@@ -1,0 +1,270 @@
+@page "/users"
+@attribute [Authorize(Roles = AppRoles.Admin)]
+@using DevPulse.Shared.Constants
+@using DevPulse.Shared.Contracts.Auth
+@inject IUserApiClient UserApi
+
+<PageTitle>@AppBranding.PageTitle("User Management")</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>User Management</h1>
+        <p class="text-muted">Create and manage application users and their roles.</p>
+    </div>
+    <button class="btn btn-primary" @onclick="ShowAddForm">Add User</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
+}
+
+@if (_showAddForm)
+{
+    <div class="form-card card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">@(_editingUserId.HasValue ? "Edit User" : "Add User")</h5>
+            <div class="row g-3">
+                @if (!_editingUserId.HasValue)
+                {
+                    <div class="col-md-4">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" @bind="_newUser.Email" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-control" @bind="_newUser.Password" />
+                        <div class="form-text">At least 8 characters with uppercase, lowercase, digit, and special character.</div>
+                    </div>
+                }
+                <div class="col-md-4">
+                    <label class="form-label">Display Name</label>
+                    <input class="form-control" @bind="_newUser.DisplayName" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Role</label>
+                    <select class="form-select" @bind="_newUser.Role">
+                        @foreach (var role in AppRoles.All)
+                        {
+                            <option value="@role">@role</option>
+                        }
+                    </select>
+                </div>
+                @if (_editingUserId.HasValue)
+                {
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="userActive" @bind="_editIsActive" />
+                            <label class="form-check-label" for="userActive">Active</label>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="mt-3 d-flex gap-2">
+                <button class="btn btn-success" disabled="@_isBusy" @onclick="SaveUserAsync">
+                    @(_editingUserId.HasValue ? "Update" : "Create")
+                </button>
+                <button class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="HideForm">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_isLoading)
+{
+    <div class="loading-inline">
+        <span class="spinner" aria-hidden="true"></span>
+        Loading users...
+    </div>
+}
+else
+{
+    <div class="data-card card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in _users)
+                        {
+                            <tr>
+                                <td><strong>@user.DisplayName</strong></td>
+                                <td>@user.Email</td>
+                                <td><span class="badge @GetRoleBadgeClass(user.Role)">@user.Role</span></td>
+                                <td>
+                                    @if (user.IsActive)
+                                    {
+                                        <span class="badge text-bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge text-bg-secondary">Inactive</span>
+                                    }
+                                </td>
+                                <td>@user.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy")</td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditUser(user)">Edit</button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteUserAsync(user.Id)">Delete</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private readonly List<UserDto> _users = [];
+    private readonly UserFormModel _newUser = new();
+    private bool _showAddForm;
+    private bool _isLoading = true;
+    private bool _isBusy;
+    private bool _isError;
+    private bool _editIsActive = true;
+    private Guid? _editingUserId;
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _isLoading = true;
+
+        try
+        {
+            var users = await UserApi.GetUsersAsync();
+            _users.Clear();
+            _users.AddRange(users);
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void ShowAddForm()
+    {
+        _editingUserId = null;
+        _newUser.Email = string.Empty;
+        _newUser.Password = string.Empty;
+        _newUser.DisplayName = string.Empty;
+        _newUser.Role = AppRoles.User;
+        _editIsActive = true;
+        _showAddForm = true;
+        _message = null;
+    }
+
+    private void EditUser(UserDto user)
+    {
+        _editingUserId = user.Id;
+        _newUser.Email = user.Email;
+        _newUser.DisplayName = user.DisplayName;
+        _newUser.Role = user.Role;
+        _editIsActive = user.IsActive;
+        _showAddForm = true;
+        _message = null;
+    }
+
+    private void HideForm()
+    {
+        _showAddForm = false;
+        _editingUserId = null;
+    }
+
+    private async Task SaveUserAsync()
+    {
+        _isBusy = true;
+        _message = null;
+
+        try
+        {
+            if (_editingUserId.HasValue)
+            {
+                await UserApi.UpdateUserAsync(_editingUserId.Value, new UpdateUserRequest(
+                    _newUser.DisplayName,
+                    _newUser.Role,
+                    _editIsActive));
+                _isError = false;
+                _message = "User updated.";
+            }
+            else
+            {
+                await UserApi.CreateUserAsync(new CreateUserRequest(
+                    _newUser.Email,
+                    _newUser.Password,
+                    _newUser.DisplayName,
+                    _newUser.Role));
+                _isError = false;
+                _message = "User created.";
+            }
+
+            HideForm();
+            await LoadUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task DeleteUserAsync(Guid id)
+    {
+        _isBusy = true;
+        _message = null;
+
+        try
+        {
+            await UserApi.DeleteUserAsync(id);
+            _isError = false;
+            _message = "User deleted.";
+            await LoadUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private static string GetRoleBadgeClass(string role) =>
+        role == AppRoles.Admin ? "text-bg-primary" : "text-bg-light text-dark";
+
+    private sealed class UserFormModel
+    {
+        public string Email { get; set; } = string.Empty;
+
+        public string Password { get; set; } = string.Empty;
+
+        public string DisplayName { get; set; } = string.Empty;
+
+        public string Role { get; set; } = AppRoles.User;
+    }
+}

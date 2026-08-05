@@ -1,10 +1,17 @@
+using DevPulse.Application.Abstractions.Auth;
 using DevPulse.Application.Abstractions.Persistence;
 using DevPulse.Application.Abstractions.Security;
 using DevPulse.Application.Abstractions.ClickUp;
 using DevPulse.Infrastructure.ClickUp;
+using DevPulse.Infrastructure.Identity;
 using DevPulse.Infrastructure.Persistence;
 using DevPulse.Infrastructure.Persistence.Repositories;
 using DevPulse.Infrastructure.Security;
+using DevPulse.Infrastructure.Services;
+using DevPulse.Shared.Constants;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,16 +22,54 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DevPulse")
-            ?? "Data Source=devpulse.db";
-
+        var connectionString = configuration.GetConnectionString("DevPulse");
         services.AddDbContext<DevPulseDbContext>(options =>
-            options.UseSqlite(connectionString));
+            options.UseSqlServer(connectionString));
+
+        services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+        services.Configure<SeedAdminSettings>(configuration.GetSection(SeedAdminSettings.SectionName));
+
+        services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
+            {
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = true;
+                options.Password.RequiredLength = 8;
+                options.User.RequireUniqueEmail = true;
+            })
+            .AddEntityFrameworkStores<DevPulseDbContext>()
+            .AddDefaultTokenProviders();
+
+        services.ConfigureApplicationCookie(options =>
+        {
+            options.Cookie.Name = "DevPulse.Auth";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SameSite = SameSiteMode.Lax;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            options.SlidingExpiration = true;
+            options.ExpireTimeSpan = TimeSpan.FromHours(8);
+
+            options.Events.OnRedirectToLogin = context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            };
+
+            options.Events.OnRedirectToAccessDenied = context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            };
+        });
 
         services.AddDataProtection();
         services.AddScoped<ITokenProtector, DataProtectionTokenProtector>();
         services.AddScoped<IClickUpAccountRepository, ClickUpAccountRepository>();
         services.AddScoped<IDeveloperRepository, DeveloperRepository>();
+        services.AddSingleton<JwtTokenGenerator>();
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUserManagementService, UserManagementService>();
 
         services.AddHttpClient<IClickUpApiClient, ClickUpApiClient>(client =>
         {
@@ -40,33 +85,7 @@ public static class DependencyInjection
     {
         await using var scope = serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<DevPulseDbContext>();
-        await dbContext.Database.EnsureCreatedAsync();
-        await EnsureDeveloperTablesAsync(dbContext);
-    }
-
-    private static async Task EnsureDeveloperTablesAsync(DevPulseDbContext dbContext)
-    {
-        await dbContext.Database.ExecuteSqlRawAsync("""
-            CREATE TABLE IF NOT EXISTS Developers (
-                Id TEXT NOT NULL PRIMARY KEY,
-                Name TEXT NOT NULL,
-                Email TEXT NULL,
-                IsActive INTEGER NOT NULL DEFAULT 1,
-                CreatedAtUtc TEXT NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS IX_Developers_Email ON Developers (Email);
-            CREATE TABLE IF NOT EXISTS DeveloperClickUpMappings (
-                Id TEXT NOT NULL PRIMARY KEY,
-                DeveloperId TEXT NOT NULL,
-                ClickUpAccountId TEXT NOT NULL,
-                ClickUpUserId INTEGER NOT NULL,
-                FOREIGN KEY (DeveloperId) REFERENCES Developers (Id) ON DELETE CASCADE,
-                FOREIGN KEY (ClickUpAccountId) REFERENCES ClickUpAccounts (Id) ON DELETE CASCADE
-            );
-            CREATE UNIQUE INDEX IF NOT EXISTS IX_DeveloperClickUpMappings_DeveloperId_ClickUpAccountId
-                ON DeveloperClickUpMappings (DeveloperId, ClickUpAccountId);
-            CREATE UNIQUE INDEX IF NOT EXISTS IX_DeveloperClickUpMappings_ClickUpAccountId_ClickUpUserId
-                ON DeveloperClickUpMappings (ClickUpAccountId, ClickUpUserId);
-            """);
+        await dbContext.Database.MigrateAsync();
+        await DatabaseSeeder.SeedAsync(serviceProvider);
     }
 }

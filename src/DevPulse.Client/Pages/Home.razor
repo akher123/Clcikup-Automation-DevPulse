@@ -1,41 +1,219 @@
 ﻿@page "/"
+@attribute [Authorize(Roles = AppRoles.Admin)]
+@using DevPulse.Shared.Constants
+@using DevPulse.Shared.Contracts.Reports
+@inject IDeveloperApiClient DeveloperApi
+@inject IReportApiClient ReportApi
 
-<PageTitle>DevPulse</PageTitle>
+<PageTitle>@AppBranding.PageTitle("Dashboard")</PageTitle>
 
 <div class="hero">
-    <h1>DevPulse</h1>
+    <h1>@AppBranding.CompanyName Developer Work</h1>
     <p class="lead">
-        Developer performance and reporting platform integrating ClickUp task data
-        with Cursor analytics for unified monthly KPI dashboards.
+        Unified monthly developer performance across ClickUp workspaces — track completed tasks, productivity trends, and workspace breakdowns for the @AppBranding.CompanyName team.
     </p>
-    <a class="btn btn-primary btn-lg me-2" href="reports">View Reports</a>
-    <a class="btn btn-outline-primary btn-lg" href="clickup-accounts">Manage ClickUp Accounts</a>
+    <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="reports">View Full Reports</a>
+        <a class="btn btn-outline-light btn-lg" href="developers">Manage Developers</a>
+    </div>
+</div>
+
+@if (_isLoadingReport)
+{
+    <div class="text-muted mb-4">Loading developer work summary...</div>
+}
+else if (_report is not null)
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0">@FormatMonth(_report.Month) Overview</h2>
+        <a class="btn btn-sm btn-outline-primary" href="reports">Open Reports</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="summary-card card h-100">
+                <div class="card-body">
+                    <div class="summary-label">Tasks Completed</div>
+                    <div class="summary-value">@_report.TotalTasksCompleted</div>
+                    <div class="text-muted small">across all workspaces</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="summary-card card h-100">
+                <div class="card-body">
+                    <div class="summary-label">Active Developers</div>
+                    <div class="summary-value">@_report.Developers.Count(d => d.TotalTasks > 0)</div>
+                    <div class="text-muted small">with completed tasks this month</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="summary-card card h-100">
+                <div class="card-body">
+                    <div class="summary-label">Workspaces</div>
+                    <div class="summary-value">@_report.WorkspaceCount</div>
+                    <div class="text-muted small">included in report</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (_report.Developers.Any(d => d.TotalTasks > 0))
+    {
+        <div class="data-card card mb-4">
+            <div class="card-body p-0">
+                <h5 class="card-title card-title-bar">Developer Work Summary</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Developer</th>
+                                <th>Tasks</th>
+                                <th>Avg. Completion</th>
+                                <th>Workspaces</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var summary in _report.Developers.Where(d => d.TotalTasks > 0))
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@summary.DeveloperName</strong>
+                                        @if (!string.IsNullOrWhiteSpace(summary.Email))
+                                        {
+                                            <div class="small text-muted">@summary.Email</div>
+                                        }
+                                    </td>
+                                    <td><span class="badge text-bg-primary">@summary.TotalTasks</span></td>
+                                    <td>
+                                        @if (summary.AverageCompletionDays.HasValue)
+                                        {
+                                            <span>@summary.AverageCompletionDays.Value days</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @foreach (var workspace in summary.ByWorkspace)
+                                        {
+                                            <span class="badge text-bg-light text-dark me-1 mb-1">
+                                                @workspace.AccountName: @workspace.TaskCount
+                                            </span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+<div class="feature-grid">
+    <div class="feature-card card h-100">
+        <div class="card-body">
+            <div class="feature-icon feature-icon-indigo" aria-hidden="true">&#128279;</div>
+            <h5>Multi-Workspace ClickUp</h5>
+            <p class="text-muted">Connect multiple ClickUp API tokens and aggregate tasks across internal and client workspaces in one place.</p>
+        </div>
+    </div>
+    <div class="feature-card card h-100">
+        <div class="card-body">
+            <div class="feature-icon feature-icon-cyan" aria-hidden="true">&#128202;</div>
+            <h5>Developer Work Reports</h5>
+            <p class="text-muted">Filter by developers and month to produce unified task and productivity reports with workspace breakdowns.</p>
+            <a href="reports" class="stretched-link" aria-label="Go to Reports"></a>
+        </div>
+    </div>
+    <div class="feature-card card h-100">
+        <div class="card-body">
+            <div class="feature-icon feature-icon-emerald" aria-hidden="true">&#128196;</div>
+            <h5>Stakeholder Exports</h5>
+            <p class="text-muted">Export monthly developer work summaries to Excel for management reviews and client reporting.</p>
+            <a href="reports" class="stretched-link" aria-label="Go to Reports"></a>
+        </div>
+    </div>
 </div>
 
 <div class="row g-4 mt-2">
-    <div class="col-md-4">
-        <div class="feature-card card h-100">
+    <div class="col-md-6">
+        <div class="card">
             <div class="card-body">
-                <h5>Multi-Workspace ClickUp</h5>
-                <p class="text-muted">Connect multiple ClickUp API tokens and aggregate tasks across all client workspaces.</p>
+                <h5 class="card-title mb-3">Quick Start</h5>
+                <ol class="quick-start-list mb-0">
+                    <li><a href="clickup-accounts">Add your ClickUp accounts</a> with API tokens</li>
+                    <li><a href="developers">Sync developers</a> from connected workspaces</li>
+                    <li><a href="reports">Generate a monthly report</a> for your team</li>
+                </ol>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="feature-card card h-100">
+    <div class="col-md-6">
+        <div class="card">
             <div class="card-body">
-                <h5>Developer-Centric Reports</h5>
-                <p class="text-muted">Filter by developers and month to produce unified task and productivity reports.</p>
-                <a href="reports" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="feature-card card h-100">
-            <div class="card-body">
-                <h5>Cursor Integration Ready</h5>
-                <p class="text-muted">Architecture is prepared for Cursor Admin and Analytics API integration in the next phase.</p>
+                <h5 class="card-title mb-3">What You Get</h5>
+                <ul class="quick-start-list mb-0">
+                    <li>Tasks completed per developer across workspaces</li>
+                    <li>Average completion time and workspace breakdown</li>
+                    <li>Excel export for stakeholder reporting</li>
+                </ul>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .quick-start-list {
+        padding-left: 1.25rem;
+        color: var(--dp-text-secondary);
+        font-size: 0.9375rem;
+        line-height: 1.8;
+    }
+
+    .quick-start-list li {
+        margin-bottom: 0.25rem;
+    }
+
+    .quick-start-list a {
+        font-weight: 500;
+    }
+</style>
+
+@code {
+    private DeveloperReportResponse? _report;
+    private bool _isLoadingReport = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var developers = await DeveloperApi.GetDevelopersAsync();
+            var activeDeveloperIds = developers.Where(d => d.IsActive).Select(d => d.Id).ToList();
+
+            if (activeDeveloperIds.Count == 0)
+            {
+                return;
+            }
+
+            var month = new DateOnly(DateTime.Today.Year, DateTime.Today.Month, 1);
+            _report = await ReportApi.GenerateDeveloperReportAsync(
+                new DeveloperReportRequest(activeDeveloperIds, month, IncludeClosed: true));
+        }
+        catch
+        {
+            _report = null;
+        }
+        finally
+        {
+            _isLoadingReport = false;
+        }
+    }
+
+    private static string FormatMonth(DateOnly month) =>
+        month.ToString("MMMM yyyy");
+}

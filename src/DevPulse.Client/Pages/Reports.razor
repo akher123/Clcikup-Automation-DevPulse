@@ -1,14 +1,21 @@
 @page "/reports"
+@attribute [Authorize]
+@using DevPulse.Shared.Constants
+@using DevPulse.Shared.Contracts.ClickUp
+@using DevPulse.Shared.Contracts.Developers
 @using DevPulse.Shared.Contracts.Reports
+@implements IAsyncDisposable
+@inject IClickUpAccountApiClient AccountApi
 @inject IDeveloperApiClient DeveloperApi
 @inject IReportApiClient ReportApi
+@inject IJSRuntime JS
 
-<PageTitle>Developer Reports - DevPulse</PageTitle>
+<PageTitle>@AppBranding.PageTitle("Developer Reports")</PageTitle>
 
 <div class="page-header">
     <div>
         <h1>Developer Reports</h1>
-        <p class="text-muted">Filter by developers and month to produce unified task and productivity reports.</p>
+        <p class="text-muted">Filter by ClickUp account and developers, then generate unified task and productivity reports.</p>
     </div>
 </div>
 
@@ -17,15 +24,57 @@
     <div class="alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
 }
 
-<div class="card mb-4">
+<div class="filter-card card mb-4">
     <div class="card-body">
         <h5 class="card-title">Report Filters</h5>
-        <div class="row g-3 align-items-end">
-            <div class="col-md-3">
+        <div class="row g-3 align-items-start">
+            <div class="col-md-2">
                 <label class="form-label">Month</label>
                 <input type="month" class="form-control" @bind="_selectedMonth" @bind:format="yyyy-MM" />
             </div>
-            <div class="col-md-6">
+            <div class="col-md-3">
+                <label class="form-label">ClickUp Accounts</label>
+                @if (_isLoadingAccounts)
+                {
+                    <p class="text-muted mb-0">Loading accounts...</p>
+                }
+                else if (_accounts.Count == 0)
+                {
+                    <p class="text-muted mb-0">
+                        No accounts configured.
+                        <AuthorizeView Roles="@AppRoles.Admin">
+                            <Authorized>
+                                <a href="clickup-accounts">Add an account</a> to get started.
+                            </Authorized>
+                            <NotAuthorized>
+                                Contact an administrator to configure ClickUp accounts.
+                            </NotAuthorized>
+                        </AuthorizeView>
+                    </p>
+                }
+                else
+                {
+                    <div class="developer-select border rounded p-2">
+                        <div class="form-check mb-1">
+                            <input class="form-check-input" type="checkbox" id="selectAllAccounts"
+                                   checked="@_selectAllAccounts"
+                                   @onchange="ToggleSelectAllAccounts" />
+                            <label class="form-check-label fw-semibold" for="selectAllAccounts">All accounts</label>
+                        </div>
+                        @foreach (var account in _accounts.Where(a => a.IsActive))
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       id="acct-@account.Id"
+                                       checked="@_selectedAccountIds.Contains(account.Id)"
+                                       @onchange="() => ToggleAccount(account.Id)" />
+                                <label class="form-check-label" for="acct-@account.Id">@account.Name</label>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="col-md-5">
                 <label class="form-label">Developers</label>
                 @if (_isLoadingDevelopers)
                 {
@@ -35,8 +84,19 @@
                 {
                     <p class="text-muted mb-0">
                         No developers registered.
-                        <a href="developers">Sync from ClickUp</a> to get started.
+                        <AuthorizeView Roles="@AppRoles.Admin">
+                            <Authorized>
+                                <a href="developers">Sync from ClickUp</a> to get started.
+                            </Authorized>
+                            <NotAuthorized>
+                                Contact an administrator to sync developers.
+                            </NotAuthorized>
+                        </AuthorizeView>
                     </p>
+                }
+                else if (!FilteredDevelopers().Any())
+                {
+                    <p class="text-muted mb-0">No developers mapped to the selected account(s).</p>
                 }
                 else
                 {
@@ -47,7 +107,7 @@
                                    @onchange="ToggleSelectAll" />
                             <label class="form-check-label fw-semibold" for="selectAll">Select all</label>
                         </div>
-                        @foreach (var developer in _developers.Where(d => d.IsActive))
+                        @foreach (var developer in FilteredDevelopers())
                         {
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox"
@@ -70,12 +130,12 @@
                     </div>
                 }
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="form-check mb-2">
                     <input class="form-check-input" type="checkbox" id="includeClosed" @bind="_includeClosed" />
                     <label class="form-check-label" for="includeClosed">Include closed tasks</label>
                 </div>
-                <button class="btn btn-primary w-100" disabled="@(_isBusy || _developers.Count == 0)" @onclick="GenerateReportAsync">
+                <button class="btn btn-primary w-100" disabled="@(_isBusy || !FilteredDevelopers().Any())" @onclick="GenerateReportAsync">
                     @if (_isBusy)
                     {
                         <span>Generating...</span>
@@ -92,6 +152,19 @@
 
 @if (_report is not null)
 {
+    <div class="d-flex justify-content-end mb-3">
+        <button class="btn btn-success" disabled="@_isExporting" @onclick="ExportToExcelAsync">
+            @if (_isExporting)
+            {
+                <span>Exporting...</span>
+            }
+            else
+            {
+                <span>Export to Excel</span>
+            }
+        </button>
+    </div>
+
     <div class="row g-3 mb-4">
         <div class="col-md-4">
             <div class="summary-card card h-100">
@@ -124,9 +197,9 @@
 
     @if (_report.Developers.Any(d => d.TotalTasks > 0))
     {
-        <div class="card mb-4">
-            <div class="card-body">
-                <h5 class="card-title">Productivity Summary</h5>
+        <div class="data-card card mb-4">
+            <div class="card-body p-0">
+                <h5 class="card-title card-title-bar">Productivity Summary</h5>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead>
@@ -178,12 +251,12 @@
         </div>
     }
 
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title">Task Details (@_report.Tasks.Count)</h5>
+    <div class="data-card card">
+        <div class="card-body p-0">
+            <h5 class="card-title card-title-bar">Task Details (@_report.Tasks.Count)</h5>
             @if (_report.Tasks.Count == 0)
             {
-                <p class="text-muted mb-0">No tasks completed in the selected month for the chosen developers.</p>
+                <p class="text-muted mb-0 p-4">No tasks completed in the selected month for the chosen developers.</p>
             }
             else
             {
@@ -242,20 +315,68 @@
 }
 
 @code {
-    private readonly List<DevPulse.Shared.Contracts.Developers.DeveloperDto> _developers = [];
+    private readonly List<ClickUpAccountDto> _accounts = [];
+    private readonly List<DeveloperDto> _developers = [];
+    private readonly HashSet<Guid> _selectedAccountIds = [];
     private readonly HashSet<Guid> _selectedDeveloperIds = [];
     private DeveloperReportResponse? _report;
     private DateTime _selectedMonth = new(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
     private bool _includeClosed = true;
+    private bool _selectAllAccounts;
     private bool _selectAll;
+    private bool _isLoadingAccounts = true;
     private bool _isLoadingDevelopers = true;
     private bool _isBusy;
+    private bool _isExporting;
     private bool _isError;
     private string? _message;
+    private IJSObjectReference? _fileDownloadModule;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadDevelopersAsync();
+        await Task.WhenAll(LoadAccountsAsync(), LoadDevelopersAsync());
+        SelectAllFilteredDevelopers();
+    }
+
+    private IEnumerable<DeveloperDto> FilteredDevelopers()
+    {
+        var active = _developers.Where(d => d.IsActive);
+
+        if (_selectedAccountIds.Count == 0)
+        {
+            return active;
+        }
+
+        return active.Where(d =>
+            d.Mappings.Any(m => _selectedAccountIds.Contains(m.ClickUpAccountId)));
+    }
+
+    private async Task LoadAccountsAsync()
+    {
+        _isLoadingAccounts = true;
+
+        try
+        {
+            var accounts = await AccountApi.GetAccountsAsync();
+            _accounts.Clear();
+            _accounts.AddRange(accounts);
+
+            _selectedAccountIds.Clear();
+            foreach (var account in _accounts.Where(a => a.IsActive))
+            {
+                _selectedAccountIds.Add(account.Id);
+            }
+            _selectAllAccounts = _selectedAccountIds.Count > 0;
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = $"Failed to load accounts: {ex.Message}";
+        }
+        finally
+        {
+            _isLoadingAccounts = false;
+        }
     }
 
     private async Task LoadDevelopersAsync()
@@ -267,13 +388,6 @@
             var developers = await DeveloperApi.GetDevelopersAsync();
             _developers.Clear();
             _developers.AddRange(developers);
-
-            _selectedDeveloperIds.Clear();
-            foreach (var developer in _developers.Where(d => d.IsActive))
-            {
-                _selectedDeveloperIds.Add(developer.Id);
-            }
-            _selectAll = _selectedDeveloperIds.Count > 0;
         }
         catch (Exception ex)
         {
@@ -286,6 +400,47 @@
         }
     }
 
+    private void SelectAllFilteredDevelopers()
+    {
+        _selectedDeveloperIds.Clear();
+        foreach (var developer in FilteredDevelopers())
+        {
+            _selectedDeveloperIds.Add(developer.Id);
+        }
+
+        var filteredCount = FilteredDevelopers().Count();
+        _selectAll = filteredCount > 0 && _selectedDeveloperIds.Count == filteredCount;
+    }
+
+    private void ToggleSelectAllAccounts(ChangeEventArgs args)
+    {
+        var isChecked = args.Value is true;
+        _selectAllAccounts = isChecked;
+        _selectedAccountIds.Clear();
+
+        if (isChecked)
+        {
+            foreach (var account in _accounts.Where(a => a.IsActive))
+            {
+                _selectedAccountIds.Add(account.Id);
+            }
+        }
+
+        SelectAllFilteredDevelopers();
+    }
+
+    private void ToggleAccount(Guid accountId)
+    {
+        if (!_selectedAccountIds.Add(accountId))
+        {
+            _selectedAccountIds.Remove(accountId);
+        }
+
+        var activeCount = _accounts.Count(a => a.IsActive);
+        _selectAllAccounts = activeCount > 0 && _selectedAccountIds.Count == activeCount;
+        SelectAllFilteredDevelopers();
+    }
+
     private void ToggleSelectAll(ChangeEventArgs args)
     {
         var isChecked = args.Value is true;
@@ -294,7 +449,7 @@
 
         if (isChecked)
         {
-            foreach (var developer in _developers.Where(d => d.IsActive))
+            foreach (var developer in FilteredDevelopers())
             {
                 _selectedDeveloperIds.Add(developer.Id);
             }
@@ -308,8 +463,8 @@
             _selectedDeveloperIds.Remove(developerId);
         }
 
-        var activeCount = _developers.Count(d => d.IsActive);
-        _selectAll = activeCount > 0 && _selectedDeveloperIds.Count == activeCount;
+        var filteredCount = FilteredDevelopers().Count();
+        _selectAll = filteredCount > 0 && _selectedDeveloperIds.Count == filteredCount;
     }
 
     private async Task GenerateReportAsync()
@@ -329,10 +484,15 @@
 
         try
         {
+            IReadOnlyList<Guid>? accountIds = _selectedAccountIds.Count > 0
+                ? _selectedAccountIds.ToList()
+                : null;
+
             var request = new DeveloperReportRequest(
                 _selectedDeveloperIds.ToList(),
                 month,
-                _includeClosed);
+                _includeClosed,
+                accountIds);
 
             _report = await ReportApi.GenerateDeveloperReportAsync(request);
             _isError = false;
@@ -349,6 +509,38 @@
         }
     }
 
+    private async Task ExportToExcelAsync()
+    {
+        if (_report is null)
+        {
+            return;
+        }
+
+        _isExporting = true;
+        _message = null;
+
+        try
+        {
+            var fileBytes = await ReportApi.ExportDeveloperReportToExcelAsync(_report);
+            var fileName = $"{AppBranding.CompanyName}-Developer-Work-{_report.Month:yyyy-MM}.xlsx";
+            const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            var base64 = Convert.ToBase64String(fileBytes);
+            var module = await GetFileDownloadModuleAsync();
+            await module.InvokeVoidAsync("downloadFromBytes", fileName, contentType, base64);
+            _isError = false;
+            _message = "Report exported to Excel.";
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _isExporting = false;
+        }
+    }
+
     private static string FormatMonth(DateOnly month) =>
         month.ToDateTime(TimeOnly.MinValue).ToString("MMMM yyyy");
 
@@ -360,5 +552,19 @@
         }
 
         return DateTimeOffset.FromUnixTimeMilliseconds(unixMs.Value).ToLocalTime().ToString("MMM d, yyyy");
+    }
+
+    private async Task<IJSObjectReference> GetFileDownloadModuleAsync()
+    {
+        _fileDownloadModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/fileDownload.js");
+        return _fileDownloadModule;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_fileDownloadModule is not null)
+        {
+            await _fileDownloadModule.DisposeAsync();
+        }
     }
 }

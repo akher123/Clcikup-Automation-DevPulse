@@ -1,11 +1,13 @@
 using DevPulse.Application.Abstractions.Developers;
 using DevPulse.Shared.Contracts.Developers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DevPulse.Server.Controllers;
 
 [ApiController]
 [Route("api/developers")]
+[Authorize]
 public sealed class DevelopersController : ControllerBase
 {
     private readonly IDeveloperService _developerService;
@@ -16,6 +18,7 @@ public sealed class DevelopersController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = "CanViewReports")]
     [ProducesResponseType(typeof(IReadOnlyList<DeveloperDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
@@ -24,6 +27,7 @@ public sealed class DevelopersController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "CanViewReports")]
     [ProducesResponseType(typeof(DeveloperDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
@@ -33,6 +37,7 @@ public sealed class DevelopersController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(DeveloperDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateDeveloperRequest request, CancellationToken cancellationToken)
@@ -47,6 +52,7 @@ public sealed class DevelopersController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(DeveloperDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -64,6 +70,7 @@ public sealed class DevelopersController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
@@ -73,6 +80,7 @@ public sealed class DevelopersController : ControllerBase
     }
 
     [HttpPost("{id:guid}/mappings")]
+    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(DeveloperDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -90,6 +98,7 @@ public sealed class DevelopersController : ControllerBase
     }
 
     [HttpPost("sync")]
+    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(SyncDevelopersResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SyncFromClickUp(CancellationToken cancellationToken)

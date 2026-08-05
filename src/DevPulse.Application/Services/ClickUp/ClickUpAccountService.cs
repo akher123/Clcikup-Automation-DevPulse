@@ -4,6 +4,7 @@ using DevPulse.Application.Abstractions.ClickUp;
 using DevPulse.Domain.Entities;
 using DevPulse.Domain.Enums;
 using DevPulse.Shared.Common;
+using DevPulse.Shared.Constants;
 using DevPulse.Shared.Contracts.ClickUp;
 using Microsoft.Extensions.Logging;
 
@@ -138,6 +139,21 @@ public sealed class ClickUpAccountService : IClickUpAccountService
         if (account is null)
         {
             return Result<ClickUpConnectionTestDto>.Failure("ClickUp account was not found.");
+        }
+
+        if (DemoSeedData.IsDemoWorkspace(account.WorkspaceId))
+        {
+            account.LastValidatedAtUtc = DateTime.UtcNow;
+            account.LastValidationMessage = "Demo workspace — seeded for developer work reporting.";
+            await _repository.UpdateAsync(account, cancellationToken);
+
+            return Result<ClickUpConnectionTestDto>.Success(new ClickUpConnectionTestDto(
+                account.Id,
+                account.Name,
+                true,
+                ConnectionStatus.Connected.ToString(),
+                account.Name,
+                "Demo workspace is ready for developer work reports."));
         }
 
         var token = _tokenProtector.Unprotect(account.EncryptedAccessToken);

@@ -4,6 +4,7 @@ using DevPulse.Application.Abstractions.Security;
 using DevPulse.Application.Abstractions.ClickUp;
 using DevPulse.Domain.Entities;
 using DevPulse.Shared.Common;
+using DevPulse.Shared.Constants;
 using DevPulse.Shared.Contracts.Developers;
 using Microsoft.Extensions.Logging;
 
@@ -168,6 +169,11 @@ public sealed class DeveloperService : IDeveloperService
 
         foreach (var account in accounts)
         {
+            if (DemoSeedData.IsDemoWorkspace(account.WorkspaceId))
+            {
+                continue;
+            }
+
             var token = _tokenProtector.Unprotect(account.EncryptedAccessToken);
             var members = await _apiClient.GetWorkspaceMembersAsync(token, account.WorkspaceId, cancellationToken);
 

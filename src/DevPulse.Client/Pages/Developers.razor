@@ -1,8 +1,10 @@
 @page "/developers"
+@attribute [Authorize(Roles = AppRoles.Admin)]
+@using DevPulse.Shared.Constants
 @using DevPulse.Shared.Contracts.Developers
 @inject IDeveloperApiClient DeveloperApi
 
-<PageTitle>Developers - DevPulse</PageTitle>
+<PageTitle>@AppBranding.PageTitle("Developers")</PageTitle>
 
 <div class="page-header">
     <div>
@@ -22,7 +24,7 @@
 
 @if (_showAddForm)
 {
-    <div class="card mb-4">
+    <div class="form-card card">
         <div class="card-body">
             <h5 class="card-title">Add Developer</h5>
             <div class="row g-3">
@@ -45,22 +47,28 @@
 
 @if (_isLoading)
 {
-    <p>Loading developers...</p>
+    <div class="loading-inline">
+        <span class="spinner" aria-hidden="true"></span>
+        Loading developers...
+    </div>
 }
 else if (_developers.Count == 0)
 {
-    <div class="empty-state card">
-        <div class="card-body">
-            <h5>No developers registered</h5>
-            <p class="text-muted mb-0">
-                Sync members from your connected ClickUp workspaces to build the developer registry automatically.
-            </p>
-        </div>
+    <div class="empty-state">
+        <div class="empty-state-icon" aria-hidden="true">&#128101;</div>
+        <h5>No developers registered</h5>
+        <p class="text-muted mb-3">
+            Sync members from your connected ClickUp workspaces to build the developer registry automatically.
+        </p>
+        <button class="btn btn-outline-primary me-2" disabled="@_isBusy" @onclick="SyncFromClickUpAsync">Sync from ClickUp</button>
+        <button class="btn btn-primary" @onclick="ShowAddForm">Add Developer</button>
     </div>
 }
 else
 {
-    <div class="table-responsive">
+    <div class="data-card card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
         <table class="table table-hover align-middle">
             <thead>
                 <tr>
@@ -104,6 +112,8 @@ else
                 }
             </tbody>
         </table>
+            </div>
+        </div>
     </div>
 }
 

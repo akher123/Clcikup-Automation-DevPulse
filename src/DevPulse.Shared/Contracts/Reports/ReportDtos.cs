@@ -5,7 +5,8 @@ namespace DevPulse.Shared.Contracts.Reports;
 public record DeveloperReportRequest(
     [property: JsonPropertyName("developerIds")] IReadOnlyList<Guid> DeveloperIds,
     [property: JsonPropertyName("month")] DateOnly Month,
-    [property: JsonPropertyName("includeClosed")] bool IncludeClosed = true);
+    [property: JsonPropertyName("includeClosed")] bool IncludeClosed = true,
+    [property: JsonPropertyName("accountIds")] IReadOnlyList<Guid>? AccountIds = null);
 
 public record DeveloperReportResponse(
     [property: JsonPropertyName("month")] DateOnly Month,

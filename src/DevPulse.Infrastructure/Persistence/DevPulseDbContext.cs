@@ -1,9 +1,12 @@
 using DevPulse.Domain.Entities;
+using DevPulse.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevPulse.Infrastructure.Persistence;
 
-public sealed class DevPulseDbContext : DbContext
+public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
 {
     public DevPulseDbContext(DbContextOptions<DevPulseDbContext> options) : base(options)
     {
@@ -17,6 +20,13 @@ public sealed class DevPulseDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<ApplicationUser>(entity =>
+        {
+            entity.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
+        });
+
         modelBuilder.Entity<ClickUpAccount>(entity =>
         {
             entity.ToTable("ClickUpAccounts");

@@ -1,11 +1,13 @@
 using DevPulse.Application.Abstractions.ClickUp;
 using DevPulse.Shared.Contracts.ClickUp;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DevPulse.Server.Controllers;
 
 [ApiController]
 [Route("api/clickup/accounts")]
+[Authorize]
 public sealed class ClickUpAccountsController : ControllerBase
 {
     private readonly IClickUpAccountService _accountService;
@@ -16,6 +18,7 @@ public sealed class ClickUpAccountsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = "CanViewReports")]
     [ProducesResponseType(typeof(IReadOnlyList<ClickUpAccountDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
@@ -24,6 +27,7 @@ public sealed class ClickUpAccountsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "CanViewReports")]
     [ProducesResponseType(typeof(ClickUpAccountDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
@@ -33,6 +37,7 @@ public sealed class ClickUpAccountsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(ClickUpAccountDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateClickUpAccountRequest request, CancellationToken cancellationToken)
@@ -47,6 +52,7 @@ public sealed class ClickUpAccountsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(ClickUpAccountDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -64,6 +70,7 @@ public sealed class ClickUpAccountsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
@@ -73,6 +80,7 @@ public sealed class ClickUpAccountsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/test")]
+    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(ClickUpConnectionTestDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> TestConnection(Guid id, CancellationToken cancellationToken)
@@ -82,6 +90,7 @@ public sealed class ClickUpAccountsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/members")]
+    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(IReadOnlyList<ClickUpMemberDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMembers(Guid id, CancellationToken cancellationToken)
@@ -98,6 +107,7 @@ public sealed class ClickUpAccountsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/workspaces")]
+    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(IReadOnlyList<ClickUpWorkspaceDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetWorkspaces(Guid id, CancellationToken cancellationToken)
@@ -107,6 +117,7 @@ public sealed class ClickUpAccountsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/tasks/query")]
+    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(ClickUpTaskQueryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> QueryTasks(Guid id, [FromBody] ClickUpTaskQueryRequest request, CancellationToken cancellationToken)

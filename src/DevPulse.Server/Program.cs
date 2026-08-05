@@ -10,13 +10,23 @@ builder.Services.AddOpenApi();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole(DevPulse.Shared.Constants.AppRoles.Admin));
+    options.AddPolicy("CanViewReports", policy =>
+        policy.RequireRole(
+            DevPulse.Shared.Constants.AppRoles.Admin,
+            DevPulse.Shared.Constants.AppRoles.User));
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DevPulseCors", policy =>
     {
         policy.AllowAnyHeader()
             .AllowAnyMethod()
-            .WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? ["https://localhost:7089", "http://localhost:5089"]);
+            .AllowCredentials()
+            .WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? ["https://localhost:7062", "http://localhost:5080"]);
     });
 });
 
@@ -39,6 +49,7 @@ app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseCors("DevPulseCors");
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapFallbackToFile("index.html");

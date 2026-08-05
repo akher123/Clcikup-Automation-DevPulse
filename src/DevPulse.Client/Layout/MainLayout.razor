@@ -1,16 +1,39 @@
 ﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
+
+<div class="app-shell">
+    <aside class="sidebar @(_sidebarOpen ? "open" : null)">
+        <NavMenu OnNavigate="CloseSidebar" />
+    </aside>
+
+    <div class="main-wrapper">
+        <header class="app-header">
+            <button class="sidebar-toggle d-lg-none" @onclick="ToggleSidebar" aria-label="Toggle navigation">
+                <span class="toggle-bar"></span>
+                <span class="toggle-bar"></span>
+                <span class="toggle-bar"></span>
+            </button>
+            <div class="header-content">
+                <span class="header-tagline">@AppBranding.ProductTagline</span>
+            </div>
+        </header>
+
+        <main class="app-content">
+            <div class="content-container">
+                @Body
+            </div>
+        </main>
     </div>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+    @if (_sidebarOpen)
+    {
+        <div class="sidebar-backdrop d-lg-none" @onclick="ToggleSidebar"></div>
+    }
 </div>
+
+@code {
+    private bool _sidebarOpen;
+
+    private void ToggleSidebar() => _sidebarOpen = !_sidebarOpen;
+
+    private void CloseSidebar() => _sidebarOpen = false;
+}

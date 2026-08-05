@@ -10,6 +10,10 @@ public interface IReportApiClient
     Task<DeveloperReportResponse?> GenerateDeveloperReportAsync(
         DeveloperReportRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<byte[]> ExportDeveloperReportToExcelAsync(
+        DeveloperReportResponse report,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class ReportApiClient : IReportApiClient
@@ -49,6 +53,25 @@ public sealed class ReportApiClient : IReportApiClient
                 "Report response JSON did not match the expected format. Ensure DevPulse.Server is running and up to date.",
                 ex);
         }
+    }
+
+    public async Task<byte[]> ExportDeveloperReportToExcelAsync(
+        DeveloperReportResponse report,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.PostAsJsonAsync(
+            "api/reports/developer-tasks/export",
+            report,
+            _jsonOptions,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(ParseApiError(error, "Failed to export report"));
+        }
+
+        return await response.Content.ReadAsByteArrayAsync(cancellationToken);
     }
 
     private static string ParseApiError(string rawError, string fallback)

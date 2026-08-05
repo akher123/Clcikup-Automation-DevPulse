@@ -4,6 +4,7 @@ using DevPulse.Application.Abstractions.Reports;
 using DevPulse.Application.Abstractions.Security;
 using DevPulse.Domain.Entities;
 using DevPulse.Shared.Common;
+using DevPulse.Shared.Constants;
 using DevPulse.Shared.Contracts.ClickUp;
 using DevPulse.Shared.Contracts.Reports;
 using Microsoft.Extensions.Logging;
@@ -61,6 +62,15 @@ public sealed class ReportService : IReportService
             return Result<DeveloperReportResponse>.Failure("No active ClickUp accounts configured.");
         }
 
+        if (request.AccountIds is { Count: > 0 })
+        {
+            accounts = accounts.Where(a => request.AccountIds.Contains(a.Id)).ToList();
+            if (accounts.Count == 0)
+            {
+                return Result<DeveloperReportResponse>.Failure("No matching ClickUp accounts were found.");
+            }
+        }
+
         var reportTasks = new List<DeveloperReportTaskDto>();
         var queriedWorkspaces = new HashSet<Guid>();
 
@@ -81,11 +91,18 @@ public sealed class ReportService : IReportService
             }
 
             queriedWorkspaces.Add(account.Id);
-            var token = _tokenProtector.Unprotect(account.EncryptedAccessToken);
 
             foreach (var entry in developersForAccount)
             {
+                if (DemoSeedData.IsDemoWorkspace(account.WorkspaceId))
+                {
+                    reportTasks.AddRange(
+                        DemoReportDataProvider.GetTasksForMonth(request.Month, account, entry.Developer));
+                    continue;
+                }
+
                 var mapping = entry.Mapping!;
+                var token = _tokenProtector.Unprotect(account.EncryptedAccessToken);
                 var query = new ClickUpTaskQueryRequest(
                     account.Id,
                     [mapping.ClickUpUserId],

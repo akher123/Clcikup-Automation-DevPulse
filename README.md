@@ -1,6 +1,6 @@
-# DevPulse
+# Datavanched Developer Work Platform
 
-**DevPulse** is a developer performance and reporting platform built with **.NET 10**, **Blazor WebAssembly**, and **Clean Architecture**. It integrates multiple **ClickUp** workspaces via API tokens and is designed to extend with **Cursor** analytics for unified monthly KPI dashboards.
+**Datavanched** developer work reporting is built with **.NET 10**, **Blazor WebAssembly**, and **Clean Architecture**. It integrates multiple **ClickUp** workspaces via API tokens for unified monthly developer performance dashboards and stakeholder exports.
 
 ## Solution Structure
 
@@ -43,6 +43,7 @@ DevPulse/
 - Unified developer-centric monthly task reports across all workspaces
 - Productivity summary: task counts, workspace breakdown, average completion time
 - Blazor UI for developer management and report generation
+- Seeded demo developers, workspaces, and task data for management previews (startup seed)
 
 ## Getting Started
 
@@ -112,9 +113,8 @@ POST /api/clickup/accounts
 
 ## Next Phases
 
-1. Cursor Admin / Analytics API integration
-2. KPI dashboard with charts and export (PDF/Excel)
-3. Authentication (Azure AD / JWT) for production
+1. KPI dashboard charts and scheduled report delivery
+2. Authentication (Azure AD / JWT) hardening for production
 
 ## License
 

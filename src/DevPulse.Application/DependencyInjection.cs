@@ -16,6 +16,7 @@ public static class DependencyInjection
         services.AddScoped<IClickUpAccountService, ClickUpAccountService>();
         services.AddScoped<IDeveloperService, DeveloperService>();
         services.AddScoped<IReportService, ReportService>();
+        services.AddScoped<IReportExportService, ReportExcelExportService>();
         return services;
     }
 }

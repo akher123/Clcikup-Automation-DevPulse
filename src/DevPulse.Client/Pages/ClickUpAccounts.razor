@@ -1,8 +1,9 @@
 @page "/clickup-accounts"
+@attribute [Authorize(Roles = AppRoles.Admin)]
 @using DevPulse.Client.Models
 @inject IClickUpAccountApiClient AccountApi
 
-<PageTitle>ClickUp Accounts - DevPulse</PageTitle>
+<PageTitle>@AppBranding.PageTitle("ClickUp Accounts")</PageTitle>
 
 <div class="page-header">
     <div>
@@ -19,7 +20,7 @@
 
 @if (_showAddForm)
 {
-    <div class="card mb-4">
+    <div class="form-card card">
         <div class="card-body">
             <h5 class="card-title">Connect ClickUp Workspace</h5>
             <div class="row g-3">
@@ -46,20 +47,25 @@
 
 @if (_isLoading)
 {
-    <p>Loading accounts...</p>
+    <div class="loading-inline">
+        <span class="spinner" aria-hidden="true"></span>
+        Loading accounts...
+    </div>
 }
 else if (_accounts.Count == 0)
 {
-    <div class="empty-state card">
-        <div class="card-body">
-            <h5>No ClickUp accounts configured</h5>
-            <p class="text-muted mb-0">Add your first workspace token to start building unified developer reports.</p>
-        </div>
+    <div class="empty-state">
+        <div class="empty-state-icon" aria-hidden="true">&#128268;</div>
+        <h5>No ClickUp accounts configured</h5>
+        <p class="text-muted mb-3">Add your first workspace token to start building unified developer reports.</p>
+        <button class="btn btn-primary" @onclick="ShowAddForm">Add Account</button>
     </div>
 }
 else
 {
-    <div class="table-responsive">
+    <div class="data-card card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
         <table class="table table-hover align-middle">
             <thead>
                 <tr>
@@ -96,14 +102,18 @@ else
                             }
                         </td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary me-2" disabled="@_isBusy" @onclick="() => TestAccountAsync(account.Id)">Test</button>
-                            <button class="btn btn-sm btn-outline-info me-2" disabled="@_isBusy" @onclick="() => LoadMembersAsync(account.Id)">Members</button>
-                            <button class="btn btn-sm btn-outline-danger" disabled="@_isBusy" @onclick="() => DeleteAccountAsync(account.Id)">Delete</button>
+                            <div class="btn-group-actions">
+                                <button class="btn btn-sm btn-outline-primary" disabled="@_isBusy" @onclick="() => TestAccountAsync(account.Id)">Test</button>
+                                <button class="btn btn-sm btn-outline-secondary" disabled="@_isBusy" @onclick="() => LoadMembersAsync(account.Id)">Members</button>
+                                <button class="btn btn-sm btn-outline-danger" disabled="@_isBusy" @onclick="() => DeleteAccountAsync(account.Id)">Delete</button>
+                            </div>
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
+            </div>
+        </div>
     </div>
 }
 
