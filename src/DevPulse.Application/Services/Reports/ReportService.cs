@@ -135,6 +135,8 @@ public sealed class ReportService : IReportService
             .Select(g => g.OrderByDescending(t => t.IsCompleted).First())
             .ToList();
 
+        reportTasks = EnrichParentTaskNames(reportTasks);
+
         var summaries = activeDevelopers
             .Select(developer => BuildSummary(developer, reportTasks))
             .Where(s => s.TotalTasks > 0 || request.DeveloperIds.Contains(s.DeveloperId))
@@ -156,6 +158,7 @@ public sealed class ReportService : IReportService
                 .OrderBy(t => t.DeveloperName)
                 .ThenBy(t => t.IsCompleted)
                 .ThenBy(t => t.AccountName)
+                .ThenBy(t => t.ProjectName)
                 .ThenBy(t => t.TaskName)
                 .ToList());
 
@@ -280,17 +283,22 @@ public sealed class ReportService : IReportService
             developer.Name,
             account.Id,
             account.Name,
+            task.ProjectName,
+            task.FolderName,
             task.Id,
             task.Name,
             task.Status,
+            task.Priority,
             task.ListName,
             task.Url,
             task.DateCreated,
             task.DateDone,
+            task.DueDate,
             isCompleted ? CalculateCompletionDays(task.DateCreated, task.DateDone) : null,
             task.IsSubtask,
             task.ParentTaskId,
-            task.IsSubtask ? "Subtask" : "Task",
+            ParentTaskName: null,
+            task.IsSubtask ? "Subtask" : task.TaskTypeName,
             isCompleted);
     }
 
@@ -300,6 +308,12 @@ public sealed class ReportService : IReportService
         var byWorkspace = developerTasks
             .GroupBy(t => new { t.AccountId, t.AccountName })
             .Select(g => new DeveloperWorkspaceBreakdownDto(g.Key.AccountId, g.Key.AccountName, g.Count()))
+            .OrderByDescending(x => x.TaskCount)
+            .ToList();
+
+        var byProject = developerTasks
+            .GroupBy(t => new { t.AccountId, t.AccountName, ProjectName = t.ProjectName ?? "Unknown" })
+            .Select(g => new DeveloperProjectBreakdownDto(g.Key.AccountId, g.Key.AccountName, g.Key.ProjectName, g.Count()))
             .OrderByDescending(x => x.TaskCount)
             .ToList();
 
@@ -317,9 +331,52 @@ public sealed class ReportService : IReportService
             developerTasks.Count(t => !t.IsCompleted),
             developerTasks.Count(t => t.IsSubtask),
             byWorkspace.Count,
+            byProject.Count,
+            developerTasks.Count(IsOverdue),
+            developerTasks.Count(IsOnTimeCompletion),
             completionDays.Count > 0 ? Math.Round(completionDays.Average(), 1) : null,
-            byWorkspace);
+            byWorkspace,
+            byProject);
     }
+
+    private static List<DeveloperReportTaskDto> EnrichParentTaskNames(IReadOnlyList<DeveloperReportTaskDto> tasks)
+    {
+        var namesById = tasks.ToDictionary(t => t.TaskId, t => t.TaskName, StringComparer.Ordinal);
+
+        return tasks
+            .Select(task =>
+            {
+                if (string.IsNullOrWhiteSpace(task.ParentTaskId)
+                    || !namesById.TryGetValue(task.ParentTaskId, out var parentName))
+                {
+                    return task;
+                }
+
+                return task with { ParentTaskName = parentName };
+            })
+            .ToList();
+    }
+
+    private static bool IsOverdue(DeveloperReportTaskDto task)
+    {
+        if (!task.DueDate.HasValue)
+        {
+            return false;
+        }
+
+        if (task.IsCompleted)
+        {
+            return task.DateDone.HasValue && task.DateDone.Value > task.DueDate.Value;
+        }
+
+        return task.DueDate.Value < DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    }
+
+    private static bool IsOnTimeCompletion(DeveloperReportTaskDto task) =>
+        task.IsCompleted
+        && task.DueDate.HasValue
+        && task.DateDone.HasValue
+        && task.DateDone.Value <= task.DueDate.Value;
 
     private static bool IsCompletedTask(ClickUpTaskDto task)
     {

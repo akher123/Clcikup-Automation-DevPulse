@@ -152,11 +152,14 @@ public sealed class ClickUpApiClient : IClickUpApiClient
                     t.Name,
                     t.Status?.Status,
                     accountName,
+                    t.Project?.Name,
+                    ResolveFolderName(t.Folder?.Name),
                     t.List?.Name,
                     t.Url,
                     t.DateCreated,
                     t.DateDone ?? t.DateClosed,
                     t.DueDate,
+                    t.Priority?.Priority,
                     t.Assignees?.Select(a => a.Email ?? a.Username).Where(x => !string.IsNullOrWhiteSpace(x)).ToList() ?? [],
                     t.Parent,
                     t.CustomItemId,
@@ -175,6 +178,16 @@ public sealed class ClickUpApiClient : IClickUpApiClient
             1 => "Milestone",
             _ => $"Type {customItemId.Value}"
         };
+
+    private static string? ResolveFolderName(string? folderName)
+    {
+        if (string.IsNullOrWhiteSpace(folderName))
+        {
+            return null;
+        }
+
+        return folderName.Equals("hidden", StringComparison.OrdinalIgnoreCase) ? null : folderName.Trim();
+    }
 
     private async Task<IReadOnlyList<ClickUpMemberDto>> TryGetMembersFromPaginatedEndpointAsync(
         string accessToken,

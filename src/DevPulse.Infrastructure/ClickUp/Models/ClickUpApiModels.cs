@@ -96,6 +96,15 @@ internal sealed class ClickUpTaskItem
     [JsonPropertyName("assignees")]
     public List<ClickUpUser>? Assignees { get; set; }
 
+    [JsonPropertyName("priority")]
+    public ClickUpPriority? Priority { get; set; }
+
+    [JsonPropertyName("project")]
+    public ClickUpProject? Project { get; set; }
+
+    [JsonPropertyName("folder")]
+    public ClickUpFolder? Folder { get; set; }
+
     [JsonPropertyName("list")]
     public ClickUpList? List { get; set; }
 }
@@ -119,6 +128,24 @@ internal sealed class ClickUpStatus
 {
     [JsonPropertyName("status")]
     public string Status { get; set; } = string.Empty;
+}
+
+internal sealed class ClickUpPriority
+{
+    [JsonPropertyName("priority")]
+    public string? Priority { get; set; }
+}
+
+internal sealed class ClickUpProject
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+}
+
+internal sealed class ClickUpFolder
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
 }
 
 internal sealed class ClickUpList

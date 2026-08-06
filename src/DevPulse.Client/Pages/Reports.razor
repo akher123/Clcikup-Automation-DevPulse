@@ -239,8 +239,12 @@
                                 <th>In Progress</th>
                                 <th>Subtasks</th>
                                 <th>Workspaces</th>
+                                <th>Projects</th>
+                                <th>Overdue</th>
+                                <th>On Time</th>
                                 <th>Avg. Completion</th>
-                                <th>Breakdown</th>
+                                <th>Workspace Breakdown</th>
+                                <th>Project Breakdown</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -259,6 +263,27 @@
                                     <td><span class="badge text-bg-warning">@summary.InProgressCount</span></td>
                                     <td><span class="badge text-bg-secondary">@summary.ChildTaskCount</span></td>
                                     <td>@summary.WorkspaceCount</td>
+                                    <td>@summary.ProjectCount</td>
+                                    <td>
+                                        @if (summary.OverdueCount > 0)
+                                        {
+                                            <span class="badge text-bg-danger">@summary.OverdueCount</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">0</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (summary.OnTimeCompletedCount > 0)
+                                        {
+                                            <span class="badge text-bg-success">@summary.OnTimeCompletedCount</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">0</span>
+                                        }
+                                    </td>
                                     <td>
                                         @if (summary.AverageCompletionDays.HasValue)
                                         {
@@ -274,6 +299,14 @@
                                         {
                                             <span class="badge text-bg-light text-dark me-1 mb-1">
                                                 @workspace.AccountName: @workspace.TaskCount
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @foreach (var project in summary.ByProject)
+                                        {
+                                            <span class="badge text-bg-light text-dark me-1 mb-1">
+                                                @project.ProjectName: @project.TaskCount
                                             </span>
                                         }
                                     </td>
@@ -301,8 +334,13 @@
                             <tr>
                                 <th>Developer</th>
                                 <th>Workspace</th>
+                                <th>Project</th>
+                                <th>Folder</th>
                                 <th>Kind</th>
                                 <th>Task</th>
+                                <th>Priority</th>
+                                <th>Created</th>
+                                <th>Due</th>
                                 <th>Status</th>
                                 <th>Completed</th>
                                 <th>Duration</th>
@@ -314,6 +352,8 @@
                                 <tr>
                                     <td>@task.DeveloperName</td>
                                     <td>@task.AccountName</td>
+                                    <td>@(string.IsNullOrWhiteSpace(task.ProjectName) ? "—" : task.ProjectName)</td>
+                                    <td>@(string.IsNullOrWhiteSpace(task.FolderName) ? "—" : task.FolderName)</td>
                                     <td>
                                         @if (task.IsSubtask)
                                         {
@@ -321,7 +361,7 @@
                                         }
                                         else
                                         {
-                                            <span class="badge text-bg-info">Task</span>
+                                            <span class="badge text-bg-info">@task.TaskType</span>
                                         }
                                     </td>
                                     <td>
@@ -337,11 +377,18 @@
                                         {
                                             <div class="small text-muted">@task.ListName</div>
                                         }
-                                        @if (task.IsSubtask && !string.IsNullOrWhiteSpace(task.ParentTaskId))
+                                        @if (task.IsSubtask && !string.IsNullOrWhiteSpace(task.ParentTaskName))
+                                        {
+                                            <div class="small text-muted">Parent: @task.ParentTaskName</div>
+                                        }
+                                        else if (task.IsSubtask && !string.IsNullOrWhiteSpace(task.ParentTaskId))
                                         {
                                             <div class="small text-muted">Parent: @task.ParentTaskId</div>
                                         }
                                     </td>
+                                    <td>@FormatPriority(task.Priority)</td>
+                                    <td>@FormatUnixDate(task.DateCreated)</td>
+                                    <td class="@(IsTaskOverdue(task) ? "text-danger fw-semibold" : null)">@FormatUnixDate(task.DueDate)</td>
                                     <td>
                                         @if (task.IsCompleted)
                                         {
@@ -666,6 +713,34 @@
         }
 
         return DateTimeOffset.FromUnixTimeMilliseconds(unixMs.Value).ToLocalTime().ToString("MMM d, yyyy");
+    }
+
+    private static string FormatPriority(string? priority)
+    {
+        if (string.IsNullOrWhiteSpace(priority))
+        {
+            return "—";
+        }
+
+        var trimmed = priority.Trim();
+        return trimmed.Length == 1
+            ? trimmed.ToUpperInvariant()
+            : char.ToUpper(trimmed[0]) + trimmed[1..].ToLowerInvariant();
+    }
+
+    private static bool IsTaskOverdue(DeveloperReportTaskDto task)
+    {
+        if (!task.DueDate.HasValue)
+        {
+            return false;
+        }
+
+        if (task.IsCompleted)
+        {
+            return task.DateDone.HasValue && task.DateDone.Value > task.DueDate.Value;
+        }
+
+        return task.DueDate.Value < DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     }
 
     private async Task<IJSObjectReference> GetFileDownloadModuleAsync()
