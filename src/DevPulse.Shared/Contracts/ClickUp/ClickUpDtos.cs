@@ -68,7 +68,8 @@ public record ClickUpTaskDto(
     string? ParentTaskId = null,
     int? CustomItemId = null,
     string TaskTypeName = "Task",
-    bool IsSubtask = false);
+    bool IsSubtask = false,
+    IReadOnlyList<int>? AssigneeIds = null);
 
 public record ClickUpTaskQueryRequest(
     Guid AccountId,

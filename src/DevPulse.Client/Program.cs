@@ -27,6 +27,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IClickUpAccountApiClient, ClickUpAccountApiClient>();
 builder.Services.AddScoped<IDeveloperApiClient, DeveloperApiClient>();
 builder.Services.AddScoped<IReportApiClient, ReportApiClient>();
+builder.Services.AddScoped<IAnalyticsApiClient, AnalyticsApiClient>();
 builder.Services.AddScoped<IUserApiClient, UserApiClient>();
 
 await builder.Build().RunAsync();

@@ -2,8 +2,10 @@ using DevPulse.Application.Abstractions.Auth;
 using DevPulse.Application.Abstractions.Persistence;
 using DevPulse.Application.Abstractions.Security;
 using DevPulse.Application.Abstractions.ClickUp;
+using DevPulse.Application.Options;
 using DevPulse.Infrastructure.ClickUp;
 using DevPulse.Infrastructure.Identity;
+using DevPulse.Infrastructure.Jobs;
 using DevPulse.Infrastructure.Persistence;
 using DevPulse.Infrastructure.Persistence.Repositories;
 using DevPulse.Infrastructure.Security;
@@ -28,6 +30,8 @@ public static class DependencyInjection
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.Configure<SeedAdminSettings>(configuration.GetSection(SeedAdminSettings.SectionName));
+        services.Configure<KpiSyncOptions>(configuration.GetSection(KpiSyncOptions.SectionName));
+        services.Configure<ClickUpApiOptions>(configuration.GetSection(ClickUpApiOptions.SectionName));
 
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
             {
@@ -67,9 +71,13 @@ public static class DependencyInjection
         services.AddScoped<ITokenProtector, DataProtectionTokenProtector>();
         services.AddScoped<IClickUpAccountRepository, ClickUpAccountRepository>();
         services.AddScoped<IDeveloperRepository, DeveloperRepository>();
+        services.AddScoped<ISyncedTaskRepository, SyncedTaskRepository>();
+        services.AddScoped<IKpiSyncRunRepository, KpiSyncRunRepository>();
         services.AddSingleton<JwtTokenGenerator>();
+        services.AddSingleton<ClickUpApiRateLimiter>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserManagementService, UserManagementService>();
+        services.AddHostedService<KpiSyncBackgroundService>();
 
         services.AddHttpClient<IClickUpApiClient, ClickUpApiClient>(client =>
         {

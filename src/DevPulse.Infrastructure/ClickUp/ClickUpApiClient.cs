@@ -1,11 +1,12 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using DevPulse.Application.Abstractions.ClickUp;
+using DevPulse.Application.Options;
 using DevPulse.Infrastructure.ClickUp.Models;
 using DevPulse.Shared.Contracts.ClickUp;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace DevPulse.Infrastructure.ClickUp;
 
@@ -23,11 +24,19 @@ public sealed class ClickUpApiClient : IClickUpApiClient
     };
 
     private readonly HttpClient _httpClient;
+    private readonly ClickUpApiRateLimiter _rateLimiter;
+    private readonly IOptionsMonitor<ClickUpApiOptions> _options;
     private readonly ILogger<ClickUpApiClient> _logger;
 
-    public ClickUpApiClient(HttpClient httpClient, ILogger<ClickUpApiClient> logger)
+    public ClickUpApiClient(
+        HttpClient httpClient,
+        ClickUpApiRateLimiter rateLimiter,
+        IOptionsMonitor<ClickUpApiOptions> options,
+        ILogger<ClickUpApiClient> logger)
     {
         _httpClient = httpClient;
+        _rateLimiter = rateLimiter;
+        _options = options;
         _logger = logger;
     }
 
@@ -147,6 +156,7 @@ public sealed class ClickUpApiClient : IClickUpApiClient
         var tasks = response.Tasks.Select(t =>
             {
                 var isSubtask = !string.IsNullOrWhiteSpace(t.Parent);
+                var assignees = t.Assignees ?? [];
                 return new ClickUpTaskDto(
                     t.Id,
                     t.Name,
@@ -160,11 +170,12 @@ public sealed class ClickUpApiClient : IClickUpApiClient
                     t.DateDone ?? t.DateClosed,
                     t.DueDate,
                     t.Priority?.Priority,
-                    t.Assignees?.Select(a => a.Email ?? a.Username).Where(x => !string.IsNullOrWhiteSpace(x)).ToList() ?? [],
+                    assignees.Select(a => a.Email ?? a.Username).Where(x => !string.IsNullOrWhiteSpace(x)).Cast<string>().ToList(),
                     t.Parent,
                     t.CustomItemId,
                     ResolveBuiltInTaskTypeName(t.CustomItemId),
-                    isSubtask);
+                    isSubtask,
+                    assignees.Where(a => a.Id > 0).Select(a => a.Id).Distinct().ToList());
             })
             .ToList();
 
@@ -392,8 +403,7 @@ public sealed class ClickUpApiClient : IClickUpApiClient
         CancellationToken cancellationToken)
         where T : class
     {
-        using var request = CreateRequest(method, relativeUrl, accessToken);
-        var response = await _httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendWithRateLimitAsync(method, relativeUrl, accessToken, cancellationToken);
 
         if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed)
         {
@@ -402,12 +412,6 @@ public sealed class ClickUpApiClient : IClickUpApiClient
                 (int)response.StatusCode,
                 relativeUrl);
             return null;
-        }
-
-        if (response.StatusCode == HttpStatusCode.TooManyRequests)
-        {
-            _logger.LogWarning("ClickUp rate limit reached for {Url}", relativeUrl);
-            throw new HttpRequestException("ClickUp API rate limit exceeded.", null, HttpStatusCode.TooManyRequests);
         }
 
         if (!response.IsSuccessStatusCode)
@@ -426,14 +430,7 @@ public sealed class ClickUpApiClient : IClickUpApiClient
         string accessToken,
         CancellationToken cancellationToken)
     {
-        using var request = CreateRequest(method, relativeUrl, accessToken);
-        var response = await _httpClient.SendAsync(request, cancellationToken);
-
-        if (response.StatusCode == HttpStatusCode.TooManyRequests)
-        {
-            _logger.LogWarning("ClickUp rate limit reached for {Url}", relativeUrl);
-            throw new HttpRequestException("ClickUp API rate limit exceeded.", null, HttpStatusCode.TooManyRequests);
-        }
+        using var response = await SendWithRateLimitAsync(method, relativeUrl, accessToken, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -444,6 +441,96 @@ public sealed class ClickUpApiClient : IClickUpApiClient
 
         var payload = await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken);
         return payload ?? throw new InvalidOperationException("ClickUp API returned an empty response.");
+    }
+
+    private async Task<HttpResponseMessage> SendWithRateLimitAsync(
+        HttpMethod method,
+        string relativeUrl,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        var options = _options.CurrentValue;
+        var maxRetries = Math.Clamp(options.MaxRetriesOnRateLimit, 0, 20);
+        var defaultRetrySeconds = Math.Clamp(options.DefaultRetryAfterSeconds, 1, 300);
+
+        for (var attempt = 0; ; attempt++)
+        {
+            await _rateLimiter.WaitTurnAsync(cancellationToken);
+
+            using var request = CreateRequest(method, relativeUrl, accessToken);
+            var response = await _httpClient.SendAsync(request, cancellationToken);
+
+            if (response.StatusCode != HttpStatusCode.TooManyRequests)
+            {
+                return response;
+            }
+
+            var retryAfter = GetRetryAfter(response) ??
+                             TimeSpan.FromSeconds(defaultRetrySeconds * Math.Pow(1.5, attempt));
+            response.Dispose();
+
+            if (attempt >= maxRetries)
+            {
+                _logger.LogWarning(
+                    "ClickUp rate limit still exceeded for {Url} after {Attempts} retries",
+                    relativeUrl,
+                    attempt + 1);
+                throw new HttpRequestException(
+                    "ClickUp API rate limit exceeded. Wait a few minutes and sync again (requests are now throttled/retried automatically).",
+                    null,
+                    HttpStatusCode.TooManyRequests);
+            }
+
+            // Cap individual waits so a bad header cannot stall forever.
+            if (retryAfter > TimeSpan.FromMinutes(5))
+            {
+                retryAfter = TimeSpan.FromMinutes(5);
+            }
+
+            _logger.LogWarning(
+                "ClickUp rate limited on {Url}; retry {Attempt}/{MaxRetries} after {RetryAfter}",
+                relativeUrl,
+                attempt + 1,
+                maxRetries,
+                retryAfter);
+
+            await _rateLimiter.CoolDownAsync(retryAfter, cancellationToken);
+        }
+    }
+
+    private static TimeSpan? GetRetryAfter(HttpResponseMessage response)
+    {
+        if (response.Headers.RetryAfter?.Delta is { } delta && delta > TimeSpan.Zero)
+        {
+            return delta;
+        }
+
+        if (response.Headers.RetryAfter?.Date is { } date)
+        {
+            var wait = date.UtcDateTime - DateTime.UtcNow;
+            return wait > TimeSpan.Zero ? wait : TimeSpan.FromSeconds(1);
+        }
+
+        if (response.Headers.TryGetValues("X-RateLimit-Reset", out var values))
+        {
+            var raw = values.FirstOrDefault();
+            if (long.TryParse(raw, out var unixSeconds))
+            {
+                // ClickUp may send unix seconds or remaining seconds; treat large values as unix.
+                if (unixSeconds > 1_000_000_000)
+                {
+                    var wait = DateTimeOffset.FromUnixTimeSeconds(unixSeconds) - DateTimeOffset.UtcNow;
+                    return wait > TimeSpan.Zero ? wait : TimeSpan.FromSeconds(1);
+                }
+
+                if (unixSeconds > 0)
+                {
+                    return TimeSpan.FromSeconds(unixSeconds);
+                }
+            }
+        }
+
+        return null;
     }
 
     private static HttpRequestMessage CreateRequest(HttpMethod method, string relativeUrl, string accessToken)

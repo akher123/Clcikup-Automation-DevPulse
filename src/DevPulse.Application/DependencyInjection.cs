@@ -1,7 +1,9 @@
+using DevPulse.Application.Abstractions.Analytics;
 using DevPulse.Application.Abstractions.Developers;
 using DevPulse.Application.Abstractions.Reports;
 using DevPulse.Application.Abstractions.ClickUp;
-using DevPulse.Application.Abstractions.Persistence;
+using DevPulse.Application.Options;
+using DevPulse.Application.Services.Analytics;
 using DevPulse.Application.Services.ClickUp;
 using DevPulse.Application.Services.Developers;
 using DevPulse.Application.Services.Reports;
@@ -17,6 +19,8 @@ public static class DependencyInjection
         services.AddScoped<IDeveloperService, DeveloperService>();
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IReportExportService, ReportExcelExportService>();
+        services.AddScoped<IKpiSyncService, KpiSyncService>();
+        services.AddScoped<ICachedAnalyticsService, CachedAnalyticsService>();
         return services;
     }
 }

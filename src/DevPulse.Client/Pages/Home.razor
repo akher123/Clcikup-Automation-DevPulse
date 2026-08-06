@@ -1,5 +1,6 @@
 ﻿@page "/"
 @attribute [Authorize(Roles = AppRoles.Admin)]
+@using DevPulse.Client.Analytics
 @using DevPulse.Shared.Constants
 @using DevPulse.Shared.Contracts.Reports
 @inject IDeveloperApiClient DeveloperApi
@@ -7,14 +8,17 @@
 
 <PageTitle>@AppBranding.PageTitle("Dashboard")</PageTitle>
 
-<div class="hero">
-    <h1>@AppBranding.CompanyName Developer Work</h1>
-    <p class="lead">
-        Unified developer performance across ClickUp workspaces — track completed tasks, productivity trends, and workspace breakdowns for the @AppBranding.CompanyName team.
-    </p>
-    <div class="hero-actions">
-        <a class="btn btn-primary btn-lg" href="reports">View Full Reports</a>
-        <a class="btn btn-outline-light btn-lg" href="developers">Manage Developers</a>
+<div class="analytics-hero analytics-hero-home">
+    <div class="analytics-hero-copy">
+        <p class="analytics-eyebrow">@AppBranding.CompanyName · MIS Overview</p>
+        <h1>Developer Performance</h1>
+        <p class="analytics-lead">
+            Unified KPI view across ClickUp workspaces — throughput, delivery health, and team workload at a glance.
+        </p>
+        <div class="analytics-hero-actions-inline">
+            <a class="btn btn-primary" href="analytics">Open Analytics</a>
+            <a class="btn btn-outline-light" href="reports">Full Reports</a>
+        </div>
     </div>
 </div>
 
@@ -22,185 +26,170 @@
 {
     <LoadingIndicator Text="Loading developer work summary..." />
 }
-else if (_report is not null)
+else if (_kpis is not null)
 {
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h4 mb-0">@FormatPeriod(_report.FromDate, _report.ToDate) Overview</h2>
-        <a class="btn btn-sm btn-outline-primary" href="reports">Open Reports</a>
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div class="analytics-period-label mb-0">
+            <span>@KpiAnalytics.FormatPeriod(_kpis.FromDate, _kpis.ToDate)</span>
+            <span class="text-muted">· month to date</span>
+        </div>
+        <a class="btn btn-sm btn-outline-primary" href="analytics">Explore KPIs</a>
     </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="summary-card card h-100">
-                <div class="card-body">
-                    <div class="summary-label">Completed</div>
-                    <div class="summary-value">@_report.TotalTasksCompleted</div>
-                    <div class="text-muted small">across all workspaces</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="summary-card card h-100">
-                <div class="card-body">
-                    <div class="summary-label">In Progress</div>
-                    <div class="summary-value">@_report.TotalInProgress</div>
-                    <div class="text-muted small">created in selected dates</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="summary-card card h-100">
-                <div class="card-body">
-                    <div class="summary-label">Active Developers</div>
-                    <div class="summary-value">@_report.Developers.Count(d => d.TotalTasks > 0)</div>
-                    <div class="text-muted small">with work in period</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="summary-card card h-100">
-                <div class="card-body">
-                    <div class="summary-label">Workspaces</div>
-                    <div class="summary-value">@_report.WorkspaceCount</div>
-                    <div class="text-muted small">included in report</div>
-                </div>
-            </div>
-        </div>
+    <div class="kpi-grid mb-4">
+        <KpiScorecard Label="Completed"
+                      Value="@_kpis.CompletedCount.ToString()"
+                      Hint="across all workspaces"
+                      Tone="success" />
+        <KpiScorecard Label="Completion Rate"
+                      Value="@KpiAnalytics.FormatPercent(_kpis.CompletionRate)"
+                      Hint="@($"{_kpis.CompletedCount}/{_kpis.TotalTasks} tasks")"
+                      Progress="_kpis.CompletionRate"
+                      Tone="primary" />
+        <KpiScorecard Label="Delivery Health"
+                      Value="@KpiAnalytics.FormatPercent(_kpis.OnTimeRate)"
+                      Hint="on-time vs overdue"
+                      Progress="_kpis.OnTimeRate"
+                      Tone="accent" />
+        <KpiScorecard Label="Avg. Cycle"
+                      Value="@KpiAnalytics.FormatDays(_kpis.AverageCycleDays)"
+                      Hint="completion days"
+                      Tone="neutral" />
+        <KpiScorecard Label="In Progress"
+                      Value="@_kpis.InProgressCount.ToString()"
+                      Hint="active in period"
+                      Tone="warning" />
+        <KpiScorecard Label="Active Devs"
+                      Value="@_kpis.ActiveDevelopers.ToString()"
+                      Hint="@($"{_kpis.WorkspaceCount} workspace(s)")"
+                      Tone="primary" />
     </div>
 
-    @if (_report.Developers.Any(d => d.TotalTasks > 0))
+    @if (_kpis.Developers.Count > 0)
     {
-        <div class="data-card card mb-4">
-            <div class="card-body p-0">
-                <h5 class="card-title card-title-bar">Developer Work Summary</h5>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>Developer</th>
-                                <th>Total</th>
-                                <th>Completed</th>
-                                <th>In Progress</th>
-                                <th>Subtasks</th>
-                                <th>Avg. Completion</th>
-                                <th>Workspaces</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var summary in _report.Developers.Where(d => d.TotalTasks > 0))
-                            {
-                                <tr>
-                                    <td>
-                                        <strong>@summary.DeveloperName</strong>
-                                        @if (!string.IsNullOrWhiteSpace(summary.Email))
-                                        {
-                                            <div class="small text-muted">@summary.Email</div>
-                                        }
-                                    </td>
-                                    <td><span class="badge text-bg-primary">@summary.TotalTasks</span></td>
-                                    <td><span class="badge text-bg-success">@summary.CompletedCount</span></td>
-                                    <td><span class="badge text-bg-warning">@summary.InProgressCount</span></td>
-                                    <td><span class="badge text-bg-secondary">@summary.ChildTaskCount</span></td>
-                                    <td>
-                                        @if (summary.AverageCompletionDays.HasValue)
-                                        {
-                                            <span>@summary.AverageCompletionDays.Value days</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">—</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        @foreach (var workspace in summary.ByWorkspace)
-                                        {
-                                            <span class="badge text-bg-light text-dark me-1 mb-1">
-                                                @workspace.AccountName: @workspace.TaskCount
-                                            </span>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+        <div class="row g-4 mb-4">
+            <div class="col-lg-7">
+                <div class="data-card card h-100">
+                    <div class="card-body p-0">
+                        <h5 class="card-title card-title-bar">Top Contributors</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 analytics-table">
+                                <thead>
+                                    <tr>
+                                        <th>Developer</th>
+                                        <th>Done</th>
+                                        <th>Completion</th>
+                                        <th>Delivery</th>
+                                        <th>Cycle</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var summary in _kpis.Developers.Take(6))
+                                    {
+                                        var band = KpiAnalytics.PerformanceBand(summary.OnTimeRate, summary.CompletionRate);
+                                        <tr>
+                                            <td>
+                                                <strong>@summary.DeveloperName</strong>
+                                                <div class="small"><span class="perf-pill @KpiAnalytics.PerformanceTone(band)">@band</span></div>
+                                            </td>
+                                            <td><span class="badge text-bg-success">@summary.CompletedCount</span></td>
+                                            <td>@KpiAnalytics.FormatPercent(summary.CompletionRate)</td>
+                                            <td>@KpiAnalytics.FormatPercent(summary.OnTimeRate)</td>
+                                            <td>@KpiAnalytics.FormatDays(summary.AverageCycleDays)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="chart-panel card h-100">
+                    <div class="card-body">
+                        <div class="chart-panel-header">
+                            <div>
+                                <h2 class="chart-title">Workspace Load</h2>
+                                <p class="chart-subtitle">Where work is concentrated this month</p>
+                            </div>
+                        </div>
+                        @if (_kpis.ByWorkspace.Count == 0)
+                        {
+                            <p class="text-muted mb-0">No workspace data.</p>
+                        }
+                        else
+                        {
+                            var maxWs = _kpis.ByWorkspace.Max(w => w.Count);
+                            <div class="rank-list">
+                                @foreach (var workspace in _kpis.ByWorkspace.Take(6))
+                                {
+                                    var width = maxWs > 0 ? workspace.Count * 100.0 / maxWs : 0;
+                                    <div class="rank-row">
+                                        <div class="rank-row-top">
+                                            <span class="rank-name">@workspace.Name</span>
+                                            <span class="rank-value">@workspace.Count</span>
+                                        </div>
+                                        <div class="rank-bar-track">
+                                            <div class="rank-bar-fill" style="width: @width.ToString("0.##")%"></div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
     }
 }
+else
+{
+    <div class="empty-state mb-4">
+        <div class="empty-state-icon" aria-hidden="true">◇</div>
+        <h5>Connect ClickUp to unlock analytics</h5>
+        <p class="text-muted mb-3">Add accounts and sync developers to populate the MIS KPI dashboard.</p>
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <a class="btn btn-primary" href="clickup-accounts">Add Accounts</a>
+            <a class="btn btn-outline-primary" href="developers">Sync Developers</a>
+        </div>
+    </div>
+}
 
 <div class="feature-grid">
     <div class="feature-card card h-100">
         <div class="card-body">
-            <div class="feature-icon feature-icon-indigo" aria-hidden="true">&#128279;</div>
-            <h5>Multi-Workspace ClickUp</h5>
-            <p class="text-muted">Connect multiple ClickUp API tokens and aggregate tasks across internal and client workspaces in one place.</p>
+            <div class="feature-icon feature-icon-indigo" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5h-2v12h2V2z"/></svg>
+            </div>
+            <h5>MIS Analytics</h5>
+            <p class="text-muted">KPI scorecards, throughput charts, delivery health, and developer leaderboards.</p>
+            <a href="analytics" class="stretched-link" aria-label="Go to Analytics"></a>
         </div>
     </div>
     <div class="feature-card card h-100">
         <div class="card-body">
-            <div class="feature-icon feature-icon-cyan" aria-hidden="true">&#128202;</div>
-            <h5>Developer Work Reports</h5>
-            <p class="text-muted">Filter by developers and month to produce unified task and productivity reports with workspace breakdowns.</p>
+            <div class="feature-icon feature-icon-cyan" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/></svg>
+            </div>
+            <h5>Stakeholder Reports</h5>
+            <p class="text-muted">Filter by period and export Excel packs for management reviews.</p>
             <a href="reports" class="stretched-link" aria-label="Go to Reports"></a>
         </div>
     </div>
     <div class="feature-card card h-100">
         <div class="card-body">
-            <div class="feature-icon feature-icon-emerald" aria-hidden="true">&#128196;</div>
-            <h5>Stakeholder Exports</h5>
-            <p class="text-muted">Export monthly developer work summaries to Excel for management reviews and client reporting.</p>
-            <a href="reports" class="stretched-link" aria-label="Go to Reports"></a>
+            <div class="feature-icon feature-icon-emerald" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7Zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>
+            </div>
+            <h5>Developer Registry</h5>
+            <p class="text-muted">Map people across multiple ClickUp workspaces for unified scoring.</p>
+            <a href="developers" class="stretched-link" aria-label="Go to Developers"></a>
         </div>
     </div>
 </div>
-
-<div class="row g-4 mt-2">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title mb-3">Quick Start</h5>
-                <ol class="quick-start-list mb-0">
-                    <li><a href="clickup-accounts">Add your ClickUp accounts</a> with API tokens</li>
-                    <li><a href="developers">Sync developers</a> from connected workspaces</li>
-                    <li><a href="reports">Generate a monthly report</a> for your team</li>
-                </ol>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title mb-3">What You Get</h5>
-                <ul class="quick-start-list mb-0">
-                    <li>Tasks completed per developer across workspaces</li>
-                    <li>Average completion time and workspace breakdown</li>
-                    <li>Excel export for stakeholder reporting</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-    .quick-start-list {
-        padding-left: 1.25rem;
-        color: var(--dp-text-secondary);
-        font-size: 0.9375rem;
-        line-height: 1.8;
-    }
-
-    .quick-start-list li {
-        margin-bottom: 0.25rem;
-    }
-
-    .quick-start-list a {
-        font-weight: 500;
-    }
-</style>
 
 @code {
-    private DeveloperReportResponse? _report;
+    private TeamKpis? _kpis;
     private bool _isLoadingReport = true;
 
     protected override async Task OnInitializedAsync()
@@ -217,32 +206,21 @@ else if (_report is not null)
 
             var fromDate = new DateOnly(DateTime.Today.Year, DateTime.Today.Month, 1);
             var toDate = DateOnly.FromDateTime(DateTime.Today);
-            _report = await ReportApi.GenerateDeveloperReportAsync(
+            var report = await ReportApi.GenerateDeveloperReportAsync(
                 new DeveloperReportRequest(activeDeveloperIds, fromDate, toDate, IncludeClosed: true));
+
+            if (report is not null)
+            {
+                _kpis = KpiAnalytics.FromReport(report);
+            }
         }
         catch
         {
-            _report = null;
+            _kpis = null;
         }
         finally
         {
             _isLoadingReport = false;
         }
-    }
-
-    private static string FormatPeriod(DateOnly fromDate, DateOnly toDate)
-    {
-        if (fromDate == toDate)
-        {
-            return fromDate.ToString("MMM d, yyyy");
-        }
-
-        if (fromDate.Year == toDate.Year && fromDate.Month == toDate.Month && fromDate.Day == 1
-            && toDate.Day == DateTime.DaysInMonth(toDate.Year, toDate.Month))
-        {
-            return fromDate.ToString("MMMM yyyy");
-        }
-
-        return $"{fromDate:MMM d, yyyy} – {toDate:MMM d, yyyy}";
     }
 }

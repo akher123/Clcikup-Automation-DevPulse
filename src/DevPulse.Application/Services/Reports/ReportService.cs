@@ -2,12 +2,14 @@ using DevPulse.Application.Abstractions.ClickUp;
 using DevPulse.Application.Abstractions.Persistence;
 using DevPulse.Application.Abstractions.Reports;
 using DevPulse.Application.Abstractions.Security;
+using DevPulse.Application.Options;
 using DevPulse.Domain.Entities;
 using DevPulse.Shared.Common;
 using DevPulse.Shared.Constants;
 using DevPulse.Shared.Contracts.ClickUp;
 using DevPulse.Shared.Contracts.Reports;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace DevPulse.Application.Services.Reports;
 
@@ -19,6 +21,7 @@ public sealed class ReportService : IReportService
     private readonly IClickUpAccountRepository _accountRepository;
     private readonly IClickUpApiClient _apiClient;
     private readonly ITokenProtector _tokenProtector;
+    private readonly ClickUpApiOptions _clickUpOptions;
     private readonly ILogger<ReportService> _logger;
 
     public ReportService(
@@ -26,12 +29,14 @@ public sealed class ReportService : IReportService
         IClickUpAccountRepository accountRepository,
         IClickUpApiClient apiClient,
         ITokenProtector tokenProtector,
+        IOptions<ClickUpApiOptions> clickUpOptions,
         ILogger<ReportService> logger)
     {
         _developerRepository = developerRepository;
         _accountRepository = accountRepository;
         _apiClient = apiClient;
         _tokenProtector = tokenProtector;
+        _clickUpOptions = clickUpOptions.Value;
         _logger = logger;
     }
 
@@ -78,6 +83,7 @@ public sealed class ReportService : IReportService
 
         var reportTasks = new List<DeveloperReportTaskDto>();
         var queriedWorkspaces = new HashSet<Guid>();
+        var assigneeBatchSize = Math.Clamp(_clickUpOptions.AssigneeBatchSize, 1, 50);
 
         foreach (var account in accounts)
         {
@@ -97,15 +103,9 @@ public sealed class ReportService : IReportService
 
             queriedWorkspaces.Add(account.Id);
 
-            string token = string.Empty;
-            if (!DemoSeedData.IsDemoWorkspace(account.WorkspaceId))
+            if (DemoSeedData.IsDemoWorkspace(account.WorkspaceId))
             {
-                token = _tokenProtector.Unprotect(account.EncryptedAccessToken);
-            }
-
-            foreach (var entry in developersForAccount)
-            {
-                if (DemoSeedData.IsDemoWorkspace(account.WorkspaceId))
+                foreach (var entry in developersForAccount)
                 {
                     reportTasks.AddRange(
                         DemoReportDataProvider.GetTasksForDateRange(
@@ -114,18 +114,48 @@ public sealed class ReportService : IReportService
                             account,
                             entry.Developer)
                             .Where(IsTaskOrSubtask));
-                    continue;
                 }
 
-                var mapping = entry.Mapping!;
-                var developerTasks = await FetchDeveloperTasksAsync(
+                continue;
+            }
+
+            string token = _tokenProtector.Unprotect(account.EncryptedAccessToken);
+            var developerByClickUpUserId = developersForAccount
+                .GroupBy(x => x.Mapping!.ClickUpUserId)
+                .ToDictionary(g => g.Key, g => g.First().Developer);
+
+            var clickUpUserIds = developerByClickUpUserId.Keys.ToList();
+            foreach (var assigneeChunk in clickUpUserIds.Chunk(assigneeBatchSize))
+            {
+                var chunkIds = assigneeChunk.ToList();
+                var accountTasks = await FetchAccountTasksAsync(
                     token,
                     account,
-                    mapping.ClickUpUserId,
+                    chunkIds,
                     request,
                     cancellationToken);
 
-                reportTasks.AddRange(developerTasks.Select(task => ToReportTask(entry.Developer, account, task)));
+                foreach (var task in accountTasks)
+                {
+                    var assigneeIds = task.AssigneeIds ?? [];
+                    var matchedDevelopers = assigneeIds
+                        .Where(developerByClickUpUserId.ContainsKey)
+                        .Select(id => developerByClickUpUserId[id])
+                        .DistinctBy(d => d.Id)
+                        .ToList();
+
+                    // Fallback: if ClickUp omitted assignee ids, attribute to the sole developer in this chunk.
+                    if (matchedDevelopers.Count == 0 && chunkIds.Count == 1
+                        && developerByClickUpUserId.TryGetValue(chunkIds[0], out var soleDeveloper))
+                    {
+                        matchedDevelopers.Add(soleDeveloper);
+                    }
+
+                    foreach (var developer in matchedDevelopers)
+                    {
+                        reportTasks.Add(ToReportTask(developer, account, task));
+                    }
+                }
             }
         }
 
@@ -173,20 +203,19 @@ public sealed class ReportService : IReportService
         return Result<DeveloperReportResponse>.Success(response);
     }
 
-    private async Task<IReadOnlyList<ClickUpTaskDto>> FetchDeveloperTasksAsync(
+    private async Task<IReadOnlyList<ClickUpTaskDto>> FetchAccountTasksAsync(
         string token,
         ClickUpAccount account,
-        int clickUpUserId,
+        IReadOnlyList<int> clickUpUserIds,
         DeveloperReportRequest request,
         CancellationToken cancellationToken)
     {
         var fromMs = ToRangeStartMs(request.FromDate);
         var toExclusiveMs = ToRangeEndExclusiveMs(request.ToDate);
 
-        // Completed tasks done within the selected date range.
         var completedQuery = new ClickUpTaskQueryRequest(
             account.Id,
-            [clickUpUserId],
+            clickUpUserIds,
             Month: null,
             request.IncludeClosed,
             Page: 0,
@@ -196,10 +225,9 @@ public sealed class ReportService : IReportService
             CustomItemIds: [0],
             DateFilter: ClickUpDateFilterMode.DateDone);
 
-        // Open / in-progress tasks created within the selected date range.
         var openQuery = new ClickUpTaskQueryRequest(
             account.Id,
-            [clickUpUserId],
+            clickUpUserIds,
             Month: null,
             IncludeClosed: false,
             Page: 0,
@@ -230,7 +258,6 @@ public sealed class ReportService : IReportService
                 && task.DateDone.Value < toExclusiveMs;
         }
 
-        // In-progress items must have been created inside the selected range.
         return task.DateCreated.HasValue
             && task.DateCreated.Value >= fromMs
             && task.DateCreated.Value < toExclusiveMs;
@@ -341,7 +368,10 @@ public sealed class ReportService : IReportService
 
     private static List<DeveloperReportTaskDto> EnrichParentTaskNames(IReadOnlyList<DeveloperReportTaskDto> tasks)
     {
-        var namesById = tasks.ToDictionary(t => t.TaskId, t => t.TaskName, StringComparer.Ordinal);
+        // Same ClickUp task id can appear on multiple developer rows (multi-assignee / batched fetch).
+        var namesById = tasks
+            .GroupBy(t => t.TaskId, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First().TaskName, StringComparer.Ordinal);
 
         return tasks
             .Select(task =>

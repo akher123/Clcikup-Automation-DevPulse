@@ -18,6 +18,12 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
 
     public DbSet<DeveloperClickUpMapping> DeveloperClickUpMappings => Set<DeveloperClickUpMapping>();
 
+    public DbSet<SyncedTask> SyncedTasks => Set<SyncedTask>();
+
+    public DbSet<KpiSyncRun> KpiSyncRuns => Set<KpiSyncRun>();
+
+    public DbSet<DeveloperKpiSnapshot> DeveloperKpiSnapshots => Set<DeveloperKpiSnapshot>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -62,6 +68,64 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
             entity.HasOne(x => x.ClickUpAccount)
                 .WithMany()
                 .HasForeignKey(x => x.ClickUpAccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SyncedTask>(entity =>
+        {
+            entity.ToTable("SyncedTasks");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.AccountName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.ProjectName).HasMaxLength(200);
+            entity.Property(x => x.FolderName).HasMaxLength(200);
+            entity.Property(x => x.TaskId).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.TaskName).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(100);
+            entity.Property(x => x.Priority).HasMaxLength(50);
+            entity.Property(x => x.ListName).HasMaxLength(200);
+            entity.Property(x => x.Url).HasMaxLength(1000);
+            entity.Property(x => x.ParentTaskId).HasMaxLength(64);
+            entity.Property(x => x.ParentTaskName).HasMaxLength(500);
+            entity.Property(x => x.TaskType).HasMaxLength(100).IsRequired();
+            entity.HasIndex(x => new { x.DeveloperId, x.AccountId, x.TaskId }).IsUnique();
+            entity.HasIndex(x => new { x.AccountId, x.IsCompleted, x.DateDone });
+            entity.HasIndex(x => new { x.AccountId, x.IsCompleted, x.DateCreated });
+
+            entity.HasOne(x => x.Developer)
+                .WithMany()
+                .HasForeignKey(x => x.DeveloperId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.Account)
+                .WithMany()
+                .HasForeignKey(x => x.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<KpiSyncRun>(entity =>
+        {
+            entity.ToTable("KpiSyncRuns");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ErrorMessage).HasMaxLength(2000);
+            entity.HasIndex(x => x.StartedAtUtc);
+        });
+
+        modelBuilder.Entity<DeveloperKpiSnapshot>(entity =>
+        {
+            entity.ToTable("DeveloperKpiSnapshots");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.DeveloperName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Email).HasMaxLength(320);
+            entity.HasIndex(x => new { x.FromDate, x.ToDate, x.DeveloperId });
+
+            entity.HasOne(x => x.SyncRun)
+                .WithMany()
+                .HasForeignKey(x => x.SyncRunId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.Developer)
+                .WithMany()
+                .HasForeignKey(x => x.DeveloperId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
