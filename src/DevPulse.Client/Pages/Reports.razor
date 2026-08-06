@@ -89,7 +89,7 @@
                 else if (_developers.Count == 0)
                 {
                     <p class="text-muted mb-0">
-                        No developers registered.
+                        No active developers registered.
                         <AuthorizeView Roles="@AppRoles.Admin">
                             <Authorized>
                                 <a href="developers">Sync from ClickUp</a> to get started.
@@ -463,14 +463,14 @@
 
     private IEnumerable<DeveloperDto> AccountFilteredDevelopers()
     {
-        var active = _developers.Where(d => d.IsActive);
+        IEnumerable<DeveloperDto> results = _developers;
 
         if (_selectedAccountIds.Count == 0)
         {
-            return active;
+            return results;
         }
 
-        return active.Where(d =>
+        return results.Where(d =>
             d.Mappings.Any(m => _selectedAccountIds.Contains(m.ClickUpAccountId)));
     }
 
@@ -524,7 +524,7 @@
         {
             var developers = await DeveloperApi.GetDevelopersAsync();
             _developers.Clear();
-            _developers.AddRange(developers);
+            _developers.AddRange(developers.Where(d => d.IsActive));
         }
         catch (Exception ex)
         {

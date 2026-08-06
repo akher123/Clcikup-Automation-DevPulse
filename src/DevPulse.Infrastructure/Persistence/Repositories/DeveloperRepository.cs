@@ -19,9 +19,9 @@ public sealed class DeveloperRepository : IDeveloperRepository
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<Developer>> GetActiveWithMappingsAsync(CancellationToken cancellationToken = default) =>
+    public async Task<IReadOnlyList<Developer>> GetWithMappingsAsync(CancellationToken cancellationToken = default) =>
         await QueryWithMappings()
-            .Where(x => x.IsActive)
+            .Where(x => x.ClickUpMappings.Any())
             .OrderBy(x => x.Name)
             .AsNoTracking()
             .ToListAsync(cancellationToken);

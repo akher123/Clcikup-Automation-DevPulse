@@ -74,14 +74,9 @@ public sealed class CachedAnalyticsService : ICachedAnalyticsService
             return Result<DeveloperReportResponse>.Failure("No matching developers were found.");
         }
 
-        var activeDevelopers = developers.Where(d => d.IsActive).ToList();
-        if (activeDevelopers.Count == 0)
-        {
-            return Result<DeveloperReportResponse>.Failure("Selected developers are inactive.");
-        }
-
+        // IsActive is registry-only; inactive developers remain in reports and analytics.
         var syncedTasks = await _syncedTaskRepository.GetForReportAsync(
-            activeDevelopers.Select(d => d.Id).ToList(),
+            developers.Select(d => d.Id).ToList(),
             request.FromDate,
             request.ToDate,
             request.AccountIds,
@@ -96,8 +91,8 @@ public sealed class CachedAnalyticsService : ICachedAnalyticsService
             return Result<DeveloperReportResponse>.Failure(hint);
         }
 
-        var nameById = activeDevelopers.ToDictionary(d => d.Id, d => d.Name);
-        var emailById = activeDevelopers.ToDictionary(d => d.Id, d => d.Email);
+        var nameById = developers.ToDictionary(d => d.Id, d => d.Name);
+        var emailById = developers.ToDictionary(d => d.Id, d => d.Email);
 
         var reportTasks = syncedTasks
             .Select(t => ReportTaskMapper.ToReportTask(t, nameById.GetValueOrDefault(t.DeveloperId, "Unknown")))
@@ -110,7 +105,7 @@ public sealed class CachedAnalyticsService : ICachedAnalyticsService
             .ThenBy(t => t.TaskName)
             .ToList();
 
-        var summaries = activeDevelopers
+        var summaries = developers
             .Select(d => ReportTaskMapper.BuildSummary(
                 d.Id,
                 d.Name,

@@ -127,7 +127,15 @@ else
                                @bind="_developerSearch"
                                @bind:event="oninput" />
                     </div>
-                    <div class="col-md-8 col-lg-9">
+                    <div class="col-md-3 col-lg-2">
+                        <label class="form-label mb-1" for="developerStatusFilter">Status</label>
+                        <select id="developerStatusFilter" class="form-select form-select-sm" @bind="_statusFilter">
+                            <option value="all">All</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5 col-lg-7">
                         <p class="text-muted small mb-0">
                             Showing @FilteredDevelopers().Count() of @_developers.Count developer@(_developers.Count == 1 ? "" : "s")
                             @if (HasActiveFilters)
@@ -189,8 +197,22 @@ else
                                         }
                                     </td>
                                     <td class="text-end">
-                                        <button class="btn btn-sm btn-outline-primary me-1" disabled="@_isBusy" @onclick="() => ShowMappingForm(developer)">Map Workspace</button>
-                                        <button class="btn btn-sm btn-outline-danger" disabled="@_isBusy" @onclick="() => DeleteDeveloperAsync(developer.Id)">Delete</button>
+                                        <div class="btn-group-actions">
+                                            <button class="btn btn-sm btn-outline-primary" disabled="@_isBusy" @onclick="() => ShowMappingForm(developer)">Map Workspace</button>
+                                            @if (developer.IsActive)
+                                            {
+                                                <button class="btn btn-sm btn-outline-secondary" disabled="@_isBusy" @onclick="() => SetDeveloperActiveAsync(developer, false)" title="Mark inactive without affecting reports or analytics">
+                                                    Set Inactive
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-sm btn-outline-success" disabled="@_isBusy" @onclick="() => SetDeveloperActiveAsync(developer, true)">
+                                                    Set Active
+                                                </button>
+                                            }
+                                            <button class="btn btn-sm btn-outline-danger" disabled="@_isBusy" @onclick="() => DeleteDeveloperAsync(developer.Id)">Delete</button>
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -210,6 +232,7 @@ else
     private Guid? _mappingDeveloperId;
     private string _selectedAccountId = string.Empty;
     private string _developerSearch = string.Empty;
+    private string _statusFilter = "all";
     private bool _showAddForm;
     private bool _isLoading = true;
     private bool _isBusy;
@@ -371,12 +394,14 @@ else
 
     private bool HasActiveFilters =>
         !string.IsNullOrWhiteSpace(_developerSearch)
-        || !string.IsNullOrWhiteSpace(_selectedAccountId);
+        || !string.IsNullOrWhiteSpace(_selectedAccountId)
+        || !string.Equals(_statusFilter, "all", StringComparison.OrdinalIgnoreCase);
 
     private void ClearFilters()
     {
         _developerSearch = string.Empty;
         _selectedAccountId = string.Empty;
+        _statusFilter = "all";
     }
 
     private IEnumerable<DeveloperDto> FilteredDevelopers()
@@ -387,6 +412,15 @@ else
         {
             results = results.Where(d =>
                 d.Mappings.Any(m => m.ClickUpAccountId == accountId));
+        }
+
+        if (string.Equals(_statusFilter, "active", StringComparison.OrdinalIgnoreCase))
+        {
+            results = results.Where(d => d.IsActive);
+        }
+        else if (string.Equals(_statusFilter, "inactive", StringComparison.OrdinalIgnoreCase))
+        {
+            results = results.Where(d => !d.IsActive);
         }
 
         if (!string.IsNullOrWhiteSpace(_developerSearch))
@@ -418,6 +452,34 @@ else
             _message = result is null
                 ? $"Sync from {accountLabel} completed."
                 : $"Sync from {accountLabel} complete: {result.DevelopersCreated} created, {result.DevelopersUpdated} updated, {result.MappingsAdded} mappings added.";
+            await LoadDevelopersAsync();
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task SetDeveloperActiveAsync(DeveloperDto developer, bool isActive)
+    {
+        _isBusy = true;
+        _message = null;
+
+        try
+        {
+            await DeveloperApi.UpdateDeveloperAsync(
+                developer.Id,
+                new UpdateDeveloperRequest(developer.Name, developer.Email, isActive));
+
+            _isError = false;
+            _message = isActive
+                ? $"{developer.Name} marked active."
+                : $"{developer.Name} marked inactive. Reports and analytics are unchanged.";
             await LoadDevelopersAsync();
         }
         catch (Exception ex)

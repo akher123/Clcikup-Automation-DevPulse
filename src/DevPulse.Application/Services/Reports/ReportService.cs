@@ -60,12 +60,7 @@ public sealed class ReportService : IReportService
             return Result<DeveloperReportResponse>.Failure("No matching developers were found.");
         }
 
-        var activeDevelopers = developers.Where(d => d.IsActive).ToList();
-        if (activeDevelopers.Count == 0)
-        {
-            return Result<DeveloperReportResponse>.Failure("Selected developers are inactive.");
-        }
-
+        // IsActive is registry-only; inactive developers remain in reports and analytics.
         var accounts = await _accountRepository.GetActiveAsync(cancellationToken);
         if (accounts.Count == 0)
         {
@@ -87,7 +82,7 @@ public sealed class ReportService : IReportService
 
         foreach (var account in accounts)
         {
-            var developersForAccount = activeDevelopers
+            var developersForAccount = developers
                 .Select(d => new
                 {
                     Developer = d,
@@ -167,7 +162,7 @@ public sealed class ReportService : IReportService
 
         reportTasks = EnrichParentTaskNames(reportTasks);
 
-        var summaries = activeDevelopers
+        var summaries = developers
             .Select(developer => BuildSummary(developer, reportTasks))
             .Where(s => s.TotalTasks > 0 || request.DeveloperIds.Contains(s.DeveloperId))
             .OrderByDescending(s => s.TotalTasks)

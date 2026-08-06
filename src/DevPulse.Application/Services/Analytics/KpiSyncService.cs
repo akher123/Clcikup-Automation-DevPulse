@@ -61,10 +61,10 @@ public sealed class KpiSyncService : IKpiSyncService
 
         try
         {
-            var developers = await _developerRepository.GetActiveWithMappingsAsync(cancellationToken);
+            var developers = await _developerRepository.GetWithMappingsAsync(cancellationToken);
             if (developers.Count == 0)
             {
-                return await CompleteFailedAsync(run, "No active developers with ClickUp mappings found.", cancellationToken);
+                return await CompleteFailedAsync(run, "No developers with ClickUp mappings found.", cancellationToken);
             }
 
             var accounts = await _accountRepository.GetActiveAsync(cancellationToken);

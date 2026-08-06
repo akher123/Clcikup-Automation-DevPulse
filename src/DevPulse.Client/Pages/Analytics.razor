@@ -212,9 +212,9 @@
                                 <p class="chart-subtitle">Completed vs in-progress work by developer</p>
                             </div>
                         </div>
-                        @if (_kpis.Developers.Count == 0)
+                        @if (!AccountFilteredDevelopers().Any())
                         {
-                            <p class="text-muted mb-0 py-5 text-center">No developer activity in this period.</p>
+                            <p class="text-muted mb-0 py-5 text-center">No active developers mapped to this workspace.</p>
                         }
                         else
                         {
@@ -464,7 +464,7 @@
         {
             var developers = await DeveloperApi.GetDevelopersAsync();
             _developers.Clear();
-            _developers.AddRange(developers);
+            _developers.AddRange(developers.Where(d => d.IsActive));
         }
         catch (Exception ex)
         {
@@ -474,14 +474,12 @@
 
     private IEnumerable<DeveloperDto> AccountFilteredDevelopers()
     {
-        var active = _developers.Where(d => d.IsActive);
-
         if (!_selectedAccountId.HasValue)
         {
             return Enumerable.Empty<DeveloperDto>();
         }
 
-        return active.Where(d =>
+        return _developers.Where(d =>
             d.Mappings.Any(m => m.ClickUpAccountId == _selectedAccountId.Value));
     }
 
@@ -615,7 +613,7 @@
             if (activeIds.Count == 0)
             {
                 _kpis = null;
-                _error = "No developers are mapped to the selected workspace account.";
+                _error = "No active developers are mapped to the selected workspace account.";
                 return;
             }
 
@@ -655,11 +653,21 @@
         {
             var module = await GetChartsModuleAsync();
 
-            if (kpis.Developers.Count > 0)
+            var throughputDevelopers = AccountFilteredDevelopers()
+                .OrderByDescending(d => kpis.Developers.FirstOrDefault(k => k.DeveloperId == d.Id)?.CompletedCount ?? 0)
+                .ThenBy(d => d.Name)
+                .ToList();
+
+            if (throughputDevelopers.Count > 0)
             {
-                var labels = kpis.Developers.Select(d => Truncate(d.DeveloperName, 18)).ToArray();
-                var completed = kpis.Developers.Select(d => d.CompletedCount).ToArray();
-                var inProgress = kpis.Developers.Select(d => d.InProgressCount).ToArray();
+                var kpiById = kpis.Developers.ToDictionary(d => d.DeveloperId);
+                var labels = throughputDevelopers.Select(d => Truncate(d.Name, 18)).ToArray();
+                var completed = throughputDevelopers
+                    .Select(d => kpiById.GetValueOrDefault(d.Id)?.CompletedCount ?? 0)
+                    .ToArray();
+                var inProgress = throughputDevelopers
+                    .Select(d => kpiById.GetValueOrDefault(d.Id)?.InProgressCount ?? 0)
+                    .ToArray();
                 await module.InvokeVoidAsync("renderDeveloperThroughput", "chart-developer-throughput", labels, completed, inProgress);
             }
 

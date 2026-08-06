@@ -197,9 +197,9 @@ else
         try
         {
             var developers = await DeveloperApi.GetDevelopersAsync();
-            var activeDeveloperIds = developers.Where(d => d.IsActive).Select(d => d.Id).ToList();
+            var developerIds = developers.Select(d => d.Id).ToList();
 
-            if (activeDeveloperIds.Count == 0)
+            if (developerIds.Count == 0)
             {
                 return;
             }
@@ -207,7 +207,7 @@ else
             var fromDate = new DateOnly(DateTime.Today.Year, DateTime.Today.Month, 1);
             var toDate = DateOnly.FromDateTime(DateTime.Today);
             var report = await ReportApi.GenerateDeveloperReportAsync(
-                new DeveloperReportRequest(activeDeveloperIds, fromDate, toDate, IncludeClosed: true));
+                new DeveloperReportRequest(developerIds, fromDate, toDate, IncludeClosed: true));
 
             if (report is not null)
             {

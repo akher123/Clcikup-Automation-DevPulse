@@ -6,7 +6,10 @@ public interface IDeveloperRepository
 {
     Task<IReadOnlyList<Developer>> GetAllAsync(CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<Developer>> GetActiveWithMappingsAsync(CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Returns all developers that have at least one ClickUp mapping, regardless of IsActive.
+    /// </summary>
+    Task<IReadOnlyList<Developer>> GetWithMappingsAsync(CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Developer>> GetByIdsWithMappingsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default);
 
