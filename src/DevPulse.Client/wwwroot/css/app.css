@@ -1172,6 +1172,56 @@ code {
     gap: 0.5rem;
 }
 
+.filter-section {
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--dp-border);
+}
+
+.filter-section-header {
+    margin-bottom: 0.75rem;
+}
+
+.filter-section-label {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dp-text-muted);
+}
+
+.filter-count-badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--dp-text-secondary);
+    background: var(--dp-bg);
+    border: 1px solid var(--dp-border);
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+}
+
+.filter-option-check {
+    display: flex;
+    align-items: center;
+    min-height: calc(1.5em + 0.75rem + 2px);
+    padding-top: 0;
+    margin-bottom: 0;
+}
+
+.filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+@media (max-width: 575.98px) {
+    .filter-actions .btn {
+        width: 100%;
+    }
+}
+
 /* Data card wrapper for tables */
 .data-card .card-body {
     padding: 0;

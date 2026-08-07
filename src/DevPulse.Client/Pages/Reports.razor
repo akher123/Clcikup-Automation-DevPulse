@@ -28,145 +28,183 @@
 
 <div class="filter-card card mb-4">
     <div class="card-body">
-        <h5 class="card-title">Report Filters</h5>
-        <div class="row g-3 align-items-start">
-            <div class="col-md-2">
-                <label class="form-label">From</label>
-                <input type="date" class="form-control" @bind="_fromDate" @bind:format="yyyy-MM-dd" />
+        <h5 class="card-title mb-3">Report Filters</h5>
+
+        <div class="filter-section">
+            <div class="filter-section-header">
+                <span class="filter-section-label">Period</span>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">To</label>
-                <input type="date" class="form-control" @bind="_toDate" @bind:format="yyyy-MM-dd" />
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-5">
+                    <label class="form-label">Quick select</label>
+                    <div class="period-chips">
+                        <button type="button" class="period-chip @(_periodPreset == PeriodPreset.ThisMonth ? "active" : null)" @onclick="() => ApplyPreset(PeriodPreset.ThisMonth)">This month</button>
+                        <button type="button" class="period-chip @(_periodPreset == PeriodPreset.LastMonth ? "active" : null)" @onclick="() => ApplyPreset(PeriodPreset.LastMonth)">Last month</button>
+                        <button type="button" class="period-chip @(_periodPreset == PeriodPreset.Last30 ? "active" : null)" @onclick="() => ApplyPreset(PeriodPreset.Last30)">Last 30 days</button>
+                        <button type="button" class="period-chip @(_periodPreset == PeriodPreset.Custom ? "active" : null)" @onclick="() => _periodPreset = PeriodPreset.Custom">Custom</button>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3 col-lg-2">
+                    <label class="form-label" for="reportFromDate">From</label>
+                    <input id="reportFromDate" type="date" class="form-control" @bind="_fromDate" @bind:format="yyyy-MM-dd" @bind:after="OnCustomDateChanged" />
+                </div>
+                <div class="col-6 col-md-3 col-lg-2">
+                    <label class="form-label" for="reportToDate">To</label>
+                    <input id="reportToDate" type="date" class="form-control" @bind="_toDate" @bind:format="yyyy-MM-dd" @bind:after="OnCustomDateChanged" />
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="form-check filter-option-check">
+                        <input class="form-check-input" type="checkbox" id="includeClosed" @bind="_includeClosed" />
+                        <label class="form-check-label" for="includeClosed">Include closed tasks</label>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-3">
-                <label class="form-label">ClickUp Accounts</label>
-                @if (_isLoadingAccounts)
-                {
-                    <LoadingIndicator Text="Loading accounts..." Compact="true" />
-                }
-                else if (_accounts.Count == 0)
-                {
-                    <p class="text-muted mb-0">
-                        No accounts configured.
-                        <AuthorizeView Roles="@AppRoles.Admin">
-                            <Authorized>
-                                <a href="clickup-accounts">Add an account</a> to get started.
-                            </Authorized>
-                            <NotAuthorized>
-                                Contact an administrator to configure ClickUp accounts.
-                            </NotAuthorized>
-                        </AuthorizeView>
-                    </p>
-                }
-                else
-                {
-                    <div class="developer-select border rounded p-2">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input" type="checkbox" id="selectAllAccounts"
-                                   checked="@_selectAllAccounts"
-                                   @onchange="ToggleSelectAllAccounts" />
-                            <label class="form-check-label fw-semibold" for="selectAllAccounts">All accounts</label>
-                        </div>
-                        @foreach (var account in _accounts.Where(a => a.IsActive))
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-section-header">
+                <span class="filter-section-label">Scope</span>
+            </div>
+            <div class="row g-3">
+                <div class="col-lg-5">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label mb-0">ClickUp Accounts</label>
+                        @if (!_isLoadingAccounts && _accounts.Any(a => a.IsActive))
                         {
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox"
-                                       id="acct-@account.Id"
-                                       checked="@_selectedAccountIds.Contains(account.Id)"
-                                       @onchange="() => ToggleAccount(account.Id)" />
-                                <label class="form-check-label" for="acct-@account.Id">@account.Name</label>
-                            </div>
+                            <span class="filter-count-badge">@_selectedAccountIds.Count selected</span>
                         }
                     </div>
-                }
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Developers</label>
-                @if (_isLoadingDevelopers)
-                {
-                    <LoadingIndicator Text="Loading developers..." Compact="true" />
-                }
-                else if (_developers.Count == 0)
-                {
-                    <p class="text-muted mb-0">
-                        No active developers registered.
-                        <AuthorizeView Roles="@AppRoles.Admin">
-                            <Authorized>
-                                <a href="developers">Sync from ClickUp</a> to get started.
-                            </Authorized>
-                            <NotAuthorized>
-                                Contact an administrator to sync developers.
-                            </NotAuthorized>
-                        </AuthorizeView>
-                    </p>
-                }
-                else if (!AccountFilteredDevelopers().Any())
-                {
-                    <p class="text-muted mb-0">No developers mapped to the selected account(s).</p>
-                }
-                else
-                {
-                    <div class="developer-select border rounded">
-                        <div class="developer-select-search p-2 border-bottom">
-                            <input type="search"
-                                   class="form-control form-control-sm"
-                                   placeholder="Filter by name or email..."
-                                   autocomplete="off"
-                                   @bind="_developerSearch"
-                                   @bind:event="oninput"
-                                   @bind:after="UpdateSelectAllState" />
-                        </div>
-                        <div class="developer-select-list p-2">
+                    @if (_isLoadingAccounts)
+                    {
+                        <LoadingIndicator Text="Loading accounts..." Compact="true" />
+                    }
+                    else if (_accounts.Count == 0)
+                    {
+                        <p class="text-muted mb-0 small">
+                            No accounts configured.
+                            <AuthorizeView Roles="@AppRoles.Admin">
+                                <Authorized>
+                                    <a href="clickup-accounts">Add an account</a> to get started.
+                                </Authorized>
+                                <NotAuthorized>
+                                    Contact an administrator to configure ClickUp accounts.
+                                </NotAuthorized>
+                            </AuthorizeView>
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="developer-select border rounded p-2">
                             <div class="form-check mb-1">
-                                <input class="form-check-input" type="checkbox" id="selectAll"
-                                       checked="@_selectAll"
-                                       @onchange="ToggleSelectAll" />
-                                <label class="form-check-label fw-semibold" for="selectAll">Select all</label>
+                                <input class="form-check-input" type="checkbox" id="selectAllAccounts"
+                                       checked="@_selectAllAccounts"
+                                       @onchange="ToggleSelectAllAccounts" />
+                                <label class="form-check-label fw-semibold" for="selectAllAccounts">All accounts</label>
                             </div>
-                            @if (!FilteredDevelopers().Any())
+                            @foreach (var account in _accounts.Where(a => a.IsActive))
                             {
-                                <p class="text-muted small mb-0">No developers match your filter.</p>
-                            }
-                            else
-                            {
-                                @foreach (var developer in FilteredDevelopers())
-                                {
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox"
-                                               id="dev-@developer.Id"
-                                               checked="@_selectedDeveloperIds.Contains(developer.Id)"
-                                               @onchange="() => ToggleDeveloper(developer.Id)" />
-                                        <label class="form-check-label" for="dev-@developer.Id">
-                                            @developer.Name
-                                            @if (!string.IsNullOrWhiteSpace(developer.Email))
-                                            {
-                                                <span class="text-muted">(@developer.Email)</span>
-                                            }
-                                            @if (developer.Mappings.Count == 0)
-                                            {
-                                                <span class="badge text-bg-warning ms-1">No mappings</span>
-                                            }
-                                        </label>
-                                    </div>
-                                }
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           id="acct-@account.Id"
+                                           checked="@_selectedAccountIds.Contains(account.Id)"
+                                           @onchange="() => ToggleAccount(account.Id)" />
+                                    <label class="form-check-label" for="acct-@account.Id">@account.Name</label>
+                                </div>
                             }
                         </div>
-                    </div>
-                }
-            </div>
-            <div class="col-md-2">
-                <div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" id="includeClosed" @bind="_includeClosed" />
-                    <label class="form-check-label" for="includeClosed">Include closed tasks</label>
+                    }
                 </div>
-                <BusyButton CssClass="btn btn-primary w-100"
-                            IsBusy="_isBusy"
-                            BusyText="Generating..."
-                            Disabled="@(!AccountFilteredDevelopers().Any())"
-                            OnClick="GenerateReportAsync">
-                    Generate Report
-                </BusyButton>
+                <div class="col-lg-7">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label mb-0">Developers</label>
+                        @if (!_isLoadingDevelopers && AccountFilteredDevelopers().Any())
+                        {
+                            <span class="filter-count-badge">@_selectedDeveloperIds.Count selected</span>
+                        }
+                    </div>
+                    @if (_isLoadingDevelopers)
+                    {
+                        <LoadingIndicator Text="Loading developers..." Compact="true" />
+                    }
+                    else if (_developers.Count == 0)
+                    {
+                        <p class="text-muted mb-0 small">
+                            No active developers registered.
+                            <AuthorizeView Roles="@AppRoles.Admin">
+                                <Authorized>
+                                    <a href="developers">Sync from ClickUp</a> to get started.
+                                </Authorized>
+                                <NotAuthorized>
+                                    Contact an administrator to sync developers.
+                                </NotAuthorized>
+                            </AuthorizeView>
+                        </p>
+                    }
+                    else if (!AccountFilteredDevelopers().Any())
+                    {
+                        <p class="text-muted mb-0 small">No developers mapped to the selected account(s).</p>
+                    }
+                    else
+                    {
+                        <div class="developer-select border rounded">
+                            <div class="developer-select-search p-2 border-bottom">
+                                <input type="search"
+                                       class="form-control form-control-sm"
+                                       placeholder="Filter by name or email..."
+                                       autocomplete="off"
+                                       @bind="_developerSearch"
+                                       @bind:event="oninput"
+                                       @bind:after="UpdateSelectAllState" />
+                            </div>
+                            <div class="developer-select-list p-2">
+                                <div class="form-check mb-1">
+                                    <input class="form-check-input" type="checkbox" id="selectAll"
+                                           checked="@_selectAll"
+                                           @onchange="ToggleSelectAll" />
+                                    <label class="form-check-label fw-semibold" for="selectAll">Select all</label>
+                                </div>
+                                @if (!FilteredDevelopers().Any())
+                                {
+                                    <p class="text-muted small mb-0">No developers match your filter.</p>
+                                }
+                                else
+                                {
+                                    @foreach (var developer in FilteredDevelopers())
+                                    {
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox"
+                                                   id="dev-@developer.Id"
+                                                   checked="@_selectedDeveloperIds.Contains(developer.Id)"
+                                                   @onchange="() => ToggleDeveloper(developer.Id)" />
+                                            <label class="form-check-label" for="dev-@developer.Id">
+                                                @developer.Name
+                                                @if (!string.IsNullOrWhiteSpace(developer.Email))
+                                                {
+                                                    <span class="text-muted">(@developer.Email)</span>
+                                                }
+                                                @if (developer.Mappings.Count == 0)
+                                                {
+                                                    <span class="badge text-bg-warning ms-1">No mappings</span>
+                                                }
+                                            </label>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
             </div>
+        </div>
+
+        <div class="filter-actions">
+            <BusyButton CssClass="btn btn-primary"
+                        IsBusy="_isBusy"
+                        BusyText="Generating..."
+                        Disabled="@(!AccountFilteredDevelopers().Any())"
+                        OnClick="GenerateReportAsync">
+                Generate Report
+            </BusyButton>
         </div>
     </div>
 </div>
@@ -466,11 +504,20 @@
 }
 
 @code {
+    private enum PeriodPreset
+    {
+        ThisMonth,
+        LastMonth,
+        Last30,
+        Custom
+    }
+
     private readonly List<ClickUpAccountDto> _accounts = [];
     private readonly List<DeveloperDto> _developers = [];
     private readonly HashSet<Guid> _selectedAccountIds = [];
     private readonly HashSet<Guid> _selectedDeveloperIds = [];
     private DeveloperReportResponse? _report;
+    private PeriodPreset _periodPreset = PeriodPreset.ThisMonth;
     private DateTime _fromDate = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     private DateTime _toDate = DateTime.Today;
     private bool _includeClosed = true;
@@ -488,8 +535,43 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ApplyPresetDates(PeriodPreset.ThisMonth);
         await Task.WhenAll(LoadAccountsAsync(), LoadDevelopersAsync());
         SelectAllFilteredDevelopers();
+    }
+
+    private void ApplyPreset(PeriodPreset preset)
+    {
+        ApplyPresetDates(preset);
+    }
+
+    private void ApplyPresetDates(PeriodPreset preset)
+    {
+        _periodPreset = preset;
+        var today = DateTime.Today;
+
+        switch (preset)
+        {
+            case PeriodPreset.ThisMonth:
+                _fromDate = new DateTime(today.Year, today.Month, 1);
+                _toDate = today;
+                break;
+            case PeriodPreset.LastMonth:
+                var firstThisMonth = new DateTime(today.Year, today.Month, 1);
+                _toDate = firstThisMonth.AddDays(-1);
+                _fromDate = new DateTime(_toDate.Year, _toDate.Month, 1);
+                break;
+            case PeriodPreset.Last30:
+                _toDate = today;
+                _fromDate = today.AddDays(-29);
+                break;
+        }
+    }
+
+    private Task OnCustomDateChanged()
+    {
+        _periodPreset = PeriodPreset.Custom;
+        return Task.CompletedTask;
     }
 
     private IEnumerable<DeveloperDto> AccountFilteredDevelopers()
