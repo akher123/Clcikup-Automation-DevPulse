@@ -334,6 +334,35 @@
             }
             else
             {
+                <div class="developer-filter-bar">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4 col-lg-3">
+                            <label class="form-label mb-1" for="taskSearch">Search</label>
+                            <input id="taskSearch"
+                                   type="search"
+                                   class="form-control form-control-sm"
+                                   placeholder="Developer, task, project..."
+                                   autocomplete="off"
+                                   @bind="_taskSearch"
+                                   @bind:event="oninput" />
+                        </div>
+                        <div class="col-md-8 col-lg-9">
+                            <p class="text-muted small mb-0">
+                                Showing @FilteredTasks().Count() of @_report.Tasks.Count task@(_report.Tasks.Count == 1 ? "" : "s")
+                                @if (!string.IsNullOrWhiteSpace(_taskSearch))
+                                {
+                                    <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline" @onclick="ClearTaskSearch">Clear search</button>
+                                }
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                @if (!FilteredTasks().Any())
+                {
+                    <p class="text-muted mb-0 p-4">No tasks match your search.</p>
+                }
+                else
+                {
                 <div class="table-responsive">
                     <table class="table table-sm table-hover align-middle">
                         <thead>
@@ -353,7 +382,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var task in _report.Tasks)
+                            @foreach (var task in FilteredTasks())
                             {
                                 <tr>
                                     <td>@task.DeveloperName</td>
@@ -430,6 +459,7 @@
                         </tbody>
                     </table>
                 </div>
+                }
             }
         </div>
     </div>
@@ -453,6 +483,7 @@
     private bool _isError;
     private string? _message;
     private string _developerSearch = string.Empty;
+    private string _taskSearch = string.Empty;
     private IJSObjectReference? _fileDownloadModule;
 
     protected override async Task OnInitializedAsync()
@@ -486,6 +517,49 @@
         }
 
         return results;
+    }
+
+    private IEnumerable<DeveloperReportTaskDto> FilteredTasks()
+    {
+        if (_report is null)
+        {
+            return [];
+        }
+
+        if (string.IsNullOrWhiteSpace(_taskSearch))
+        {
+            return _report.Tasks;
+        }
+
+        return _report.Tasks.Where(TaskMatchesSearch);
+    }
+
+    private bool TaskMatchesSearch(DeveloperReportTaskDto task)
+    {
+        return ContainsSearch(task.DeveloperName)
+            || ContainsSearch(task.AccountName)
+            || ContainsSearch(task.ProjectName)
+            || ContainsSearch(task.FolderName)
+            || ContainsSearch(task.TaskName)
+            || ContainsSearch(task.ListName)
+            || ContainsSearch(task.Status)
+            || ContainsSearch(task.Priority)
+            || ContainsSearch(FormatPriority(task.Priority))
+            || ContainsSearch(task.TaskType)
+            || ContainsSearch(task.ParentTaskName)
+            || ContainsSearch(task.ParentTaskId)
+            || (task.IsSubtask && ContainsSearch("subtask"));
+    }
+
+    private bool ContainsSearch(string? value)
+    {
+        return !string.IsNullOrWhiteSpace(value)
+            && value.Contains(_taskSearch, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ClearTaskSearch()
+    {
+        _taskSearch = string.Empty;
     }
 
     private async Task LoadAccountsAsync()
@@ -634,6 +708,7 @@
         _isBusy = true;
         _message = null;
         _report = null;
+        _taskSearch = string.Empty;
 
         try
         {
