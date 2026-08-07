@@ -32,33 +32,47 @@ else if (_kpis is not null)
         <div class="analytics-period-label mb-0">
             <span>@KpiAnalytics.FormatPeriod(_kpis.FromDate, _kpis.ToDate)</span>
             <span class="text-muted">· month to date</span>
+            @if (_previousKpis is not null)
+            {
+                <span class="text-muted"> · vs @_comparisonPeriodLabel</span>
+            }
         </div>
         <a class="btn btn-sm btn-outline-primary" href="analytics">Explore KPIs</a>
     </div>
+
+    @if (_slaChecks.Count > 0)
+    {
+        <SlaStatusBanner Checks="_slaChecks" PeriodLabel="Month to date" />
+    }
 
     <div class="kpi-grid mb-4">
         <KpiScorecard Label="Completed"
                       Value="@_kpis.CompletedCount.ToString()"
                       Hint="across all workspaces"
-                      Tone="success" />
+                      Tone="success"
+                      Trend="@FormatCountTrend(_kpis.CompletedCount, _previousKpis?.CompletedCount, higherIsBetter: true)" />
         <KpiScorecard Label="Completion Rate"
                       Value="@KpiAnalytics.FormatPercent(_kpis.CompletionRate)"
                       Hint="@($"{_kpis.CompletedCount}/{_kpis.TotalTasks} tasks")"
                       Progress="_kpis.CompletionRate"
-                      Tone="primary" />
+                      Tone="primary"
+                      Trend="@FormatPercentTrend(_kpis.CompletionRate, _previousKpis?.CompletionRate, higherIsBetter: true)" />
         <KpiScorecard Label="Delivery Health"
                       Value="@KpiAnalytics.FormatPercent(_kpis.OnTimeRate)"
                       Hint="on-time vs overdue"
                       Progress="_kpis.OnTimeRate"
-                      Tone="accent" />
+                      Tone="accent"
+                      Trend="@FormatPercentTrend(_kpis.OnTimeRate, _previousKpis?.OnTimeRate, higherIsBetter: true)" />
         <KpiScorecard Label="Avg. Cycle"
                       Value="@KpiAnalytics.FormatDays(_kpis.AverageCycleDays)"
                       Hint="completion days"
-                      Tone="neutral" />
+                      Tone="neutral"
+                      Trend="@FormatDaysTrend(_kpis.AverageCycleDays, _previousKpis?.AverageCycleDays)" />
         <KpiScorecard Label="In Progress"
                       Value="@_kpis.InProgressCount.ToString()"
                       Hint="active in period"
-                      Tone="warning" />
+                      Tone="warning"
+                      Trend="@FormatCountTrend(_kpis.InProgressCount, _previousKpis?.InProgressCount, higherIsBetter: false)" />
         <KpiScorecard Label="Active Devs"
                       Value="@_kpis.ActiveDevelopers.ToString()"
                       Hint="@($"{_kpis.WorkspaceCount} workspace(s)")"
@@ -190,6 +204,9 @@ else
 
 @code {
     private TeamKpis? _kpis;
+    private TeamKpis? _previousKpis;
+    private string? _comparisonPeriodLabel;
+    private IReadOnlyList<SlaCheckResult> _slaChecks = [];
     private bool _isLoadingReport = true;
 
     protected override async Task OnInitializedAsync()
@@ -206,21 +223,69 @@ else
 
             var fromDate = new DateOnly(DateTime.Today.Year, DateTime.Today.Month, 1);
             var toDate = DateOnly.FromDateTime(DateTime.Today);
-            var report = await ReportApi.GenerateDeveloperReportAsync(
-                new DeveloperReportRequest(developerIds, fromDate, toDate, IncludeClosed: true));
+            var (prevFrom, prevTo) = KpiAnalytics.GetPreviousPeriod(fromDate, toDate);
+            _comparisonPeriodLabel = KpiAnalytics.FormatPeriod(prevFrom, prevTo);
+
+            var currentRequest = new DeveloperReportRequest(developerIds, fromDate, toDate, IncludeClosed: true);
+            var previousRequest = new DeveloperReportRequest(developerIds, prevFrom, prevTo, IncludeClosed: true);
+
+            var currentTask = ReportApi.GenerateDeveloperReportAsync(currentRequest);
+            var previousTask = ReportApi.GenerateDeveloperReportAsync(previousRequest);
+            await Task.WhenAll(currentTask, previousTask);
+
+            var report = await currentTask;
+            var previousReport = await previousTask;
 
             if (report is not null)
             {
                 _kpis = KpiAnalytics.FromReport(report);
+                _previousKpis = previousReport is not null ? KpiAnalytics.FromReport(previousReport) : null;
+                _slaChecks = KpiAnalytics.EvaluateTeamSla(_kpis);
             }
         }
         catch
         {
             _kpis = null;
+            _previousKpis = null;
+            _slaChecks = [];
         }
         finally
         {
             _isLoadingReport = false;
         }
+    }
+
+    private KpiTrendDisplay? FormatCountTrend(int current, int? previous, bool higherIsBetter)
+    {
+        if (_previousKpis is null || !previous.HasValue)
+        {
+            return null;
+        }
+
+        return KpiAnalytics.FormatTrend(
+            KpiAnalytics.TrendCount(current, previous.Value, higherIsBetter));
+    }
+
+    private KpiTrendDisplay? FormatPercentTrend(double? current, double? previous, bool higherIsBetter)
+    {
+        if (_previousKpis is null)
+        {
+            return null;
+        }
+
+        return KpiAnalytics.FormatTrend(
+            KpiAnalytics.TrendPercent(current, previous, higherIsBetter));
+    }
+
+    private KpiTrendDisplay? FormatDaysTrend(double? current, double? previous)
+    {
+        if (_previousKpis is null)
+        {
+            return null;
+        }
+
+        return KpiAnalytics.FormatTrend(
+            KpiAnalytics.TrendDays(current, previous),
+            countLabel: "days");
     }
 }

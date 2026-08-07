@@ -171,35 +171,113 @@
             }
         </div>
 
+        @if (_previousKpis is not null && !string.IsNullOrWhiteSpace(_comparisonPeriodLabel))
+        {
+            <p class="comparison-context mb-3">
+                Trends compare to prior period: <strong>@_comparisonPeriodLabel</strong>
+            </p>
+        }
+
+        @if (_slaChecks.Count > 0)
+        {
+            <SlaStatusBanner Checks="_slaChecks" PeriodLabel="@KpiAnalytics.FormatPeriod(_kpis.FromDate, _kpis.ToDate)" />
+        }
+
         <div class="kpi-grid mb-4">
             <KpiScorecard Label="Throughput"
                           Value="@_kpis.CompletedCount.ToString()"
                           Hint="Tasks completed in period"
                           Tone="success"
-                          Meta="Done" />
+                          Meta="Done"
+                          Trend="@FormatCountTrend(_kpis.CompletedCount, _previousKpis?.CompletedCount, higherIsBetter: true)" />
             <KpiScorecard Label="Completion Rate"
                           Value="@KpiAnalytics.FormatPercent(_kpis.CompletionRate)"
                           Hint="@($"{_kpis.CompletedCount} of {_kpis.TotalTasks} tasks")"
                           Progress="_kpis.CompletionRate"
-                          Tone="primary" />
+                          Tone="primary"
+                          Trend="@FormatPercentTrend(_kpis.CompletionRate, _previousKpis?.CompletionRate, higherIsBetter: true)" />
             <KpiScorecard Label="Delivery Health"
                           Value="@KpiAnalytics.FormatPercent(_kpis.OnTimeRate)"
                           Hint="On-time vs overdue pressure"
                           Progress="_kpis.OnTimeRate"
                           Tone="accent"
-                          Meta="On-time" />
+                          Meta="On-time"
+                          Trend="@FormatPercentTrend(_kpis.OnTimeRate, _previousKpis?.OnTimeRate, higherIsBetter: true)" />
             <KpiScorecard Label="Avg. Cycle Time"
                           Value="@KpiAnalytics.FormatDays(_kpis.AverageCycleDays)"
                           Hint="Weighted average completion days"
-                          Tone="neutral" />
+                          Tone="neutral"
+                          Trend="@FormatDaysTrend(_kpis.AverageCycleDays, _previousKpis?.AverageCycleDays)" />
             <KpiScorecard Label="In Progress"
                           Value="@_kpis.InProgressCount.ToString()"
                           Hint="Created in period, still open"
-                          Tone="warning" />
+                          Tone="warning"
+                          Trend="@FormatCountTrend(_kpis.InProgressCount, _previousKpis?.InProgressCount, higherIsBetter: false)" />
             <KpiScorecard Label="Overdue"
                           Value="@_kpis.OverdueCount.ToString()"
                           Hint="Past due or completed late"
-                          Tone="@(_kpis.OverdueCount > 0 ? "danger" : "neutral")" />
+                          Tone="@(_kpis.OverdueCount > 0 ? "danger" : "neutral")"
+                          Trend="@FormatCountTrend(_kpis.OverdueCount, _previousKpis?.OverdueCount, higherIsBetter: false)" />
+        </div>
+
+        @if (_atRiskDevelopers.Count > 0)
+        {
+            <div class="data-card card at-risk-panel">
+                <div class="card-body p-0">
+                    <h5 class="card-title card-title-bar">Needs Attention · @_atRiskDevelopers.Count developer@(_atRiskDevelopers.Count == 1 ? "" : "s")</h5>
+                    <div class="at-risk-grid">
+                        @foreach (var entry in _atRiskDevelopers.Take(6))
+                        {
+                            <div class="at-risk-card">
+                                <div class="at-risk-card-name">@entry.Developer.DeveloperName</div>
+                                <div class="at-risk-missed">
+                                    @string.Join(" · ", entry.MissedChecks.Select(c => c.Metric))
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="row g-4 mb-4">
+            <div class="col-xl-7">
+                <div class="chart-panel card h-100">
+                    <div class="card-body">
+                        <div class="chart-panel-header">
+                            <div>
+                                <h2 class="chart-title">Weekly Throughput</h2>
+                                <p class="chart-subtitle">Tasks completed per week in the selected period</p>
+                            </div>
+                        </div>
+                        @if (_weeklyThroughput.Count == 0 || _weeklyThroughput.All(w => w.Count == 0))
+                        {
+                            <p class="text-muted mb-0 py-5 text-center">No completed tasks in this period yet.</p>
+                        }
+                        else
+                        {
+                            <div class="chart-canvas-wrap chart-canvas-md">
+                                <canvas id="chart-weekly-throughput"></canvas>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-5">
+                <div class="chart-panel card h-100">
+                    <div class="card-body">
+                        <div class="chart-panel-header">
+                            <div>
+                                <h2 class="chart-title">Work Status Mix</h2>
+                                <p class="chart-subtitle">Completed, active, and overdue pressure</p>
+                            </div>
+                        </div>
+                        <div class="chart-canvas-wrap chart-canvas-md">
+                            <canvas id="chart-status-mix"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="row g-4 mb-4">
@@ -230,24 +308,6 @@
                     <div class="card-body">
                         <div class="chart-panel-header">
                             <div>
-                                <h2 class="chart-title">Work Status Mix</h2>
-                                <p class="chart-subtitle">Completed, active, and overdue pressure</p>
-                            </div>
-                        </div>
-                        <div class="chart-canvas-wrap chart-canvas-md">
-                            <canvas id="chart-status-mix"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row g-4 mb-4">
-            <div class="col-xl-5">
-                <div class="chart-panel card h-100">
-                    <div class="card-body">
-                        <div class="chart-panel-header">
-                            <div>
                                 <h2 class="chart-title">Workspace Load</h2>
                                 <p class="chart-subtitle">Task distribution across ClickUp workspaces</p>
                             </div>
@@ -265,7 +325,10 @@
                     </div>
                 </div>
             </div>
-            <div class="col-xl-7">
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-12">
                 <div class="chart-panel card h-100">
                     <div class="card-body">
                         <div class="chart-panel-header">
@@ -321,6 +384,7 @@
                                     <th>#</th>
                                     <th>Developer</th>
                                     <th>Band</th>
+                                    <th>SLA</th>
                                     <th>Total</th>
                                     <th>Completed</th>
                                     <th>Completion</th>
@@ -338,6 +402,8 @@
                                 {
                                     rank++;
                                     var band = KpiAnalytics.PerformanceBand(developer.OnTimeRate, developer.CompletionRate);
+                                    var devSla = KpiAnalytics.EvaluateDeveloperSla(developer);
+                                    var slaMet = KpiAnalytics.MeetsAllSla(devSla);
                                     <tr>
                                         <td><span class="rank-badge">@rank</span></td>
                                         <td>
@@ -348,6 +414,11 @@
                                             }
                                         </td>
                                         <td><span class="perf-pill @KpiAnalytics.PerformanceTone(band)">@band</span></td>
+                                        <td>
+                                            <span class="sla-pill @(slaMet ? "sla-pill-met" : "sla-pill-missed")" title="@GetSlaTooltip(devSla)">
+                                                @(slaMet ? "On track" : "At risk")
+                                            </span>
+                                        </td>
                                         <td>@developer.TotalTasks</td>
                                         <td>@developer.CompletedCount</td>
                                         <td>
@@ -406,6 +477,11 @@
     private readonly List<DeveloperDto> _developers = [];
     private Guid? _selectedAccountId;
     private TeamKpis? _kpis;
+    private TeamKpis? _previousKpis;
+    private string? _comparisonPeriodLabel;
+    private IReadOnlyList<SlaCheckResult> _slaChecks = [];
+    private IReadOnlyList<NamedCount> _weeklyThroughput = [];
+    private IReadOnlyList<AtRiskDeveloperEntry> _atRiskDevelopers = [];
     private PeriodPreset _periodPreset = PeriodPreset.ThisMonth;
     private DateTime _fromDate = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     private DateTime _toDate = DateTime.Today;
@@ -491,6 +567,7 @@
         if (!_selectedAccountId.HasValue)
         {
             _kpis = null;
+            _previousKpis = null;
         }
 
         return Task.CompletedTask;
@@ -500,6 +577,10 @@
     {
         _selectedAccountId = null;
         _kpis = null;
+        _previousKpis = null;
+        _slaChecks = [];
+        _weeklyThroughput = [];
+        _atRiskDevelopers = [];
         _error = null;
     }
 
@@ -613,32 +694,61 @@
             if (activeIds.Count == 0)
             {
                 _kpis = null;
+                _previousKpis = null;
                 _error = "No active developers are mapped to the selected workspace account.";
                 return;
             }
 
-            var cached = await AnalyticsApi.GetFromDatabaseAsync(
-                new CachedAnalyticsRequest(
-                    activeIds,
-                    DateOnly.FromDateTime(_fromDate),
-                    DateOnly.FromDateTime(_toDate),
-                    AccountIds: [_selectedAccountId.Value]));
+            var fromDate = DateOnly.FromDateTime(_fromDate);
+            var toDate = DateOnly.FromDateTime(_toDate);
+            var (prevFrom, prevTo) = KpiAnalytics.GetPreviousPeriod(fromDate, toDate);
+            _comparisonPeriodLabel = KpiAnalytics.FormatPeriod(prevFrom, prevTo);
+
+            var currentRequest = new CachedAnalyticsRequest(
+                activeIds,
+                fromDate,
+                toDate,
+                AccountIds: [_selectedAccountId.Value]);
+
+            var previousRequest = new CachedAnalyticsRequest(
+                activeIds,
+                prevFrom,
+                prevTo,
+                AccountIds: [_selectedAccountId.Value]);
+
+            var currentTask = AnalyticsApi.GetFromDatabaseAsync(currentRequest);
+            var previousTask = AnalyticsApi.GetFromDatabaseAsync(previousRequest);
+            await Task.WhenAll(currentTask, previousTask);
+
+            var cached = await currentTask;
+            var previousCached = await previousTask;
 
             if (cached?.Report is null)
             {
                 _kpis = null;
+                _previousKpis = null;
                 _error = "Unable to load analytics from the database. Run a KPI sync first.";
                 return;
             }
 
             _kpis = KpiAnalytics.FromReport(cached.Report);
+            _previousKpis = previousCached?.Report is not null
+                ? KpiAnalytics.FromReport(previousCached.Report)
+                : null;
             _dataSyncedAtUtc = cached.SyncedAtUtc;
+            _slaChecks = KpiAnalytics.EvaluateTeamSla(_kpis);
+            _weeklyThroughput = KpiAnalytics.GroupCompletedByWeek(cached.Report.Tasks, fromDate, toDate);
+            _atRiskDevelopers = BuildAtRiskDevelopers(_kpis);
             _chartsPending = true;
         }
         catch (Exception ex)
         {
             _error = ex.Message;
             _kpis = null;
+            _previousKpis = null;
+            _slaChecks = [];
+            _weeklyThroughput = [];
+            _atRiskDevelopers = [];
             _dataSyncedAtUtc = null;
         }
         finally
@@ -684,6 +794,13 @@
                 var values = kpis.ByWorkspace.Select(w => w.Count).ToArray();
                 await module.InvokeVoidAsync("renderWorkspaceShare", "chart-workspace-share", labels, values);
             }
+
+            if (_weeklyThroughput.Count > 0 && _weeklyThroughput.Any(w => w.Count > 0))
+            {
+                var labels = _weeklyThroughput.Select(w => w.Name).ToArray();
+                var values = _weeklyThroughput.Select(w => w.Count).ToArray();
+                await module.InvokeVoidAsync("renderWeeklyThroughput", "chart-weekly-throughput", labels, values);
+            }
         }
         catch (JSException)
         {
@@ -699,6 +816,59 @@
 
     private static string Truncate(string value, int max) =>
         value.Length <= max ? value : value[..(max - 1)] + "…";
+
+    private sealed record AtRiskDeveloperEntry(DeveloperKpi Developer, IReadOnlyList<SlaCheckResult> MissedChecks);
+
+    private static IReadOnlyList<AtRiskDeveloperEntry> BuildAtRiskDevelopers(TeamKpis kpis) =>
+        kpis.Developers
+            .Select(dev =>
+            {
+                var checks = KpiAnalytics.EvaluateDeveloperSla(dev);
+                var missed = checks.Where(c => !c.Met).ToList();
+                return missed.Count == 0 ? null : new AtRiskDeveloperEntry(dev, missed);
+            })
+            .Where(entry => entry is not null)
+            .Cast<AtRiskDeveloperEntry>()
+            .OrderByDescending(entry => entry.MissedChecks.Count)
+            .ThenByDescending(entry => entry.Developer.OverdueCount)
+            .ToList();
+
+    private KpiTrendDisplay? FormatCountTrend(int current, int? previous, bool higherIsBetter)
+    {
+        if (_previousKpis is null || !previous.HasValue)
+        {
+            return null;
+        }
+
+        return KpiAnalytics.FormatTrend(
+            KpiAnalytics.TrendCount(current, previous.Value, higherIsBetter));
+    }
+
+    private KpiTrendDisplay? FormatPercentTrend(double? current, double? previous, bool higherIsBetter)
+    {
+        if (_previousKpis is null)
+        {
+            return null;
+        }
+
+        return KpiAnalytics.FormatTrend(
+            KpiAnalytics.TrendPercent(current, previous, higherIsBetter));
+    }
+
+    private KpiTrendDisplay? FormatDaysTrend(double? current, double? previous)
+    {
+        if (_previousKpis is null)
+        {
+            return null;
+        }
+
+        return KpiAnalytics.FormatTrend(
+            KpiAnalytics.TrendDays(current, previous),
+            countLabel: "days");
+    }
+
+    private static string GetSlaTooltip(IReadOnlyList<SlaCheckResult> checks) =>
+        string.Join("; ", checks.Select(c => $"{c.Metric}: {c.Actual} (target {c.Target})"));
 
     public async ValueTask DisposeAsync()
     {

@@ -1275,3 +1275,216 @@ code {
 .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* KPI trend badges */
+.kpi-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.45rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.kpi-trend-vs {
+    font-weight: 500;
+    color: var(--dp-text-muted);
+}
+
+.kpi-trend-positive {
+    color: var(--dp-success);
+}
+
+.kpi-trend-negative {
+    color: var(--dp-danger);
+}
+
+.kpi-trend-neutral {
+    color: var(--dp-text-muted);
+}
+
+/* SLA status banner */
+.sla-banner {
+    border: 1px solid var(--dp-border);
+    border-radius: var(--dp-radius-lg);
+    background: var(--dp-surface);
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+    box-shadow: var(--dp-shadow-sm);
+}
+
+.sla-banner-main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    flex-wrap: wrap;
+}
+
+.sla-banner-score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 4.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--dp-radius-md);
+    text-align: center;
+}
+
+.sla-score-excellent {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.sla-score-good {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.sla-score-watch {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.sla-banner-fraction {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.sla-banner-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.85;
+}
+
+.sla-banner-copy {
+    flex: 1;
+    min-width: 12rem;
+}
+
+.sla-banner-details {
+    border-top: 1px solid var(--dp-border);
+    padding: 0.75rem 1.25rem 1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.65rem;
+    background: #f8fafc;
+}
+
+.sla-check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.55rem 0.65rem;
+    border-radius: var(--dp-radius-md);
+    background: #fff;
+    border: 1px solid var(--dp-border);
+}
+
+.sla-check-met .sla-check-icon {
+    color: var(--dp-success);
+}
+
+.sla-check-missed .sla-check-icon {
+    color: var(--dp-danger);
+}
+
+.sla-check-icon {
+    font-weight: 700;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.sla-check-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.sla-check-metric {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--dp-text);
+}
+
+.sla-check-values {
+    font-size: 0.75rem;
+}
+
+/* At-risk developer cards */
+.at-risk-panel {
+    margin-bottom: 1.25rem;
+}
+
+.at-risk-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 0.75rem;
+    padding: 1rem 1.25rem 1.25rem;
+}
+
+.at-risk-card {
+    padding: 0.85rem 1rem;
+    border-radius: var(--dp-radius-md);
+    border: 1px solid #fecaca;
+    background: #fffafb;
+}
+
+.at-risk-card-name {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    margin-bottom: 0.35rem;
+}
+
+.at-risk-missed {
+    font-size: 0.75rem;
+    color: #b91c1c;
+    line-height: 1.45;
+}
+
+.sla-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+}
+
+.sla-pill-met {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.sla-pill-missed {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.comparison-context {
+    font-size: 0.8125rem;
+    color: var(--dp-text-muted);
+    margin-bottom: 1rem;
+}
+
+.comparison-context strong {
+    color: var(--dp-text-secondary);
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .sla-banner-main {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .sla-banner-toggle {
+        width: 100%;
+    }
+}

@@ -277,3 +277,74 @@ export function renderStatusMix(canvasId, completed, inProgress, overdue) {
 
     charts.set(canvasId, chart);
 }
+
+export function renderWeeklyThroughput(canvasId, labels, values) {
+    ensureChartJs();
+    destroyChart(canvasId);
+
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        return;
+    }
+
+    const chart = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Tasks completed',
+                data: values,
+                borderColor: palette.success,
+                backgroundColor: 'rgba(5, 150, 105, 0.12)',
+                fill: true,
+                tension: 0.35,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: palette.success,
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                borderWidth: 2.5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            animation: {
+                duration: 700,
+                easing: 'easeOutQuart'
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: tooltipDefaults()
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    border: { display: false },
+                    ticks: {
+                        color: palette.text,
+                        font: { size: 11, weight: '500' },
+                        maxRotation: 45,
+                        minRotation: 0
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    border: { display: false },
+                    ticks: {
+                        precision: 0,
+                        color: palette.text,
+                        font: { size: 11 }
+                    },
+                    grid: {
+                        color: palette.grid,
+                        drawTicks: false
+                    }
+                }
+            }
+        }
+    });
+
+    charts.set(canvasId, chart);
+}
