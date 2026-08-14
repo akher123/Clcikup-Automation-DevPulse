@@ -4,6 +4,7 @@ using DevPulse.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DevPulse.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(DevPulseDbContext))]
-    partial class DevPulseDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260814154500_AddAssignmentPeriods")]
+    partial class AddAssignmentPeriods
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -238,6 +241,47 @@ namespace DevPulse.Infrastructure.Persistence.Migrations
                     b.ToTable("KpiSyncRuns", (string)null);
                 });
 
+            modelBuilder.Entity("DevPulse.Domain.Entities.TaskAssignmentPeriod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("AssignedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("DeveloperId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TaskId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UnassignedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("DeveloperId");
+
+                    b.HasIndex("DeveloperId", "AssignedAtUtc", "UnassignedAtUtc");
+
+                    b.HasIndex("AccountId", "TaskId", "DeveloperId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_TaskAssignmentPeriods_Open")
+                        .HasFilter("[UnassignedAtUtc] IS NULL");
+
+                    b.HasIndex("AccountId", "TaskId", "DeveloperId", "UnassignedAtUtc");
+
+                    b.ToTable("TaskAssignmentPeriods", (string)null);
+                });
+
             modelBuilder.Entity("DevPulse.Domain.Entities.SyncedTask", b =>
                 {
                     b.Property<Guid>("Id")
@@ -322,51 +366,14 @@ namespace DevPulse.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AccountId", "TaskId")
-                        .IsUnique();
-
                     b.HasIndex("AccountId", "IsCompleted", "DateCreated");
 
                     b.HasIndex("AccountId", "IsCompleted", "DateDone");
 
+                    b.HasIndex("AccountId", "TaskId")
+                        .IsUnique();
+
                     b.ToTable("SyncedTasks", (string)null);
-                });
-
-            modelBuilder.Entity("DevPulse.Domain.Entities.TaskAssignmentPeriod", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("AccountId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("AssignedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("DeveloperId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("TaskId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTime?>("UnassignedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AccountId", "TaskId", "DeveloperId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_TaskAssignmentPeriods_Open")
-                        .HasFilter("[UnassignedAtUtc] IS NULL");
-
-                    b.HasIndex("DeveloperId", "AssignedAtUtc", "UnassignedAtUtc");
-
-                    b.HasIndex("AccountId", "TaskId", "DeveloperId", "UnassignedAtUtc");
-
-                    b.ToTable("TaskAssignmentPeriods", (string)null);
                 });
 
             modelBuilder.Entity("DevPulse.Infrastructure.Identity.ApplicationUser", b =>

@@ -2,6 +2,7 @@ using DevPulse.Application.Abstractions.Analytics;
 using DevPulse.Application.Abstractions.Persistence;
 using DevPulse.Application.Abstractions.Reports;
 using DevPulse.Application.Options;
+using DevPulse.Application.Services.Reports;
 using DevPulse.Domain.Entities;
 using DevPulse.Shared.Common;
 using DevPulse.Shared.Contracts.Analytics;
@@ -14,26 +15,32 @@ namespace DevPulse.Application.Services.Analytics;
 public sealed class KpiSyncService : IKpiSyncService
 {
     private readonly IReportService _reportService;
+    private readonly ICachedAnalyticsService _cachedAnalyticsService;
     private readonly IDeveloperRepository _developerRepository;
     private readonly IClickUpAccountRepository _accountRepository;
     private readonly ISyncedTaskRepository _syncedTaskRepository;
+    private readonly ITaskAssignmentPeriodRepository _assignmentPeriodRepository;
     private readonly IKpiSyncRunRepository _syncRunRepository;
     private readonly KpiSyncOptions _options;
     private readonly ILogger<KpiSyncService> _logger;
 
     public KpiSyncService(
         IReportService reportService,
+        ICachedAnalyticsService cachedAnalyticsService,
         IDeveloperRepository developerRepository,
         IClickUpAccountRepository accountRepository,
         ISyncedTaskRepository syncedTaskRepository,
+        ITaskAssignmentPeriodRepository assignmentPeriodRepository,
         IKpiSyncRunRepository syncRunRepository,
         IOptions<KpiSyncOptions> options,
         ILogger<KpiSyncService> logger)
     {
         _reportService = reportService;
+        _cachedAnalyticsService = cachedAnalyticsService;
         _developerRepository = developerRepository;
         _accountRepository = accountRepository;
         _syncedTaskRepository = syncedTaskRepository;
+        _assignmentPeriodRepository = assignmentPeriodRepository;
         _syncRunRepository = syncRunRepository;
         _options = options.Value;
         _logger = logger;
@@ -92,14 +99,42 @@ public sealed class KpiSyncService : IKpiSyncService
             var report = reportResult.Value;
             var syncedAt = DateTime.UtcNow;
             var syncedTasks = report.Tasks
-                .Select(t => ReportTaskMapper.ToSyncedTask(t, syncedAt))
+                .GroupBy(t => (t.AccountId, t.TaskId))
+                .Select(g => ReportTaskMapper.ToSyncedTask(
+                    g.OrderByDescending(t => t.IsCompleted).First(),
+                    syncedAt))
                 .ToList();
 
             await _syncedTaskRepository.UpsertRangeAsync(syncedTasks, cancellationToken);
 
+            var currentAssignees = report.Tasks
+                .Select(t => new TaskCurrentAssignee(t.AccountId, t.TaskId, t.DeveloperId, t.DateCreated))
+                .Distinct()
+                .ToList();
+            await _assignmentPeriodRepository.ApplyCurrentAssigneesAsync(currentAssignees, syncedAt, cancellationToken);
+            await DemoReportDataProvider.ApplyHandoffPeriodsAsync(
+                _assignmentPeriodRepository,
+                accounts.Select(a => a.Id).ToHashSet(),
+                developers.Select(d => d.Id).ToHashSet(),
+                fromDate,
+                toDate,
+                cancellationToken);
+
+            var dbReportResult = await _cachedAnalyticsService.GenerateReportFromDatabaseAsync(
+                new DeveloperReportRequest(
+                    developers.Select(d => d.Id).ToList(),
+                    fromDate,
+                    toDate,
+                    IncludeClosed: true),
+                cancellationToken);
+
+            var snapshotSource = dbReportResult.IsSuccess && dbReportResult.Value is not null
+                ? dbReportResult.Value
+                : report;
+
             await _syncRunRepository.DeleteSnapshotsForPeriodAsync(fromDate, toDate, cancellationToken);
 
-            var snapshots = report.Developers
+            var snapshots = snapshotSource.Developers
                 .Where(d => d.TotalTasks > 0)
                 .Select(d => new DeveloperKpiSnapshot
                 {

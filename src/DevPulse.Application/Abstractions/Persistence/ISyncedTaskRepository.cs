@@ -6,11 +6,9 @@ public interface ISyncedTaskRepository
 {
     Task UpsertRangeAsync(IReadOnlyList<SyncedTask> tasks, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<SyncedTask>> GetForReportAsync(
-        IReadOnlyList<Guid> developerIds,
-        DateOnly fromDate,
-        DateOnly toDate,
-        IReadOnlyList<Guid>? accountIds = null,
+    Task<IReadOnlyList<SyncedTask>> GetByAccountAndTaskIdsAsync(
+        IReadOnlyList<Guid> accountIds,
+        IReadOnlyList<string> taskIds,
         CancellationToken cancellationToken = default);
 
     Task<DateTime?> GetLatestSyncedAtAsync(CancellationToken cancellationToken = default);

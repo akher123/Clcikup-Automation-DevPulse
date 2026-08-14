@@ -66,4 +66,5 @@ public record DeveloperReportTaskDto(
     [property: JsonPropertyName("parentTaskId")] string? ParentTaskId = null,
     [property: JsonPropertyName("parentTaskName")] string? ParentTaskName = null,
     [property: JsonPropertyName("taskType")] string TaskType = "Task",
-    [property: JsonPropertyName("isCompleted")] bool IsCompleted = true);
+    [property: JsonPropertyName("isCompleted")] bool IsCompleted = true,
+    [property: JsonPropertyName("assigneeIds")] IReadOnlyList<int>? AssigneeIds = null);

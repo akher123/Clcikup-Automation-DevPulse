@@ -321,7 +321,8 @@ public sealed class ReportService : IReportService
             task.ParentTaskId,
             ParentTaskName: null,
             task.IsSubtask ? "Subtask" : task.TaskTypeName,
-            isCompleted);
+            isCompleted,
+            task.AssigneeIds);
     }
 
     private static DeveloperReportSummaryDto BuildSummary(Developer developer, IReadOnlyList<DeveloperReportTaskDto> tasks)

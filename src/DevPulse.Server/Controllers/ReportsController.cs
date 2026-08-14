@@ -1,3 +1,4 @@
+using DevPulse.Application.Abstractions.Analytics;
 using DevPulse.Application.Abstractions.Reports;
 using DevPulse.Shared.Constants;
 using DevPulse.Shared.Contracts.Reports;
@@ -11,12 +12,14 @@ namespace DevPulse.Server.Controllers;
 [Authorize(Policy = "CanViewReports")]
 public sealed class ReportsController : ControllerBase
 {
-    private readonly IReportService _reportService;
+    private readonly ICachedAnalyticsService _cachedAnalyticsService;
     private readonly IReportExportService _reportExportService;
 
-    public ReportsController(IReportService reportService, IReportExportService reportExportService)
+    public ReportsController(
+        ICachedAnalyticsService cachedAnalyticsService,
+        IReportExportService reportExportService)
     {
-        _reportService = reportService;
+        _cachedAnalyticsService = cachedAnalyticsService;
         _reportExportService = reportExportService;
     }
 
@@ -34,7 +37,7 @@ public sealed class ReportsController : ControllerBase
 
         try
         {
-            var result = await _reportService.GenerateDeveloperReportAsync(request, cancellationToken);
+            var result = await _cachedAnalyticsService.GenerateReportFromDatabaseAsync(request, cancellationToken);
             return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error, errors = result.Errors });
         }
         catch (Exception ex)

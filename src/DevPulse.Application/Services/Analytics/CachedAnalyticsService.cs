@@ -10,17 +10,20 @@ namespace DevPulse.Application.Services.Analytics;
 public sealed class CachedAnalyticsService : ICachedAnalyticsService
 {
     private readonly ISyncedTaskRepository _syncedTaskRepository;
+    private readonly ITaskAssignmentPeriodRepository _assignmentPeriodRepository;
     private readonly IDeveloperRepository _developerRepository;
     private readonly IKpiSyncRunRepository _syncRunRepository;
     private readonly ILogger<CachedAnalyticsService> _logger;
 
     public CachedAnalyticsService(
         ISyncedTaskRepository syncedTaskRepository,
+        ITaskAssignmentPeriodRepository assignmentPeriodRepository,
         IDeveloperRepository developerRepository,
         IKpiSyncRunRepository syncRunRepository,
         ILogger<CachedAnalyticsService> logger)
     {
         _syncedTaskRepository = syncedTaskRepository;
+        _assignmentPeriodRepository = assignmentPeriodRepository;
         _developerRepository = developerRepository;
         _syncRunRepository = syncRunRepository;
         _logger = logger;
@@ -74,28 +77,79 @@ public sealed class CachedAnalyticsService : ICachedAnalyticsService
             return Result<DeveloperReportResponse>.Failure("No matching developers were found.");
         }
 
-        // IsActive is registry-only; inactive developers remain in reports and analytics.
-        var syncedTasks = await _syncedTaskRepository.GetForReportAsync(
+        var lastRun = await _syncRunRepository.GetLatestAsync(cancellationToken);
+        var syncedAt = await _syncedTaskRepository.GetLatestSyncedAtAsync(cancellationToken);
+        if (lastRun is null && syncedAt is null)
+        {
+            return Result<DeveloperReportResponse>.Failure("No synced KPI data found. Run a KPI sync first.");
+        }
+
+        var rangeStartUtc = ReportTaskMapper.ToRangeStartUtc(request.FromDate);
+        var rangeEndExclusiveUtc = ReportTaskMapper.ToRangeEndExclusiveUtc(request.ToDate);
+        var fromMs = ReportTaskMapper.ToRangeStartMs(request.FromDate);
+        var toExclusiveMs = ReportTaskMapper.ToRangeEndExclusiveMs(request.ToDate);
+
+        var periods = await _assignmentPeriodRepository.GetOverlappingAsync(
             developers.Select(d => d.Id).ToList(),
-            request.FromDate,
-            request.ToDate,
+            rangeStartUtc,
+            rangeEndExclusiveUtc,
             request.AccountIds,
             cancellationToken);
 
-        if (syncedTasks.Count == 0)
-        {
-            var lastRun = await _syncRunRepository.GetLatestAsync(cancellationToken);
-            var hint = lastRun is null
-                ? "No synced KPI data found. Run a KPI sync first."
-                : $"No synced tasks match this period. Last sync covered {lastRun.FromDate:yyyy-MM-dd} to {lastRun.ToDate:yyyy-MM-dd} ({lastRun.Status}).";
-            return Result<DeveloperReportResponse>.Failure(hint);
-        }
+        var accountIds = periods.Select(p => p.AccountId).Distinct().ToList();
+        var taskIds = periods.Select(p => p.TaskId).Distinct().ToList();
+        var snapshots = await _syncedTaskRepository.GetByAccountAndTaskIdsAsync(accountIds, taskIds, cancellationToken);
+        var snapshotByKey = snapshots.ToDictionary(t => (t.AccountId, t.TaskId));
 
         var nameById = developers.ToDictionary(d => d.Id, d => d.Name);
         var emailById = developers.ToDictionary(d => d.Id, d => d.Email);
 
-        var reportTasks = syncedTasks
-            .Select(t => ReportTaskMapper.ToReportTask(t, nameById.GetValueOrDefault(t.DeveloperId, "Unknown")))
+        var reportTasks = new List<DeveloperReportTaskDto>();
+        foreach (var period in periods)
+        {
+            if (!snapshotByKey.TryGetValue((period.AccountId, period.TaskId), out var snapshot))
+            {
+                continue;
+            }
+
+            var dateDoneUtc = ReportTaskMapper.ToUtc(snapshot.DateDone);
+            var dateDoneInPeriod = dateDoneUtc.HasValue
+                && ReportTaskMapper.InstantInPeriod(dateDoneUtc.Value, period);
+            var dateDoneInRange = snapshot.DateDone.HasValue
+                && snapshot.DateDone.Value >= fromMs
+                && snapshot.DateDone.Value < toExclusiveMs;
+            var dateCreatedInRange = snapshot.DateCreated.HasValue
+                && snapshot.DateCreated.Value >= fromMs
+                && snapshot.DateCreated.Value < toExclusiveMs;
+
+            var completedForPerson = snapshot.IsCompleted && dateDoneInPeriod;
+            if (!request.IncludeClosed && snapshot.IsCompleted)
+            {
+                continue;
+            }
+
+            var include = completedForPerson
+                ? dateDoneInRange
+                : snapshot.IsCompleted || dateCreatedInRange;
+
+            if (!include)
+            {
+                continue;
+            }
+
+            var statusOverride = !completedForPerson && snapshot.IsCompleted
+                ? "handed off"
+                : null;
+
+            reportTasks.Add(ReportTaskMapper.ToReportTask(
+                snapshot,
+                period.DeveloperId,
+                nameById.GetValueOrDefault(period.DeveloperId, "Unknown"),
+                completedForPerson && dateDoneInRange,
+                statusOverride));
+        }
+
+        reportTasks = reportTasks
             .GroupBy(t => (t.DeveloperId, t.AccountId, t.TaskId))
             .Select(g => g.OrderByDescending(t => t.IsCompleted).First())
             .OrderBy(t => t.DeveloperName)
@@ -127,7 +181,7 @@ public sealed class CachedAnalyticsService : ICachedAnalyticsService
             reportTasks);
 
         _logger.LogInformation(
-            "Generated DB-backed report for {FromDate}–{ToDate}: {Completed} completed, {InProgress} in progress from {TaskCount} synced tasks",
+            "Generated DB-backed report for {FromDate}–{ToDate}: {Completed} completed, {InProgress} in progress from {TaskCount} assignment-period rows",
             request.FromDate,
             request.ToDate,
             response.TotalTasksCompleted,

@@ -70,7 +70,8 @@ public sealed class DeveloperService : IDeveloperService
         var developer = new Developer
         {
             Name = request.Name.Trim(),
-            Email = normalizedEmail
+            Email = normalizedEmail,
+            WorkRole = (Domain.Enums.WorkRole)(int)request.WorkRole
         };
 
         await _developerRepository.AddAsync(developer, cancellationToken);
@@ -107,6 +108,7 @@ public sealed class DeveloperService : IDeveloperService
         developer.Name = request.Name.Trim();
         developer.Email = normalizedEmail;
         developer.IsActive = request.IsActive;
+        developer.WorkRole = (Domain.Enums.WorkRole)(int)request.WorkRole;
 
         await _developerRepository.UpdateAsync(developer, cancellationToken);
 
@@ -329,5 +331,6 @@ public sealed class DeveloperService : IDeveloperService
                     m.ClickUpAccount?.Name ?? "Unknown",
                     m.ClickUpUserId))
                 .OrderBy(m => m.AccountName)
-                .ToList());
+                .ToList(),
+            (WorkRole)(int)developer.WorkRole);
 }

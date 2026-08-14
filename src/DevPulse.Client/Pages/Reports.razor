@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @using DevPulse.Client.Analytics
 @using DevPulse.Shared.Constants
+@using DevPulse.Shared.Contracts.Analytics
 @using DevPulse.Shared.Contracts.ClickUp
 @using DevPulse.Shared.Contracts.Developers
 @using DevPulse.Shared.Contracts.Reports
@@ -9,6 +10,7 @@
 @inject IClickUpAccountApiClient AccountApi
 @inject IDeveloperApiClient DeveloperApi
 @inject IReportApiClient ReportApi
+@inject IAnalyticsApiClient AnalyticsApi
 @inject IJSRuntime JS
 
 <PageTitle>@AppBranding.PageTitle("Developer Reports")</PageTitle>
@@ -16,10 +18,47 @@
 <div class="page-header">
     <div>
         <h1>Developer Reports</h1>
-        <p class="text-muted">Filter by date range, ClickUp account, and developers, then generate unified task and productivity reports for MIS.</p>
+        <p class="text-muted">Reports are generated from the local synced database. Assignment history is kept when a task is handed from a developer to QA.</p>
     </div>
     <a class="btn btn-outline-primary" href="analytics">MIS Analytics</a>
 </div>
+
+@if (_syncStatus is not null)
+{
+    <div class="alert alert-light border mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2" role="status">
+        <div class="small mb-0">
+            @if (_syncStatus.LastRun is null)
+            {
+                <span>No KPI sync has run yet. Reports require a successful sync from ClickUp.</span>
+            }
+            else
+            {
+                <span>
+                    Last sync: <strong>@_syncStatus.LastRun.Status</strong>
+                    @if (_syncStatus.LastRun.CompletedAtUtc.HasValue)
+                    {
+                        <span> · @_syncStatus.LastRun.CompletedAtUtc.Value.ToLocalTime().ToString("g")</span>
+                    }
+                    <span> · @_syncStatus.LastRun.TasksUpserted tasks</span>
+                    @if (_syncStatus.NextScheduledRunUtc.HasValue)
+                    {
+                        <span class="text-muted"> · Next: @_syncStatus.NextScheduledRunUtc.Value.ToLocalTime().ToString("g")</span>
+                    }
+                </span>
+            }
+        </div>
+        <AuthorizeView Roles="@AppRoles.Admin">
+            <Authorized>
+                <BusyButton CssClass="btn btn-outline-primary btn-sm"
+                            IsBusy="_isSyncing"
+                            BusyText="Syncing..."
+                            OnClick="RunSyncAsync">
+                    Sync report data now
+                </BusyButton>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+}
 
 @if (!string.IsNullOrWhiteSpace(_message))
 {
@@ -116,11 +155,16 @@
                 </div>
                 <div class="col-lg-7">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="form-label mb-0">Developers</label>
+                        <label class="form-label mb-0">People</label>
                         @if (!_isLoadingDevelopers && AccountFilteredDevelopers().Any())
                         {
                             <span class="filter-count-badge">@_selectedDeveloperIds.Count selected</span>
                         }
+                    </div>
+                    <div class="period-chips mb-2">
+                        <button type="button" class="period-chip @(_workRoleFilter == WorkRoleFilter.All ? "active" : null)" @onclick="() => SetWorkRoleFilter(WorkRoleFilter.All)">All</button>
+                        <button type="button" class="period-chip @(_workRoleFilter == WorkRoleFilter.Developer ? "active" : null)" @onclick="() => SetWorkRoleFilter(WorkRoleFilter.Developer)">Developers</button>
+                        <button type="button" class="period-chip @(_workRoleFilter == WorkRoleFilter.QA ? "active" : null)" @onclick="() => SetWorkRoleFilter(WorkRoleFilter.QA)">QA</button>
                     </div>
                     @if (_isLoadingDevelopers)
                     {
@@ -178,6 +222,7 @@
                                                    @onchange="() => ToggleDeveloper(developer.Id)" />
                                             <label class="form-check-label" for="dev-@developer.Id">
                                                 @developer.Name
+                                                <span class="badge text-bg-light text-dark ms-1">@(developer.WorkRole == WorkRole.QA ? "QA" : "Dev")</span>
                                                 @if (!string.IsNullOrWhiteSpace(developer.Email))
                                                 {
                                                     <span class="text-muted">(@developer.Email)</span>
@@ -512,12 +557,21 @@
         Custom
     }
 
+    private enum WorkRoleFilter
+    {
+        All,
+        Developer,
+        QA
+    }
+
     private readonly List<ClickUpAccountDto> _accounts = [];
     private readonly List<DeveloperDto> _developers = [];
     private readonly HashSet<Guid> _selectedAccountIds = [];
     private readonly HashSet<Guid> _selectedDeveloperIds = [];
     private DeveloperReportResponse? _report;
     private PeriodPreset _periodPreset = PeriodPreset.ThisMonth;
+    private WorkRoleFilter _workRoleFilter = WorkRoleFilter.All;
+    private KpiSyncStatusResponse? _syncStatus;
     private DateTime _fromDate = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     private DateTime _toDate = DateTime.Today;
     private bool _includeClosed = true;
@@ -526,6 +580,7 @@
     private bool _isLoadingAccounts = true;
     private bool _isLoadingDevelopers = true;
     private bool _isBusy;
+    private bool _isSyncing;
     private bool _isExporting;
     private bool _isError;
     private string? _message;
@@ -536,7 +591,7 @@
     protected override async Task OnInitializedAsync()
     {
         ApplyPresetDates(PeriodPreset.ThisMonth);
-        await Task.WhenAll(LoadAccountsAsync(), LoadDevelopersAsync());
+        await Task.WhenAll(LoadAccountsAsync(), LoadDevelopersAsync(), LoadSyncStatusAsync());
         SelectAllFilteredDevelopers();
     }
 
@@ -577,6 +632,13 @@
     private IEnumerable<DeveloperDto> AccountFilteredDevelopers()
     {
         IEnumerable<DeveloperDto> results = _developers;
+
+        results = _workRoleFilter switch
+        {
+            WorkRoleFilter.Developer => results.Where(d => d.WorkRole == WorkRole.Developer),
+            WorkRoleFilter.QA => results.Where(d => d.WorkRole == WorkRole.QA),
+            _ => results
+        };
 
         if (_selectedAccountIds.Count == 0)
         {
@@ -642,6 +704,48 @@
     private void ClearTaskSearch()
     {
         _taskSearch = string.Empty;
+    }
+
+    private void SetWorkRoleFilter(WorkRoleFilter filter)
+    {
+        _workRoleFilter = filter;
+        SelectAllFilteredDevelopers();
+        UpdateSelectAllState();
+    }
+
+    private async Task LoadSyncStatusAsync()
+    {
+        try
+        {
+            _syncStatus = await AnalyticsApi.GetSyncStatusAsync();
+        }
+        catch
+        {
+            _syncStatus = null;
+        }
+    }
+
+    private async Task RunSyncAsync()
+    {
+        _isSyncing = true;
+        _message = null;
+
+        try
+        {
+            var result = await AnalyticsApi.RunSyncAsync();
+            _isError = false;
+            _message = result?.Message ?? "Report data synced.";
+            await LoadSyncStatusAsync();
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _isSyncing = false;
+        }
     }
 
     private async Task LoadAccountsAsync()

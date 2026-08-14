@@ -20,20 +20,25 @@ public sealed class SyncedTaskRepository : ISyncedTaskRepository
             return;
         }
 
-        var accountIds = tasks.Select(t => t.AccountId).Distinct().ToList();
-        var taskIds = tasks.Select(t => t.TaskId).Distinct().ToList();
+        var uniqueIncoming = tasks
+            .GroupBy(t => (t.AccountId, t.TaskId), t => t)
+            .Select(g => g.OrderByDescending(t => t.IsCompleted).ThenByDescending(t => t.SyncedAtUtc).First())
+            .ToList();
+
+        var accountIds = uniqueIncoming.Select(t => t.AccountId).Distinct().ToList();
+        var taskIds = uniqueIncoming.Select(t => t.TaskId).Distinct().ToList();
 
         var existing = await _dbContext.SyncedTasks
             .Where(t => accountIds.Contains(t.AccountId) && taskIds.Contains(t.TaskId))
             .ToListAsync(cancellationToken);
 
         var existingByKey = existing.ToDictionary(
-            t => (t.DeveloperId, t.AccountId, t.TaskId),
+            t => (t.AccountId, t.TaskId),
             t => t);
 
-        foreach (var incoming in tasks)
+        foreach (var incoming in uniqueIncoming)
         {
-            var key = (incoming.DeveloperId, incoming.AccountId, incoming.TaskId);
+            var key = (incoming.AccountId, incoming.TaskId);
             if (existingByKey.TryGetValue(key, out var current))
             {
                 current.AccountName = incoming.AccountName;
@@ -65,31 +70,20 @@ public sealed class SyncedTaskRepository : ISyncedTaskRepository
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<SyncedTask>> GetForReportAsync(
-        IReadOnlyList<Guid> developerIds,
-        DateOnly fromDate,
-        DateOnly toDate,
-        IReadOnlyList<Guid>? accountIds = null,
+    public async Task<IReadOnlyList<SyncedTask>> GetByAccountAndTaskIdsAsync(
+        IReadOnlyList<Guid> accountIds,
+        IReadOnlyList<string> taskIds,
         CancellationToken cancellationToken = default)
     {
-        var fromMs = ToRangeStartMs(fromDate);
-        var toExclusiveMs = ToRangeEndExclusiveMs(toDate);
-
-        var query = _dbContext.SyncedTasks
-            .AsNoTracking()
-            .Where(t => developerIds.Contains(t.DeveloperId));
-
-        if (accountIds is { Count: > 0 })
+        if (accountIds.Count == 0 || taskIds.Count == 0)
         {
-            query = query.Where(t => accountIds.Contains(t.AccountId));
+            return [];
         }
 
-        // Match live report semantics: completed by dateDone, open by dateCreated.
-        query = query.Where(t =>
-            (t.IsCompleted && t.DateDone.HasValue && t.DateDone.Value >= fromMs && t.DateDone.Value < toExclusiveMs)
-            || (!t.IsCompleted && t.DateCreated.HasValue && t.DateCreated.Value >= fromMs && t.DateCreated.Value < toExclusiveMs));
-
-        return await query.ToListAsync(cancellationToken);
+        return await _dbContext.SyncedTasks
+            .AsNoTracking()
+            .Where(t => accountIds.Contains(t.AccountId) && taskIds.Contains(t.TaskId))
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<DateTime?> GetLatestSyncedAtAsync(CancellationToken cancellationToken = default)
@@ -103,10 +97,4 @@ public sealed class SyncedTaskRepository : ISyncedTaskRepository
             .AsNoTracking()
             .MaxAsync(t => t.SyncedAtUtc, cancellationToken);
     }
-
-    private static long ToRangeStartMs(DateOnly fromDate) =>
-        new DateTimeOffset(fromDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
-
-    private static long ToRangeEndExclusiveMs(DateOnly toDate) =>
-        new DateTimeOffset(toDate.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
 }

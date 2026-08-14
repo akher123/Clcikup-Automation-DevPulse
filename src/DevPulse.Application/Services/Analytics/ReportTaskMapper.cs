@@ -8,7 +8,6 @@ internal static class ReportTaskMapper
     public static SyncedTask ToSyncedTask(DeveloperReportTaskDto task, DateTime syncedAtUtc) =>
         new()
         {
-            DeveloperId = task.DeveloperId,
             AccountId = task.AccountId,
             AccountName = task.AccountName,
             ProjectName = task.ProjectName,
@@ -31,9 +30,14 @@ internal static class ReportTaskMapper
             SyncedAtUtc = syncedAtUtc
         };
 
-    public static DeveloperReportTaskDto ToReportTask(SyncedTask task, string developerName) =>
+    public static DeveloperReportTaskDto ToReportTask(
+        SyncedTask task,
+        Guid developerId,
+        string developerName,
+        bool isCompletedForPerson,
+        string? statusOverride = null) =>
         new(
-            task.DeveloperId,
+            developerId,
             developerName,
             task.AccountId,
             task.AccountName,
@@ -41,19 +45,19 @@ internal static class ReportTaskMapper
             task.FolderName,
             task.TaskId,
             task.TaskName,
-            task.Status,
+            statusOverride ?? task.Status,
             task.Priority,
             task.ListName,
             task.Url,
             task.DateCreated,
-            task.DateDone,
+            isCompletedForPerson ? task.DateDone : null,
             task.DueDate,
-            task.CompletionDays,
+            isCompletedForPerson ? task.CompletionDays : null,
             task.IsSubtask,
             task.ParentTaskId,
             task.ParentTaskName,
             task.TaskType,
-            task.IsCompleted);
+            isCompletedForPerson);
 
     public static DeveloperReportSummaryDto BuildSummary(
         Guid developerId,
@@ -104,6 +108,32 @@ internal static class ReportTaskMapper
         var denominator = onTimeCompleted + overdueCount;
         return denominator > 0 ? Rate(onTimeCompleted, denominator) : null;
     }
+
+    public static DateTime ToRangeStartUtc(DateOnly fromDate) =>
+        DateTime.SpecifyKind(fromDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+
+    public static DateTime ToRangeEndExclusiveUtc(DateOnly toDate) =>
+        DateTime.SpecifyKind(toDate.AddDays(1).ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+
+    public static long ToRangeStartMs(DateOnly fromDate) =>
+        new DateTimeOffset(ToRangeStartUtc(fromDate)).ToUnixTimeMilliseconds();
+
+    public static long ToRangeEndExclusiveMs(DateOnly toDate) =>
+        new DateTimeOffset(ToRangeEndExclusiveUtc(toDate)).ToUnixTimeMilliseconds();
+
+    public static DateTime? ToUtc(long? unixMs)
+    {
+        if (!unixMs.HasValue || unixMs.Value <= 0)
+        {
+            return null;
+        }
+
+        return DateTimeOffset.FromUnixTimeMilliseconds(unixMs.Value).UtcDateTime;
+    }
+
+    public static bool InstantInPeriod(DateTime instantUtc, TaskAssignmentPeriod period) =>
+        period.AssignedAtUtc <= instantUtc
+        && (period.UnassignedAtUtc is null || instantUtc < period.UnassignedAtUtc);
 
     private static bool IsOverdue(DeveloperReportTaskDto task)
     {

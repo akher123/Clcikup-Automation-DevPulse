@@ -1,15 +1,12 @@
 namespace DevPulse.Domain.Entities;
 
 /// <summary>
-/// Persisted ClickUp task snapshot used for daily KPI sync and DB-backed analytics.
+/// Persisted ClickUp task snapshot used for daily KPI sync and DB-backed reports.
+/// One row per (AccountId, TaskId). Person attribution comes from <see cref="TaskAssignmentPeriod"/>.
 /// </summary>
 public class SyncedTask
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-
-    public Guid DeveloperId { get; set; }
-
-    public Developer Developer { get; set; } = null!;
 
     public Guid AccountId { get; set; }
 

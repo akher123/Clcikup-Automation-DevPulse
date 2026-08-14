@@ -20,6 +20,8 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
 
     public DbSet<SyncedTask> SyncedTasks => Set<SyncedTask>();
 
+    public DbSet<TaskAssignmentPeriod> TaskAssignmentPeriods => Set<TaskAssignmentPeriod>();
+
     public DbSet<KpiSyncRun> KpiSyncRuns => Set<KpiSyncRun>();
 
     public DbSet<DeveloperKpiSnapshot> DeveloperKpiSnapshots => Set<DeveloperKpiSnapshot>();
@@ -50,6 +52,7 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
             entity.Property(x => x.Email).HasMaxLength(320);
+            entity.Property(x => x.WorkRole).HasConversion<int>();
             entity.HasIndex(x => x.Email);
         });
 
@@ -87,18 +90,36 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
             entity.Property(x => x.ParentTaskId).HasMaxLength(64);
             entity.Property(x => x.ParentTaskName).HasMaxLength(500);
             entity.Property(x => x.TaskType).HasMaxLength(100).IsRequired();
-            entity.HasIndex(x => new { x.DeveloperId, x.AccountId, x.TaskId }).IsUnique();
+            entity.HasIndex(x => new { x.AccountId, x.TaskId }).IsUnique();
             entity.HasIndex(x => new { x.AccountId, x.IsCompleted, x.DateDone });
             entity.HasIndex(x => new { x.AccountId, x.IsCompleted, x.DateCreated });
-
-            entity.HasOne(x => x.Developer)
-                .WithMany()
-                .HasForeignKey(x => x.DeveloperId)
-                .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(x => x.Account)
                 .WithMany()
                 .HasForeignKey(x => x.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TaskAssignmentPeriod>(entity =>
+        {
+            entity.ToTable("TaskAssignmentPeriods");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.TaskId).HasMaxLength(64).IsRequired();
+            entity.HasIndex(x => new { x.AccountId, x.TaskId, x.DeveloperId, x.UnassignedAtUtc });
+            entity.HasIndex(x => new { x.DeveloperId, x.AssignedAtUtc, x.UnassignedAtUtc });
+            entity.HasIndex(x => new { x.AccountId, x.TaskId, x.DeveloperId })
+                .IsUnique()
+                .HasFilter("[UnassignedAtUtc] IS NULL")
+                .HasDatabaseName("IX_TaskAssignmentPeriods_Open");
+
+            entity.HasOne(x => x.Account)
+                .WithMany()
+                .HasForeignKey(x => x.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.Developer)
+                .WithMany()
+                .HasForeignKey(x => x.DeveloperId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

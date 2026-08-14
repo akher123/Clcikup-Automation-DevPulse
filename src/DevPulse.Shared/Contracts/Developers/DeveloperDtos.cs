@@ -1,12 +1,19 @@
 namespace DevPulse.Shared.Contracts.Developers;
 
+public enum WorkRole
+{
+    Developer = 0,
+    QA = 1
+}
+
 public record DeveloperDto(
     Guid Id,
     string Name,
     string? Email,
     bool IsActive,
     DateTime CreatedAtUtc,
-    IReadOnlyList<DeveloperClickUpMappingDto> Mappings);
+    IReadOnlyList<DeveloperClickUpMappingDto> Mappings,
+    WorkRole WorkRole = WorkRole.Developer);
 
 public record DeveloperClickUpMappingDto(
     Guid Id,
@@ -16,12 +23,14 @@ public record DeveloperClickUpMappingDto(
 
 public record CreateDeveloperRequest(
     string Name,
-    string? Email);
+    string? Email,
+    WorkRole WorkRole = WorkRole.Developer);
 
 public record UpdateDeveloperRequest(
     string Name,
     string? Email,
-    bool IsActive);
+    bool IsActive,
+    WorkRole WorkRole = WorkRole.Developer);
 
 public record AddDeveloperMappingRequest(
     Guid ClickUpAccountId,

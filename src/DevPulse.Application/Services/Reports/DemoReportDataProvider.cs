@@ -1,3 +1,4 @@
+using DevPulse.Application.Abstractions.Persistence;
 using DevPulse.Domain.Entities;
 using DevPulse.Shared.Constants;
 using DevPulse.Shared.Contracts.Reports;
@@ -9,6 +10,7 @@ namespace DevPulse.Application.Services.Reports;
 /// </summary>
 public static class DemoReportDataProvider
 {
+    public const string HandoffTaskId = "dv-5001";
     private sealed record DemoTaskTemplate(
         Guid DeveloperId,
         Guid AccountId,
@@ -53,8 +55,50 @@ public static class DemoReportDataProvider
         new(MarcusWebbId(), DemoSeedData.InternalAccountId, "dv-4001", "Write integration tests for auth", "Internal QA", "Automation", "QA", 3, 8, 9, 5.0, "complete", "normal"),
         new(MarcusWebbId(), DemoSeedData.InternalAccountId, "dv-4002", "Automate regression suite in CI", "Internal QA", "Automation", "QA", 9, 13, 14, 4.0, "complete", "high"),
         new(MarcusWebbId(), DemoSeedData.InternalAccountId, "dv-4005", "Expand smoke coverage for reports", "Internal QA", "Automation", "QA", 16, null, 15, null, "in progress", "normal", true, "dv-4002", "Subtask"),
+        new(MarcusWebbId(), DemoSeedData.InternalAccountId, HandoffTaskId, "Validate payment flow after developer handoff", "Internal Platform", "Payments", "QA", 2, 16, 18, 8.0, "complete", "high"),
         new(MarcusWebbId(), DemoSeedData.AcmeAccountId, "dv-4003", "Validate API contract changes", "Acme QA", null, "Acme QA", 6, 10, 11, 4.0, "complete", "normal"),
     ];
+
+    public static async Task ApplyHandoffPeriodsAsync(
+        ITaskAssignmentPeriodRepository repository,
+        IReadOnlySet<Guid> activeAccountIds,
+        IReadOnlySet<Guid> activeDeveloperIds,
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default)
+    {
+        if (!activeAccountIds.Contains(DemoSeedData.InternalAccountId)
+            || !activeDeveloperIds.Contains(DemoSeedData.SarahChenId)
+            || !activeDeveloperIds.Contains(DemoSeedData.MarcusWebbId)
+            || fromDate > toDate)
+        {
+            return;
+        }
+
+        var month = new DateOnly(toDate.Year, toDate.Month, 1);
+        var assignedAt = ToUtc(month, 2);
+        var handedOffAt = ToUtc(month, 10);
+
+        await repository.InsertIfMissingAsync(
+            [
+                new TaskAssignmentPeriod
+                {
+                    AccountId = DemoSeedData.InternalAccountId,
+                    TaskId = HandoffTaskId,
+                    DeveloperId = DemoSeedData.SarahChenId,
+                    AssignedAtUtc = assignedAt,
+                    UnassignedAtUtc = handedOffAt
+                }
+            ],
+            cancellationToken);
+
+        await repository.AdjustOpenPeriodStartAsync(
+            DemoSeedData.InternalAccountId,
+            HandoffTaskId,
+            DemoSeedData.MarcusWebbId,
+            handedOffAt,
+            cancellationToken);
+    }
 
     public static IReadOnlyList<DeveloperReportTaskDto> GetTasksForDateRange(
         DateOnly fromDate,
@@ -144,6 +188,12 @@ public static class DemoReportDataProvider
             ParentTaskName: null,
             template.TaskType,
             isCompleted);
+    }
+
+    private static DateTime ToUtc(DateOnly month, int day)
+    {
+        var clampedDay = Math.Clamp(day, 1, DateTime.DaysInMonth(month.Year, month.Month));
+        return new DateTime(month.Year, month.Month, clampedDay, 12, 0, 0, DateTimeKind.Utc);
     }
 
     private static long ToUnixMs(DateOnly month, int day)
