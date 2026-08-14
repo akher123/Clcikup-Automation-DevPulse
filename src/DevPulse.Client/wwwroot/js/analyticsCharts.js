@@ -156,7 +156,7 @@ export function renderDeveloperThroughput(canvasId, labels, completed, inProgres
     charts.set(canvasId, chart);
 }
 
-export function renderWorkspaceShare(canvasId, labels, values) {
+export function renderWorkspaceShare(canvasId, labels, values, chartType = 'pie') {
     ensureChartJs();
     destroyChart(canvasId);
 
@@ -165,8 +165,9 @@ export function renderWorkspaceShare(canvasId, labels, values) {
         return;
     }
 
+    const isDoughnut = chartType === 'doughnut';
     const chart = new Chart(canvas, {
-        type: 'doughnut',
+        type: isDoughnut ? 'doughnut' : 'pie',
         data: {
             labels,
             datasets: [{
@@ -181,7 +182,7 @@ export function renderWorkspaceShare(canvasId, labels, values) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '70%',
+            cutout: isDoughnut ? '70%' : 0,
             animation: {
                 animateRotate: true,
                 duration: 800

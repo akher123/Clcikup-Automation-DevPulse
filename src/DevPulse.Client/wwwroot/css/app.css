@@ -700,7 +700,22 @@ code {
 }
 
 .analytics-hero-home {
-    margin-bottom: 1.35rem;
+    margin-bottom: 1rem;
+    align-items: center;
+}
+
+.analytics-hero-compact {
+    padding: 0.7rem 1.1rem;
+    margin-bottom: 0.85rem;
+}
+
+.analytics-hero-compact .analytics-eyebrow {
+    margin-bottom: 0.1rem;
+}
+
+.analytics-hero-compact h1 {
+    margin: 0;
+    font-size: 1.2rem;
 }
 
 .analytics-eyebrow {
@@ -1016,6 +1031,22 @@ code {
     gap: 0.85rem;
 }
 
+.workspace-load-pie {
+    margin-bottom: 1.15rem;
+}
+
+.dashboard-table-scroll {
+    max-height: 28rem;
+    overflow: auto;
+}
+
+.band-mix {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .rank-row-top {
     display: flex;
     justify-content: space-between;
@@ -1119,6 +1150,18 @@ code {
 
 .mini-bar-fill.tone-accent {
     background: var(--dp-accent);
+}
+
+.mini-bar-fill.tone-success {
+    background: var(--dp-success);
+}
+
+.mini-bar-fill.tone-warning {
+    background: var(--dp-warning);
+}
+
+.mini-bar-fill.tone-danger {
+    background: var(--dp-danger);
 }
 
 .analytics-table td,

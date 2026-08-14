@@ -68,6 +68,10 @@ public sealed record SlaCheckResult(
     string Target,
     string Detail);
 
+public sealed record AtRiskDeveloperEntry(
+    DeveloperKpi Developer,
+    IReadOnlyList<SlaCheckResult> MissedChecks);
+
 public static class KpiAnalytics
 {
     public static readonly SlaTargets DefaultSlaTargets = new();
@@ -161,6 +165,36 @@ public static class KpiAnalytics
 
     public static double Rate(int numerator, int denominator) =>
         denominator <= 0 ? 0 : Math.Round(numerator * 100.0 / denominator, 1);
+
+    /// <summary>
+    /// Completed ÷ assigned tasks in the period. Same formula as completion rate.
+    /// </summary>
+    public static double AchievementRatio(int achievement, int target) =>
+        Rate(achievement, target);
+
+    public static string FormatTargetVsAchievement(int achievement, int target) =>
+        $"{achievement} / {target}";
+
+    public static string AchievementRatioTone(double ratio, SlaTargets? targets = null)
+    {
+        targets ??= DefaultSlaTargets;
+        if (ratio >= 100)
+        {
+            return "tone-success";
+        }
+
+        if (ratio >= targets.MinCompletionRate)
+        {
+            return "tone-primary";
+        }
+
+        if (ratio >= 40)
+        {
+            return "tone-warning";
+        }
+
+        return "tone-danger";
+    }
 
     public static string FormatPercent(double? value) =>
         value.HasValue ? $"{value.Value:0.#}%" : "—";
@@ -366,6 +400,35 @@ public static class KpiAnalytics
 
     public static bool MeetsAllSla(IReadOnlyList<SlaCheckResult> checks) =>
         checks.All(c => c.Met);
+
+    public static string FormatSlaTooltip(IReadOnlyList<SlaCheckResult> checks) =>
+        string.Join("; ", checks.Select(c => $"{c.Metric}: {c.Actual} (target {c.Target})"));
+
+    public static IReadOnlyList<AtRiskDeveloperEntry> BuildAtRiskDevelopers(TeamKpis kpis) =>
+        kpis.Developers
+            .Select(dev =>
+            {
+                var checks = EvaluateDeveloperSla(dev);
+                var missed = checks.Where(c => !c.Met).ToList();
+                return missed.Count == 0 ? null : new AtRiskDeveloperEntry(dev, missed);
+            })
+            .Where(entry => entry is not null)
+            .Cast<AtRiskDeveloperEntry>()
+            .OrderByDescending(entry => entry.MissedChecks.Count)
+            .ThenByDescending(entry => entry.Developer.OverdueCount)
+            .ToList();
+
+    public static IReadOnlyList<NamedCount> GroupByPerformanceBand(IEnumerable<DeveloperKpi> developers)
+    {
+        var order = new[] { "Excellent", "Strong", "Steady", "Watch" };
+        var counts = developers
+            .GroupBy(d => PerformanceBand(d.OnTimeRate, d.CompletionRate))
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        return order
+            .Select(name => new NamedCount(name, counts.GetValueOrDefault(name)))
+            .ToList();
+    }
 
     public static IReadOnlyList<NamedCount> GroupCompletedByWeek(
         IEnumerable<DeveloperReportTaskDto> tasks,

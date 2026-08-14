@@ -393,9 +393,9 @@
                                     <th>Developer</th>
                                     <th>Band</th>
                                     <th>SLA</th>
-                                    <th>Total</th>
-                                    <th>Completed</th>
-                                    <th>Completion</th>
+                                    <th title="Assigned tasks in the selected period">Assigned</th>
+                                    <th title="Tasks completed in the selected period">Completed</th>
+                                    <th title="Completed ÷ Assigned">Ratio</th>
                                     <th>Delivery</th>
                                     <th>Cycle</th>
                                     <th>Overdue</th>
@@ -412,6 +412,8 @@
                                     var band = KpiAnalytics.PerformanceBand(developer.OnTimeRate, developer.CompletionRate);
                                     var devSla = KpiAnalytics.EvaluateDeveloperSla(developer);
                                     var slaMet = KpiAnalytics.MeetsAllSla(devSla);
+                                    var achievementRatio = KpiAnalytics.AchievementRatio(developer.CompletedCount, developer.TotalTasks);
+                                    var ratioTone = KpiAnalytics.AchievementRatioTone(achievementRatio);
                                     <tr>
                                         <td><span class="rank-badge">@rank</span></td>
                                         <td>
@@ -423,17 +425,18 @@
                                         </td>
                                         <td><span class="perf-pill @KpiAnalytics.PerformanceTone(band)">@band</span></td>
                                         <td>
-                                            <span class="sla-pill @(slaMet ? "sla-pill-met" : "sla-pill-missed")" title="@GetSlaTooltip(devSla)">
+                                            <span class="sla-pill @(slaMet ? "sla-pill-met" : "sla-pill-missed")" title="@KpiAnalytics.FormatSlaTooltip(devSla)">
                                                 @(slaMet ? "On track" : "At risk")
                                             </span>
                                         </td>
                                         <td>@developer.TotalTasks</td>
                                         <td>@developer.CompletedCount</td>
                                         <td>
-                                            <div class="mini-metric">
-                                                <span>@KpiAnalytics.FormatPercent(developer.CompletionRate)</span>
+                                            <div class="mini-metric" title="@KpiAnalytics.FormatTargetVsAchievement(developer.CompletedCount, developer.TotalTasks) completed of assigned">
+                                                <span>@KpiAnalytics.FormatPercent(achievementRatio)</span>
+                                                <div class="small text-muted">@KpiAnalytics.FormatTargetVsAchievement(developer.CompletedCount, developer.TotalTasks)</div>
                                                 <div class="mini-bar">
-                                                    <div class="mini-bar-fill tone-primary" style="width: @Math.Clamp(developer.CompletionRate, 0, 100).ToString("0.##")%"></div>
+                                                    <div class="mini-bar-fill @ratioTone" style="width: @Math.Clamp(achievementRatio, 0, 100).ToString("0.##")%"></div>
                                                 </div>
                                             </div>
                                         </td>
@@ -760,7 +763,7 @@
             _dataSyncedAtUtc = cached.SyncedAtUtc;
             _slaChecks = KpiAnalytics.EvaluateTeamSla(_kpis);
             _weeklyThroughput = KpiAnalytics.GroupCompletedByWeek(cached.Report.Tasks, fromDate, toDate);
-            _atRiskDevelopers = BuildAtRiskDevelopers(_kpis);
+            _atRiskDevelopers = KpiAnalytics.BuildAtRiskDevelopers(_kpis);
             _chartsPending = true;
         }
         catch (Exception ex)
@@ -814,7 +817,7 @@
             {
                 var labels = kpis.ByWorkspace.Select(w => Truncate(w.Name, 22)).ToArray();
                 var values = kpis.ByWorkspace.Select(w => w.Count).ToArray();
-                await module.InvokeVoidAsync("renderWorkspaceShare", "chart-workspace-share", labels, values);
+                await module.InvokeVoidAsync("renderWorkspaceShare", "chart-workspace-share", labels, values, "pie");
             }
 
             if (_weeklyThroughput.Count > 0 && _weeklyThroughput.Any(w => w.Count > 0))
@@ -838,22 +841,6 @@
 
     private static string Truncate(string value, int max) =>
         value.Length <= max ? value : value[..(max - 1)] + "…";
-
-    private sealed record AtRiskDeveloperEntry(DeveloperKpi Developer, IReadOnlyList<SlaCheckResult> MissedChecks);
-
-    private static IReadOnlyList<AtRiskDeveloperEntry> BuildAtRiskDevelopers(TeamKpis kpis) =>
-        kpis.Developers
-            .Select(dev =>
-            {
-                var checks = KpiAnalytics.EvaluateDeveloperSla(dev);
-                var missed = checks.Where(c => !c.Met).ToList();
-                return missed.Count == 0 ? null : new AtRiskDeveloperEntry(dev, missed);
-            })
-            .Where(entry => entry is not null)
-            .Cast<AtRiskDeveloperEntry>()
-            .OrderByDescending(entry => entry.MissedChecks.Count)
-            .ThenByDescending(entry => entry.Developer.OverdueCount)
-            .ToList();
 
     private KpiTrendDisplay? FormatCountTrend(int current, int? previous, bool higherIsBetter)
     {
@@ -888,9 +875,6 @@
             KpiAnalytics.TrendDays(current, previous),
             countLabel: "days");
     }
-
-    private static string GetSlaTooltip(IReadOnlyList<SlaCheckResult> checks) =>
-        string.Join("; ", checks.Select(c => $"{c.Metric}: {c.Actual} (target {c.Target})"));
 
     public async ValueTask DisposeAsync()
     {
