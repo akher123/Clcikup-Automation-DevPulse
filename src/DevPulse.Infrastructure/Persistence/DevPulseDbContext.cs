@@ -34,6 +34,12 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
 
     public DbSet<LeaveSettings> LeaveSettings => Set<LeaveSettings>();
 
+    public DbSet<AttendanceSettings> AttendanceSettings => Set<AttendanceSettings>();
+
+    public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
+
+    public DbSet<AttendanceCorrectionRequest> AttendanceCorrectionRequests => Set<AttendanceCorrectionRequest>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -62,6 +68,12 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
             entity.Property(x => x.Email).HasMaxLength(320);
             entity.Property(x => x.WorkRole).HasConversion<int>();
             entity.HasIndex(x => x.Email);
+            entity.HasIndex(x => x.ReportingManagerDeveloperId);
+
+            entity.HasOne(x => x.ReportingManager)
+                .WithMany()
+                .HasForeignKey(x => x.ReportingManagerDeveloperId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<DeveloperClickUpMapping>(entity =>
@@ -212,6 +224,40 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
             entity.Property(x => x.EncryptedTelegramBotToken).HasMaxLength(2000);
             entity.Property(x => x.TelegramChatId).HasMaxLength(50);
             entity.Property(x => x.LastTelegramError).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<AttendanceSettings>(entity =>
+        {
+            entity.ToTable("AttendanceSettings");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.OfficeTimeZoneId).HasMaxLength(100).IsRequired();
+        });
+
+        modelBuilder.Entity<AttendanceRecord>(entity =>
+        {
+            entity.ToTable("AttendanceRecords");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.DeveloperId, x.WorkDate }).IsUnique();
+
+            entity.HasOne(x => x.Developer)
+                .WithMany()
+                .HasForeignKey(x => x.DeveloperId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AttendanceCorrectionRequest>(entity =>
+        {
+            entity.ToTable("AttendanceCorrectionRequests");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.ReviewerComment).HasMaxLength(1000);
+            entity.Property(x => x.Status).HasConversion<int>();
+            entity.HasIndex(x => new { x.DeveloperId, x.WorkDate, x.Status });
+
+            entity.HasOne(x => x.Developer)
+                .WithMany()
+                .HasForeignKey(x => x.DeveloperId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

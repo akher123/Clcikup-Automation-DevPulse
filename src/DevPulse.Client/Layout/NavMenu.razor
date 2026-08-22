@@ -70,6 +70,12 @@
                         IsExpandedChanged="@(value => SetGroupExpanded("time-off", value))"
                         SidebarCollapsed="IsCollapsed">
                 <div class="nav-item">
+                    <NavLink class="nav-link nav-link-sub" href="attendance" title="Attendance" @onclick="HandleNavigate">
+                        <span class="nav-icon bi-fingerprint" aria-hidden="true"></span>
+                        <span class="nav-label">Attendance</span>
+                    </NavLink>
+                </div>
+                <div class="nav-item">
                     <NavLink class="nav-link nav-link-sub" href="leave" title="Leave Applications" @onclick="HandleNavigate">
                         <span class="nav-icon bi-calendar-check" aria-hidden="true"></span>
                         <span class="nav-label">Leave Applications</span>
@@ -93,6 +99,12 @@
                             <NavLink class="nav-link nav-link-sub" href="leave-settings" title="Leave Settings" @onclick="HandleNavigate">
                                 <span class="nav-icon bi-gear" aria-hidden="true"></span>
                                 <span class="nav-label">Leave Settings</span>
+                            </NavLink>
+                        </div>
+                        <div class="nav-item">
+                            <NavLink class="nav-link nav-link-sub" href="attendance-settings" title="Attendance Settings" @onclick="HandleNavigate">
+                                <span class="nav-icon bi-clock" aria-hidden="true"></span>
+                                <span class="nav-label">Attendance Settings</span>
                             </NavLink>
                         </div>
                     </Authorized>
@@ -222,7 +234,7 @@
     private static string? GetGroupForPath(string path) => path switch
     {
         "clickup-accounts" or "developers" or "users" => "management",
-        "leave" or "holidays" or "leave-types" or "leave-settings" => "time-off",
+        "leave" or "holidays" or "leave-types" or "leave-settings" or "attendance" or "attendance-settings" => "time-off",
         "analytics" or "reports" or "leave-analytics" => "analytics",
         _ => null
     };

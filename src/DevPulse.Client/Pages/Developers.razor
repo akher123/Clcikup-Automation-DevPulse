@@ -60,6 +60,16 @@
                         <option value="@WorkRole.QA">QA</option>
                     </select>
                 </div>
+                <div class="col-md-4">
+                    <label class="form-label">Reporting manager</label>
+                    <select class="form-select" @bind="_newDeveloper.ReportingManagerDeveloperId">
+                        <option value="">None</option>
+                        @foreach (var manager in GetActiveDevelopersForManagerSelect())
+                        {
+                            <option value="@manager.Id">@manager.Name</option>
+                        }
+                    </select>
+                </div>
             </div>
             <div class="mt-3 d-flex gap-2">
                 <BusyButton CssClass="btn btn-success" IsBusy="_isBusy" BusyText="Saving..." OnClick="CreateDeveloperAsync">Save</BusyButton>
@@ -181,6 +191,7 @@ else
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Role</th>
+                                <th>Reporting manager</th>
                                 <th>Status</th>
                                 <th>Workspace Mappings</th>
                                 <th class="text-end">Actions</th>
@@ -200,6 +211,18 @@ else
                                                 @onchange="e => SetWorkRoleAsync(developer, e.Value?.ToString())">
                                             <option value="@WorkRole.Developer">Developer</option>
                                             <option value="@WorkRole.QA">QA</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select class="form-select form-select-sm developer-manager-select"
+                                                disabled="@_isBusy"
+                                                value="@FormatManagerSelectValue(developer.ReportingManagerDeveloperId)"
+                                                @onchange="e => SetReportingManagerAsync(developer, e.Value?.ToString())">
+                                            <option value="">None</option>
+                                            @foreach (var manager in GetActiveDevelopersForManagerSelect(developer.Id))
+                                            {
+                                                <option value="@manager.Id">@manager.Name</option>
+                                            }
                                         </select>
                                     </td>
                                     <td>
@@ -512,7 +535,12 @@ else
         {
             await DeveloperApi.UpdateDeveloperAsync(
                 developer.Id,
-                new UpdateDeveloperRequest(developer.Name, developer.Email, isActive, developer.WorkRole));
+                new UpdateDeveloperRequest(
+                    developer.Name,
+                    developer.Email,
+                    isActive,
+                    developer.WorkRole,
+                    developer.ReportingManagerDeveloperId));
 
             _isError = false;
             _message = isActive
@@ -545,7 +573,12 @@ else
         {
             await DeveloperApi.UpdateDeveloperAsync(
                 developer.Id,
-                new UpdateDeveloperRequest(developer.Name, developer.Email, developer.IsActive, role));
+                new UpdateDeveloperRequest(
+                    developer.Name,
+                    developer.Email,
+                    developer.IsActive,
+                    role,
+                    developer.ReportingManagerDeveloperId));
 
             _isError = false;
             _message = $"{developer.Name} set as {role}.";
@@ -561,6 +594,53 @@ else
             _isBusy = false;
         }
     }
+
+    private async Task SetReportingManagerAsync(DeveloperDto developer, string? managerValue)
+    {
+        Guid? managerId = string.IsNullOrWhiteSpace(managerValue) ? null : Guid.TryParse(managerValue, out var id) ? id : null;
+        if (managerId == developer.ReportingManagerDeveloperId)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        _message = null;
+
+        try
+        {
+            await DeveloperApi.UpdateDeveloperAsync(
+                developer.Id,
+                new UpdateDeveloperRequest(
+                    developer.Name,
+                    developer.Email,
+                    developer.IsActive,
+                    developer.WorkRole,
+                    managerId));
+
+            _isError = false;
+            _message = managerId.HasValue
+                ? $"{developer.Name} assigned to reporting manager."
+                : $"{developer.Name} reporting manager cleared.";
+            await LoadDevelopersAsync();
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private IEnumerable<DeveloperDto> GetActiveDevelopersForManagerSelect(Guid? excludeDeveloperId = null) =>
+        _developers
+            .Where(d => d.IsActive && d.Id != excludeDeveloperId)
+            .OrderBy(d => d.Name);
+
+    private static string FormatManagerSelectValue(Guid? managerId) =>
+        managerId?.ToString() ?? string.Empty;
 
     private async Task DeleteDeveloperAsync(Guid id)
     {
@@ -590,8 +670,13 @@ else
         public string Name { get; set; } = string.Empty;
         public string? Email { get; set; }
         public WorkRole WorkRole { get; set; } = WorkRole.Developer;
+        public string ReportingManagerDeveloperId { get; set; } = string.Empty;
 
-        public CreateDeveloperRequest ToRequest() => new(Name, Email, WorkRole);
+        public CreateDeveloperRequest ToRequest()
+        {
+            Guid? managerId = Guid.TryParse(ReportingManagerDeveloperId, out var id) ? id : null;
+            return new CreateDeveloperRequest(Name, Email, WorkRole, managerId);
+        }
     }
 
     private sealed class MappingFormModel

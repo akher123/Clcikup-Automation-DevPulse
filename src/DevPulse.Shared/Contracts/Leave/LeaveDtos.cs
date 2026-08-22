@@ -102,7 +102,9 @@ public record UpdateLeaveSettingsRequest(
 public record LeaveMeDto(
     Guid? DeveloperId,
     string? DeveloperName,
-    bool CanApply);
+    bool CanApply,
+    Guid? ReportingManagerDeveloperId = null,
+    string? ReportingManagerName = null);
 
 public record DeveloperLeaveBalanceDto(
     Guid DeveloperId,

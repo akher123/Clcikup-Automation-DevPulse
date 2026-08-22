@@ -1,4 +1,5 @@
 using DevPulse.Application.Abstractions.Analytics;
+using DevPulse.Application.Abstractions.Attendance;
 using DevPulse.Application.Abstractions.Developers;
 using DevPulse.Application.Abstractions.Holidays;
 using DevPulse.Application.Abstractions.Leave;
@@ -6,6 +7,7 @@ using DevPulse.Application.Abstractions.Reports;
 using DevPulse.Application.Abstractions.ClickUp;
 using DevPulse.Application.Options;
 using DevPulse.Application.Services.Analytics;
+using DevPulse.Application.Services.Attendance;
 using DevPulse.Application.Services.ClickUp;
 using DevPulse.Application.Services.Developers;
 using DevPulse.Application.Services.Holidays;
@@ -28,6 +30,8 @@ public static class DependencyInjection
         services.AddScoped<IHolidayService, HolidayService>();
         services.AddScoped<LeaveDayCalculator>();
         services.AddScoped<ILeaveService, LeaveService>();
+        services.AddScoped<AttendanceStatusCalculator>();
+        services.AddScoped<IAttendanceService, AttendanceService>();
         return services;
     }
 }

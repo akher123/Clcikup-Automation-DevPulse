@@ -1,0 +1,134 @@
+@using DevPulse.Shared.Contracts.Attendance
+
+<div class="fingerprint-punch @GetStateClass() @(IsDisabled ? "disabled" : null) @(IsPressing ? "pressing" : null)">
+    <button type="button"
+            class="fingerprint-punch-btn"
+            disabled="@(IsDisabled || IsBusy)"
+            aria-label="@GetLabel()"
+            @onpointerdown="StartPress"
+            @onpointerup="CancelPress"
+            @onpointerleave="CancelPress"
+            @onpointercancel="CancelPress">
+        <svg class="fingerprint-progress" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="fingerprint-progress-track" cx="60" cy="60" r="54" />
+            <circle class="fingerprint-progress-ring"
+                    cx="60"
+                    cy="60"
+                    r="54"
+                    style="stroke-dashoffset: @GetProgressOffset()" />
+        </svg>
+        <span class="fingerprint-icon bi-fingerprint" aria-hidden="true"></span>
+    </button>
+    <p class="fingerprint-label">@GetLabel()</p>
+    @if (!string.IsNullOrWhiteSpace(Hint))
+    {
+        <p class="fingerprint-hint">@Hint</p>
+    }
+</div>
+
+@code {
+    private const int HoldDurationMs = 800;
+
+    [Parameter]
+    public AttendanceNextActionDto NextAction { get; set; } = AttendanceNextActionDto.PunchIn;
+
+    [Parameter]
+    public bool IsDisabled { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public string? Hint { get; set; }
+
+    [Parameter]
+    public EventCallback OnPunchComplete { get; set; }
+
+    private bool IsPressing { get; set; }
+    private double _progress;
+    private CancellationTokenSource? _pressCts;
+
+    private string GetStateClass() => NextAction switch
+    {
+        AttendanceNextActionDto.PunchIn => "fingerprint-punch-in",
+        AttendanceNextActionDto.PunchOut => "fingerprint-punch-out",
+        AttendanceNextActionDto.Complete => "fingerprint-punch-complete",
+        _ => string.Empty
+    };
+
+    private string GetLabel() => NextAction switch
+    {
+        AttendanceNextActionDto.PunchIn => "Hold to Punch In",
+        AttendanceNextActionDto.PunchOut => "Hold to Punch Out",
+        AttendanceNextActionDto.Complete => "Day Complete",
+        _ => "Hold to Punch"
+    };
+
+    private string GetProgressOffset()
+    {
+        const double circumference = 339.292;
+        return (circumference * (1 - _progress)).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private void StartPress(PointerEventArgs args)
+    {
+        if (IsDisabled || IsBusy || NextAction == AttendanceNextActionDto.Complete)
+        {
+            return;
+        }
+
+        CancelPressInternal();
+        IsPressing = true;
+        _progress = 0;
+        _pressCts = new CancellationTokenSource();
+        _ = RunHoldTimerAsync(_pressCts.Token);
+    }
+
+    private void CancelPress(PointerEventArgs args)
+    {
+        CancelPressInternal();
+    }
+
+    private void CancelPressInternal()
+    {
+        _pressCts?.Cancel();
+        _pressCts?.Dispose();
+        _pressCts = null;
+        IsPressing = false;
+        _progress = 0;
+    }
+
+    private async Task RunHoldTimerAsync(CancellationToken cancellationToken)
+    {
+        var started = DateTime.UtcNow;
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var elapsed = (DateTime.UtcNow - started).TotalMilliseconds;
+                _progress = Math.Clamp(elapsed / HoldDurationMs, 0, 1);
+                await InvokeAsync(StateHasChanged);
+
+                if (_progress >= 1)
+                {
+                    CancelPressInternal();
+                    await OnPunchComplete.InvokeAsync();
+                    return;
+                }
+
+                await Task.Delay(30, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when the user releases early.
+        }
+        finally
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+}

@@ -24,6 +24,13 @@ public class Developer
     /// </summary>
     public bool IsActive { get; set; } = true;
 
+    /// <summary>
+    /// Optional reporting manager used for leave approval. Also a <see cref="Developer"/> record.
+    /// </summary>
+    public Guid? ReportingManagerDeveloperId { get; set; }
+
+    public Developer? ReportingManager { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public ICollection<DeveloperClickUpMapping> ClickUpMappings { get; set; } = [];

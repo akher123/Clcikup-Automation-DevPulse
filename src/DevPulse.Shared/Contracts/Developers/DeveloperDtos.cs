@@ -13,7 +13,9 @@ public record DeveloperDto(
     bool IsActive,
     DateTime CreatedAtUtc,
     IReadOnlyList<DeveloperClickUpMappingDto> Mappings,
-    WorkRole WorkRole = WorkRole.Developer);
+    WorkRole WorkRole = WorkRole.Developer,
+    Guid? ReportingManagerDeveloperId = null,
+    string? ReportingManagerName = null);
 
 public record DeveloperClickUpMappingDto(
     Guid Id,
@@ -24,13 +26,15 @@ public record DeveloperClickUpMappingDto(
 public record CreateDeveloperRequest(
     string Name,
     string? Email,
-    WorkRole WorkRole = WorkRole.Developer);
+    WorkRole WorkRole = WorkRole.Developer,
+    Guid? ReportingManagerDeveloperId = null);
 
 public record UpdateDeveloperRequest(
     string Name,
     string? Email,
     bool IsActive,
-    WorkRole WorkRole = WorkRole.Developer);
+    WorkRole WorkRole = WorkRole.Developer,
+    Guid? ReportingManagerDeveloperId = null);
 
 public record AddDeveloperMappingRequest(
     Guid ClickUpAccountId,

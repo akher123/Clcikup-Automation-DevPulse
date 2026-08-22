@@ -67,11 +67,18 @@ public sealed class DeveloperService : IDeveloperService
             }
         }
 
+        var managerValidation = await ValidateReportingManagerAsync(null, request.ReportingManagerDeveloperId, cancellationToken);
+        if (managerValidation.IsFailure)
+        {
+            return Result<DeveloperDto>.Failure(managerValidation.Error!);
+        }
+
         var developer = new Developer
         {
             Name = request.Name.Trim(),
             Email = normalizedEmail,
-            WorkRole = (Domain.Enums.WorkRole)(int)request.WorkRole
+            WorkRole = (Domain.Enums.WorkRole)(int)request.WorkRole,
+            ReportingManagerDeveloperId = request.ReportingManagerDeveloperId
         };
 
         await _developerRepository.AddAsync(developer, cancellationToken);
@@ -105,10 +112,17 @@ public sealed class DeveloperService : IDeveloperService
             }
         }
 
+        var managerValidation = await ValidateReportingManagerAsync(id, request.ReportingManagerDeveloperId, cancellationToken);
+        if (managerValidation.IsFailure)
+        {
+            return Result<DeveloperDto>.Failure(managerValidation.Error!);
+        }
+
         developer.Name = request.Name.Trim();
         developer.Email = normalizedEmail;
         developer.IsActive = request.IsActive;
         developer.WorkRole = (Domain.Enums.WorkRole)(int)request.WorkRole;
+        developer.ReportingManagerDeveloperId = request.ReportingManagerDeveloperId;
 
         await _developerRepository.UpdateAsync(developer, cancellationToken);
 
@@ -317,6 +331,52 @@ public sealed class DeveloperService : IDeveloperService
     private static string? NormalizeEmail(string? email) =>
         string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
 
+    private async Task<Result> ValidateReportingManagerAsync(
+        Guid? developerId,
+        Guid? reportingManagerDeveloperId,
+        CancellationToken cancellationToken)
+    {
+        if (reportingManagerDeveloperId is null)
+        {
+            return Result.Success();
+        }
+
+        if (developerId.HasValue && reportingManagerDeveloperId.Value == developerId.Value)
+        {
+            return Result.Failure("A developer cannot be their own reporting manager.");
+        }
+
+        var manager = await _developerRepository.GetByIdAsync(reportingManagerDeveloperId.Value, cancellationToken);
+        if (manager is null || !manager.IsActive)
+        {
+            return Result.Failure("Reporting manager was not found or is inactive.");
+        }
+
+        if (!developerId.HasValue)
+        {
+            return Result.Success();
+        }
+
+        var currentManagerId = manager.ReportingManagerDeveloperId;
+        while (currentManagerId.HasValue)
+        {
+            if (currentManagerId.Value == developerId.Value)
+            {
+                return Result.Failure("This reporting manager assignment would create a circular hierarchy.");
+            }
+
+            var next = await _developerRepository.GetByIdAsync(currentManagerId.Value, cancellationToken);
+            if (next is null)
+            {
+                break;
+            }
+
+            currentManagerId = next.ReportingManagerDeveloperId;
+        }
+
+        return Result.Success();
+    }
+
     private static DeveloperDto MapToDto(Developer developer) =>
         new(
             developer.Id,
@@ -332,5 +392,7 @@ public sealed class DeveloperService : IDeveloperService
                     m.ClickUpUserId))
                 .OrderBy(m => m.AccountName)
                 .ToList(),
-            (WorkRole)(int)developer.WorkRole);
+            (WorkRole)(int)developer.WorkRole,
+            developer.ReportingManagerDeveloperId,
+            developer.ReportingManager?.Name);
 }

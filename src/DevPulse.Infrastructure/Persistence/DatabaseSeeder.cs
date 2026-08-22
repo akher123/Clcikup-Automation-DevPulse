@@ -37,6 +37,7 @@ public static class DatabaseSeeder
        // await SeedAdminUserAsync(userManager, seedSettings, logger);
        // await SeedDemoClickUpAccountsAsync(dbContext, tokenProtector, logger);
         await SeedLeaveTelegramSettingsAsync(dbContext, telegramOptions, dataProtectionProvider, logger);
+        await SeedAttendanceSettingsAsync(dbContext, logger);
     }
 
     private static async Task SeedAdminUserAsync(
@@ -148,5 +149,17 @@ public static class DatabaseSeeder
 
         await dbContext.SaveChangesAsync();
         logger.LogInformation("Seeded leave Telegram group chat ID from appsettings.");
+    }
+
+    private static async Task SeedAttendanceSettingsAsync(DevPulseDbContext dbContext, ILogger logger)
+    {
+        if (await dbContext.AttendanceSettings.AnyAsync())
+        {
+            return;
+        }
+
+        dbContext.AttendanceSettings.Add(new AttendanceSettings());
+        await dbContext.SaveChangesAsync();
+        logger.LogInformation("Seeded default attendance settings.");
     }
 }

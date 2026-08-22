@@ -110,6 +110,15 @@
                     <p class="mb-0">Your developer record is inactive. Contact an administrator.</p>
                 </div>
             }
+            else if (_me.ReportingManagerDeveloperId is null)
+            {
+                <div class="leave-notice leave-notice-warning">
+                    <strong>Reporting manager required</strong>
+                    <p class="mb-0">
+                        No reporting manager is assigned to your developer profile. Ask an administrator to assign one on the Developers page before applying for leave.
+                    </p>
+                </div>
+            }
             else
             {
                 @if (_balances.Count > 0)
@@ -189,10 +198,11 @@
                             <h3 class="leave-form-section-title">Approval</h3>
                             <div class="row g-3">
                                 <div class="col-lg-5">
-                                    <label class="form-label">Approver</label>
-                                    <SearchableApproverSelect Colleagues="_colleagues"
-                                                              ExcludeDeveloperId="_me.DeveloperId"
-                                                              @bind-SelectedValue="_approverDeveloperId" />
+                                    <label class="form-label">Reporting manager</label>
+                                    <div class="leave-manager-display">
+                                        <span class="leave-manager-name">@_me.ReportingManagerName</span>
+                                        <span class="form-text">Leave requests are sent to your assigned reporting manager for approval.</span>
+                                    </div>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label">Reason</label>
@@ -308,6 +318,7 @@
         try
         {
             _me = await LeaveApi.GetMeAsync();
+            _approverDeveloperId = _me.ReportingManagerDeveloperId ?? Guid.Empty;
             _activeLeaveTypes = (await LeaveApi.GetLeaveTypesAsync(activeOnly: true)).ToList();
             _colleagues = (await LeaveApi.GetColleaguesAsync()).ToList();
 
@@ -319,6 +330,7 @@
             _myApplications = (await LeaveApi.GetMyApplicationsAsync()).ToList();
             _pendingApplications = (await LeaveApi.GetPendingForApprovalAsync()).ToList();
             _pendingCount = _pendingApplications.Count;
+            _approverDeveloperId = _me.ReportingManagerDeveloperId ?? Guid.Empty;
         }
         catch (Exception ex)
         {
@@ -368,11 +380,13 @@
 
     private async Task SubmitAsync()
     {
-        if (_selectedLeaveTypeId == Guid.Empty || _approverDeveloperId == Guid.Empty)
+        if (_selectedLeaveTypeId == Guid.Empty || _me.ReportingManagerDeveloperId is null)
         {
-            ShowMessage("Select a leave type and approver.", true);
+            ShowMessage("Select a leave type. A reporting manager must be assigned before you can apply.", true);
             return;
         }
+
+        _approverDeveloperId = _me.ReportingManagerDeveloperId.Value;
 
         _isBusy = true;
         _message = null;

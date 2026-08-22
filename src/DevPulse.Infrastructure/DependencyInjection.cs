@@ -78,6 +78,7 @@ public static class DependencyInjection
         services.AddScoped<IKpiSyncRunRepository, KpiSyncRunRepository>();
         services.AddScoped<IHolidayRepository, HolidayRepository>();
         services.AddScoped<ILeaveRepository, LeaveRepository>();
+        services.AddScoped<IAttendanceRepository, AttendanceRepository>();
         services.AddScoped<IUserEmailLookup, UserEmailLookup>();
         services.AddScoped<ILeaveTelegramService, LeaveTelegramService>();
         services.AddSingleton<LeaveTelegramNotificationQueue>();

@@ -4,6 +4,7 @@ using DevPulse.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DevPulse.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(DevPulseDbContext))]
-    partial class DevPulseDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260822125652_AddAttendanceTracking")]
+    partial class AddAttendanceTracking
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -227,17 +230,12 @@ namespace DevPulse.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<Guid?>("ReportingManagerDeveloperId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<int>("WorkRole")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Email");
-
-                    b.HasIndex("ReportingManagerDeveloperId");
 
                     b.ToTable("Developers", (string)null);
                 });
@@ -886,16 +884,6 @@ namespace DevPulse.Infrastructure.Persistence.Migrations
                     b.Navigation("ClickUpAccount");
 
                     b.Navigation("Developer");
-                });
-
-            modelBuilder.Entity("DevPulse.Domain.Entities.Developer", b =>
-                {
-                    b.HasOne("DevPulse.Domain.Entities.Developer", "ReportingManager")
-                        .WithMany()
-                        .HasForeignKey("ReportingManagerDeveloperId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("ReportingManager");
                 });
 
             modelBuilder.Entity("DevPulse.Domain.Entities.DeveloperKpiSnapshot", b =>

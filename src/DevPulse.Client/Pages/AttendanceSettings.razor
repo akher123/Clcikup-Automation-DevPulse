@@ -1,0 +1,164 @@
+@page "/attendance-settings"
+@attribute [Authorize(Policy = "AdminOnly")]
+@using DevPulse.Shared.Constants
+@using DevPulse.Shared.Contracts.Attendance
+@inject IAttendanceApiClient AttendanceApi
+
+<PageTitle>@AppBranding.PageTitle("Attendance Settings")</PageTitle>
+
+<div class="attendance-settings-page">
+    <div class="analytics-hero analytics-hero-compact attendance-settings-hero">
+        <div class="analytics-hero-copy">
+            <p class="analytics-eyebrow">Admin · Configuration</p>
+            <h1>Attendance Settings</h1>
+            <p class="analytics-lead">
+                Configure official working hours, buffer times, and office time zone used for punch calculations.
+            </p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <div class="alert @(_isError ? "alert-danger" : "alert-success") leave-alert" role="alert">@_message</div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="attendance-skeleton" aria-hidden="true">
+            <div class="attendance-skeleton-card"></div>
+            <div class="attendance-skeleton-card"></div>
+        </div>
+        <LoadingIndicator Text="Loading settings..." />
+    }
+    else
+    {
+        <div class="form-card card mb-4">
+            <div class="card-body">
+                <div class="attendance-section-header">
+                    <span class="attendance-section-icon bi-clock" aria-hidden="true"></span>
+                    <div>
+                        <h5 class="card-title mb-1">Working hours</h5>
+                        <p class="attendance-section-desc mb-0">Official start and end times for a standard work day.</p>
+                    </div>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-md-6">
+                        <label class="form-label">Work start</label>
+                        <input type="time" class="form-control" @bind="_workStart" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Work end</label>
+                        <input type="time" class="form-control" @bind="_workEnd" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-card card mb-4">
+            <div class="card-body">
+                <div class="attendance-section-header">
+                    <span class="attendance-section-icon bi-sliders" aria-hidden="true"></span>
+                    <div>
+                        <h5 class="card-title mb-1">Buffer times</h5>
+                        <p class="attendance-section-desc mb-0">
+                            Buffer start is the latest arrival still counted as on-time. Buffer end is the earliest departure still counted as a full day.
+                        </p>
+                    </div>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-md-6">
+                        <label class="form-label">Buffer start (on-time arrival until)</label>
+                        <input type="time" class="form-control" @bind="_bufferStart" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Buffer end (full day if leaving after)</label>
+                        <input type="time" class="form-control" @bind="_bufferEnd" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-card card mb-4">
+            <div class="card-body">
+                <div class="attendance-section-header">
+                    <span class="attendance-section-icon bi-globe2" aria-hidden="true"></span>
+                    <div>
+                        <h5 class="card-title mb-1">Office time zone</h5>
+                        <p class="attendance-section-desc mb-0">IANA time zone used for punch dates and on-time calculations.</p>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <input class="form-control" @bind="_timeZoneId" placeholder="Asia/Dhaka" />
+                </div>
+            </div>
+        </div>
+
+        <BusyButton CssClass="btn btn-primary" IsBusy="_isBusy" BusyText="Saving..." OnClick="SaveAsync">Save Settings</BusyButton>
+    }
+</div>
+
+@code {
+    private bool _isLoading = true;
+    private bool _isBusy;
+    private bool _isError;
+    private string? _message;
+    private TimeOnly _workStart = new(9, 0);
+    private TimeOnly _workEnd = new(18, 0);
+    private TimeOnly _bufferStart = new(9, 15);
+    private TimeOnly _bufferEnd = new(17, 45);
+    private string _timeZoneId = "Asia/Dhaka";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var settings = await AttendanceApi.GetSettingsAsync();
+            _workStart = settings.WorkStartTime;
+            _workEnd = settings.WorkEndTime;
+            _bufferStart = settings.BufferStartTime;
+            _bufferEnd = settings.BufferEndTime;
+            _timeZoneId = settings.OfficeTimeZoneId;
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _isBusy = true;
+        _message = null;
+        try
+        {
+            await AttendanceApi.UpdateSettingsAsync(new UpdateAttendanceSettingsRequest(
+                _workStart,
+                _workEnd,
+                _bufferStart,
+                _bufferEnd,
+                _timeZoneId));
+            _isError = false;
+            _message = "Attendance settings saved.";
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+}

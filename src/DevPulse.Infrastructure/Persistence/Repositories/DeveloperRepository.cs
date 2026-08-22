@@ -49,6 +49,7 @@ public sealed class DeveloperRepository : IDeveloperRepository
     {
         var normalized = email.Trim().ToLowerInvariant();
         return await _dbContext.Developers
+            .Include(x => x.ReportingManager)
             .FirstOrDefaultAsync(x => x.Email != null && x.Email.ToLower() == normalized, cancellationToken);
     }
 
@@ -95,6 +96,7 @@ public sealed class DeveloperRepository : IDeveloperRepository
 
     private IQueryable<Developer> QueryWithMappings() =>
         _dbContext.Developers
+            .Include(x => x.ReportingManager)
             .Include(x => x.ClickUpMappings)
             .ThenInclude(x => x.ClickUpAccount);
 }

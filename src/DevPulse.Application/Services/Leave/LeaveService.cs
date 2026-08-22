@@ -46,7 +46,12 @@ public sealed class LeaveService : ILeaveService
             return new LeaveMeDto(null, null, false);
         }
 
-        return new LeaveMeDto(developer.Id, developer.Name, developer.IsActive);
+        return new LeaveMeDto(
+            developer.Id,
+            developer.Name,
+            developer.IsActive,
+            developer.ReportingManagerDeveloperId,
+            developer.ReportingManager?.Name);
     }
 
     public async Task<IReadOnlyList<LeaveTypeDto>> GetLeaveTypesAsync(bool activeOnly, CancellationToken cancellationToken = default)
@@ -292,7 +297,18 @@ public sealed class LeaveService : ILeaveService
             return Result<LeaveApplicationDto>.Failure("You cannot select yourself as the approver.");
         }
 
-        var approver = await _developerRepository.GetByIdAsync(request.ApproverDeveloperId, cancellationToken);
+        if (applicant.ReportingManagerDeveloperId is not Guid assignedManagerId)
+        {
+            return Result<LeaveApplicationDto>.Failure(
+                "No reporting manager is assigned to your developer profile. Ask an administrator to assign one before applying for leave.");
+        }
+
+        if (request.ApproverDeveloperId != assignedManagerId)
+        {
+            return Result<LeaveApplicationDto>.Failure("Leave applications must be submitted to your assigned reporting manager.");
+        }
+
+        var approver = await _developerRepository.GetByIdAsync(assignedManagerId, cancellationToken);
         if (approver is null || !approver.IsActive)
         {
             return Result<LeaveApplicationDto>.Failure("Selected approver was not found or is inactive.");
