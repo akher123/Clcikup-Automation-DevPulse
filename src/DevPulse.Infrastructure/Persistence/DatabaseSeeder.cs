@@ -1,12 +1,14 @@
+using DevPulse.Application.Abstractions.Security;
+using DevPulse.Application.Options;
 using DevPulse.Domain.Entities;
 using DevPulse.Infrastructure.Identity;
 using DevPulse.Shared.Constants;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using DevPulse.Application.Abstractions.Security;
 
 namespace DevPulse.Infrastructure.Persistence;
 
@@ -20,6 +22,8 @@ public static class DatabaseSeeder
         var seedSettings = scope.ServiceProvider.GetRequiredService<IOptions<SeedAdminSettings>>().Value;
         var dbContext = scope.ServiceProvider.GetRequiredService<DevPulseDbContext>();
         var tokenProtector = scope.ServiceProvider.GetRequiredService<ITokenProtector>();
+        var telegramOptions = scope.ServiceProvider.GetRequiredService<IOptions<LeaveTelegramOptions>>().Value;
+        var dataProtectionProvider = scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>();
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseSeeder");
 
         foreach (var role in AppRoles.All)
@@ -32,6 +36,7 @@ public static class DatabaseSeeder
 
        // await SeedAdminUserAsync(userManager, seedSettings, logger);
        // await SeedDemoClickUpAccountsAsync(dbContext, tokenProtector, logger);
+        await SeedLeaveTelegramSettingsAsync(dbContext, telegramOptions, dataProtectionProvider, logger);
     }
 
     private static async Task SeedAdminUserAsync(
@@ -110,5 +115,38 @@ public static class DatabaseSeeder
             "Seeded demo ClickUp workspaces for {Company}: {AccountCount} accounts",
             AppBranding.CompanyName,
             2);
+    }
+
+    private static async Task SeedLeaveTelegramSettingsAsync(
+        DevPulseDbContext dbContext,
+        LeaveTelegramOptions telegramOptions,
+        IDataProtectionProvider dataProtectionProvider,
+        ILogger logger)
+    {
+        if (string.IsNullOrWhiteSpace(telegramOptions.BotToken) || string.IsNullOrWhiteSpace(telegramOptions.ChatId))
+        {
+            return;
+        }
+
+        var settings = await dbContext.LeaveSettings.FirstOrDefaultAsync();
+        if (settings is null)
+        {
+            settings = new LeaveSettings();
+            dbContext.LeaveSettings.Add(settings);
+        }
+
+        if (!string.IsNullOrWhiteSpace(settings.EncryptedTelegramBotToken)
+            && !string.IsNullOrWhiteSpace(settings.TelegramChatId))
+        {
+            return;
+        }
+
+        var protector = dataProtectionProvider.CreateProtector("DevPulse.Telegram.BotTokens.v1");
+        settings.EncryptedTelegramBotToken ??= protector.Protect(telegramOptions.BotToken.Trim());
+        settings.TelegramChatId ??= telegramOptions.ChatId.Trim();
+        settings.UpdatedAtUtc = DateTime.UtcNow;
+
+        await dbContext.SaveChangesAsync();
+        logger.LogInformation("Seeded leave Telegram group chat ID from appsettings.");
     }
 }

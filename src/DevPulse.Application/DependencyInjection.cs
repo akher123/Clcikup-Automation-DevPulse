@@ -1,6 +1,7 @@
 using DevPulse.Application.Abstractions.Analytics;
 using DevPulse.Application.Abstractions.Developers;
 using DevPulse.Application.Abstractions.Holidays;
+using DevPulse.Application.Abstractions.Leave;
 using DevPulse.Application.Abstractions.Reports;
 using DevPulse.Application.Abstractions.ClickUp;
 using DevPulse.Application.Options;
@@ -8,6 +9,7 @@ using DevPulse.Application.Services.Analytics;
 using DevPulse.Application.Services.ClickUp;
 using DevPulse.Application.Services.Developers;
 using DevPulse.Application.Services.Holidays;
+using DevPulse.Application.Services.Leave;
 using DevPulse.Application.Services.Reports;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -24,6 +26,8 @@ public static class DependencyInjection
         services.AddScoped<IKpiSyncService, KpiSyncService>();
         services.AddScoped<ICachedAnalyticsService, CachedAnalyticsService>();
         services.AddScoped<IHolidayService, HolidayService>();
+        services.AddScoped<LeaveDayCalculator>();
+        services.AddScoped<ILeaveService, LeaveService>();
         return services;
     }
 }

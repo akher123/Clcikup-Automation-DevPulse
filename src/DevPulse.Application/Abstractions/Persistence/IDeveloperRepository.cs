@@ -19,6 +19,10 @@ public interface IDeveloperRepository
 
     Task<Developer?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
 
+    Task<Developer?> GetByEmailIgnoreCaseAsync(string email, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Developer>> GetActiveWithEmailAsync(CancellationToken cancellationToken = default);
+
     Task AddAsync(Developer developer, CancellationToken cancellationToken = default);
 
     Task UpdateAsync(Developer developer, CancellationToken cancellationToken = default);

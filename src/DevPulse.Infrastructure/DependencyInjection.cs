@@ -1,4 +1,5 @@
 using DevPulse.Application.Abstractions.Auth;
+using DevPulse.Application.Abstractions.Leave;
 using DevPulse.Application.Abstractions.Persistence;
 using DevPulse.Application.Abstractions.Security;
 using DevPulse.Application.Abstractions.ClickUp;
@@ -32,6 +33,7 @@ public static class DependencyInjection
         services.Configure<SeedAdminSettings>(configuration.GetSection(SeedAdminSettings.SectionName));
         services.Configure<KpiSyncOptions>(configuration.GetSection(KpiSyncOptions.SectionName));
         services.Configure<ClickUpApiOptions>(configuration.GetSection(ClickUpApiOptions.SectionName));
+        services.Configure<LeaveTelegramOptions>(configuration.GetSection(LeaveTelegramOptions.SectionName));
 
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
             {
@@ -75,17 +77,29 @@ public static class DependencyInjection
         services.AddScoped<ITaskAssignmentPeriodRepository, TaskAssignmentPeriodRepository>();
         services.AddScoped<IKpiSyncRunRepository, KpiSyncRunRepository>();
         services.AddScoped<IHolidayRepository, HolidayRepository>();
+        services.AddScoped<ILeaveRepository, LeaveRepository>();
+        services.AddScoped<IUserEmailLookup, UserEmailLookup>();
+        services.AddScoped<ILeaveTelegramService, LeaveTelegramService>();
+        services.AddSingleton<LeaveTelegramNotificationQueue>();
+        services.AddSingleton<ILeaveTelegramNotificationQueue>(sp =>
+            sp.GetRequiredService<LeaveTelegramNotificationQueue>());
         services.AddSingleton<JwtTokenGenerator>();
         services.AddSingleton<ClickUpApiRateLimiter>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddHostedService<KpiSyncBackgroundService>();
+        services.AddHostedService<LeaveTelegramNotificationBackgroundService>();
 
         services.AddHttpClient<IClickUpApiClient, ClickUpApiClient>(client =>
         {
             client.BaseAddress = new Uri("https://api.clickup.com/api/v2/");
             client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
             client.Timeout = TimeSpan.FromDays(2);
+        });
+
+        services.AddHttpClient<ITelegramApiClient, Telegram.TelegramApiClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
         });
 
         return services;

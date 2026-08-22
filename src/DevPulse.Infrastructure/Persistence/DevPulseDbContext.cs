@@ -28,6 +28,12 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
 
     public DbSet<CompanyHoliday> CompanyHolidays => Set<CompanyHoliday>();
 
+    public DbSet<LeaveType> LeaveTypes => Set<LeaveType>();
+
+    public DbSet<LeaveApplication> LeaveApplications => Set<LeaveApplication>();
+
+    public DbSet<LeaveSettings> LeaveSettings => Set<LeaveSettings>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -159,6 +165,53 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
             entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
             entity.Property(x => x.Reason).HasMaxLength(500);
             entity.HasIndex(x => new { x.FromDate, x.ToDate });
+        });
+
+        modelBuilder.Entity<LeaveType>(entity =>
+        {
+            entity.ToTable("LeaveTypes");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.PolicyNotes).HasMaxLength(1000);
+            entity.Property(x => x.CountingMode).HasConversion<int>();
+            entity.HasIndex(x => x.Name);
+        });
+
+        modelBuilder.Entity<LeaveApplication>(entity =>
+        {
+            entity.ToTable("LeaveApplications");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.ReviewerComment).HasMaxLength(1000);
+            entity.Property(x => x.RequestedDays).HasPrecision(5, 1);
+            entity.Property(x => x.Status).HasConversion<int>();
+            entity.HasIndex(x => new { x.ApplicantDeveloperId, x.Status });
+            entity.HasIndex(x => new { x.ApproverDeveloperId, x.Status });
+            entity.HasIndex(x => x.FromDate);
+
+            entity.HasOne(x => x.ApplicantDeveloper)
+                .WithMany()
+                .HasForeignKey(x => x.ApplicantDeveloperId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.ApproverDeveloper)
+                .WithMany()
+                .HasForeignKey(x => x.ApproverDeveloperId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.LeaveType)
+                .WithMany()
+                .HasForeignKey(x => x.LeaveTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LeaveSettings>(entity =>
+        {
+            entity.ToTable("LeaveSettings");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.EncryptedTelegramBotToken).HasMaxLength(2000);
+            entity.Property(x => x.TelegramChatId).HasMaxLength(50);
+            entity.Property(x => x.LastTelegramError).HasMaxLength(1000);
         });
     }
 }

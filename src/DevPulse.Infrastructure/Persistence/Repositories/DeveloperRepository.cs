@@ -45,6 +45,20 @@ public sealed class DeveloperRepository : IDeveloperRepository
         await _dbContext.Developers
             .FirstOrDefaultAsync(x => x.Email != null && x.Email == email, cancellationToken);
 
+    public async Task<Developer?> GetByEmailIgnoreCaseAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var normalized = email.Trim().ToLowerInvariant();
+        return await _dbContext.Developers
+            .FirstOrDefaultAsync(x => x.Email != null && x.Email.ToLower() == normalized, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Developer>> GetActiveWithEmailAsync(CancellationToken cancellationToken = default) =>
+        await _dbContext.Developers
+            .Where(x => x.IsActive && x.Email != null && x.Email != "")
+            .OrderBy(x => x.Name)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(Developer developer, CancellationToken cancellationToken = default)
     {
         _dbContext.Developers.Add(developer);
