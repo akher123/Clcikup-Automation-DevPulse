@@ -50,7 +50,7 @@ public sealed class AttendanceApiClient : IAttendanceApiClient
     public async Task<AttendanceMeDto> GetMeAsync(CancellationToken cancellationToken = default)
     {
         var me = await _httpClient.GetFromJsonAsync<AttendanceMeDto>("api/attendance/me", _jsonOptions, cancellationToken);
-        return me ?? new AttendanceMeDto(null, null, false, AttendanceNextActionDto.PunchIn, null, "Asia/Dhaka");
+        return me ?? new AttendanceMeDto(null, null, false, AttendanceNextActionDto.PunchIn, null, "Asia/Dhaka", true, null);
     }
 
     public async Task<AttendancePunchResultDto?> PunchAsync(CancellationToken cancellationToken = default)

@@ -4977,6 +4977,8 @@ button.holiday-day:hover {
 }
 
 .attendance-badge.on-time { background: #ecfdf5; color: #047857; }
+.attendance-badge.punched { background: #eff6ff; color: #1d4ed8; }
+.attendance-badge.complete { background: #ecfdf5; color: #047857; }
 .attendance-badge.late { background: #fffbeb; color: #b45309; }
 .attendance-badge.early-leave { background: #fff7ed; color: #c2410c; }
 .attendance-badge.incomplete { background: #fef2f2; color: #b91c1c; }
@@ -5121,6 +5123,26 @@ button.holiday-day:hover {
 .fingerprint-punch-btn:disabled {
     opacity: 0.55;
     cursor: not-allowed;
+    box-shadow: none;
+}
+
+.fingerprint-punch-locked .fingerprint-punch-btn {
+    background: linear-gradient(145deg, #f3f4f6, #e5e7eb);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+.fingerprint-punch-locked .fingerprint-icon {
+    color: #9ca3af;
+}
+
+.fingerprint-punch-locked .fingerprint-progress-ring,
+.fingerprint-punch-locked .fingerprint-progress-track {
+    stroke: rgba(156, 163, 175, 0.25);
+}
+
+.fingerprint-punch-locked .fingerprint-label {
+    color: #6b7280;
 }
 
 .fingerprint-punch.pressing .fingerprint-punch-btn {

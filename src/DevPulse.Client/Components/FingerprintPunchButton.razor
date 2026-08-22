@@ -1,9 +1,9 @@
 @using DevPulse.Shared.Contracts.Attendance
 
-<div class="fingerprint-punch @GetStateClass() @(IsDisabled ? "disabled" : null) @(IsPressing ? "pressing" : null)">
+<div class="fingerprint-punch @GetStateClass() @(IsDisabled ? "disabled" : null) @(PunchOutLocked ? "fingerprint-punch-locked" : null) @(IsPressing ? "pressing" : null)">
     <button type="button"
             class="fingerprint-punch-btn"
-            disabled="@(IsDisabled || IsBusy)"
+            disabled="@(IsDisabled || IsBusy || PunchOutLocked)"
             aria-label="@GetLabel()"
             @onpointerdown="StartPress"
             @onpointerup="CancelPress"
@@ -39,6 +39,9 @@
     public bool IsBusy { get; set; }
 
     [Parameter]
+    public bool PunchOutLocked { get; set; }
+
+    [Parameter]
     public string? Hint { get; set; }
 
     [Parameter]
@@ -59,6 +62,7 @@
     private string GetLabel() => NextAction switch
     {
         AttendanceNextActionDto.PunchIn => "Hold to Punch In",
+        AttendanceNextActionDto.PunchOut when PunchOutLocked => "Punch Out Locked",
         AttendanceNextActionDto.PunchOut => "Hold to Punch Out",
         AttendanceNextActionDto.Complete => "Day Complete",
         _ => "Hold to Punch"
@@ -72,7 +76,7 @@
 
     private void StartPress(PointerEventArgs args)
     {
-        if (IsDisabled || IsBusy || NextAction == AttendanceNextActionDto.Complete)
+        if (IsDisabled || IsBusy || PunchOutLocked || NextAction == AttendanceNextActionDto.Complete)
         {
             return;
         }

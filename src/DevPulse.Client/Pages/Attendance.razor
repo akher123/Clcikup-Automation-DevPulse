@@ -101,13 +101,13 @@
                         <div class="attendance-toolbar-stat">
                             <span class="attendance-toolbar-stat-label">Status</span>
                             <span class="attendance-toolbar-stat-value">
-                                @if (_me.TodayRecord?.Status is AttendanceDayStatusDto status && status != AttendanceDayStatusDto.Absent)
+                                @if (_me.NextAction == AttendanceNextActionDto.Complete)
                                 {
-                                    <span class="attendance-badge @GetStatusClass(status)">@FormatStatus(status)</span>
+                                    <span class="attendance-badge complete">Complete</span>
                                 }
-                                else if (_me.NextAction == AttendanceNextActionDto.Complete)
+                                else if (_me.NextAction == AttendanceNextActionDto.PunchOut)
                                 {
-                                    <span class="attendance-badge on-time">Complete</span>
+                                    <span class="attendance-badge punched">Punched</span>
                                 }
                                 else
                                 {
@@ -166,7 +166,8 @@
 
                                 <div class="attendance-today-punch">
                                     <FingerprintPunchButton NextAction="_me.NextAction"
-                                                          IsDisabled="!_me.CanPunch"
+                                                          IsDisabled="!CanUsePunchButton()"
+                                                          PunchOutLocked="@IsPunchOutLocked()"
                                                           IsBusy="_isPunching"
                                                           Hint="@GetPunchHint()"
                                                           OnPunchComplete="PunchAsync" />
@@ -391,7 +392,7 @@
         {
             UpdateLiveClock();
             StateHasChanged();
-        }), null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
+        }), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
     }
 
     private void UpdateLiveClock()
@@ -405,6 +406,58 @@
         {
             _liveClock = DateTime.Now.ToString("h:mm tt");
         }
+    }
+
+    private bool CanUsePunchButton()
+    {
+        if (!_me.CanPunch)
+        {
+            return false;
+        }
+
+        if (_me.NextAction == AttendanceNextActionDto.Complete)
+        {
+            return false;
+        }
+
+        if (_me.NextAction == AttendanceNextActionDto.PunchOut && !IsPunchOutAllowed())
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool IsPunchOutLocked() =>
+        _me.NextAction == AttendanceNextActionDto.PunchOut && !IsPunchOutAllowed();
+
+    private bool IsPunchOutAllowed()
+    {
+        if (_me.BufferEndTime is null)
+        {
+            return _me.CanPunchOut;
+        }
+
+        try
+        {
+            var tz = TimeZoneInfo.FindSystemTimeZoneById(_me.OfficeTimeZoneId);
+            var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+            return TimeOnly.FromDateTime(localNow) >= _me.BufferEndTime.Value;
+        }
+        catch
+        {
+            return _me.CanPunchOut;
+        }
+    }
+
+    private string FormatBufferEndTime()
+    {
+        if (_me.BufferEndTime is null)
+        {
+            return "buffer end time";
+        }
+
+        return DateTime.Today.Add(_me.BufferEndTime.Value.ToTimeSpan()).ToString("h:mm tt");
     }
 
     private RenderFragment AdminFilterBar(string title, Func<Task> loadAction) => @<div class="attendance-filter-bar card form-card">
@@ -472,7 +525,7 @@
             var result = await AttendanceApi.PunchAsync();
             if (result is not null)
             {
-                _me = _me with { NextAction = result.NextAction, TodayRecord = result.Record };
+                _me = await AttendanceApi.GetMeAsync();
                 _isError = false;
                 _message = result.NextAction == AttendanceNextActionDto.PunchOut ? "Punch in recorded." :
                     result.NextAction == AttendanceNextActionDto.Complete ? "Punch out recorded. Day complete." : "Punch recorded.";
@@ -590,6 +643,8 @@
     private string GetPunchHint() => _me.NextAction switch
     {
         AttendanceNextActionDto.PunchIn => "Press and hold the fingerprint for about one second.",
+        AttendanceNextActionDto.PunchOut when !IsPunchOutAllowed() =>
+            $"Punch out is available after {FormatBufferEndTime()}.",
         AttendanceNextActionDto.PunchOut => "Hold again when you are ready to leave.",
         AttendanceNextActionDto.Complete => "You have already punched in and out today.",
         _ => string.Empty

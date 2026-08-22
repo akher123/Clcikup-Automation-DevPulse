@@ -38,7 +38,7 @@ public sealed class AttendanceService : IAttendanceService
         var developer = await ResolveDeveloperAsync(userEmail, cancellationToken);
         if (developer is null)
         {
-            return new AttendanceMeDto(null, null, false, AttendanceNextActionDto.PunchIn, null, "Asia/Dhaka");
+            return new AttendanceMeDto(null, null, false, AttendanceNextActionDto.PunchIn, null, "Asia/Dhaka", true, null);
         }
 
         var settings = await GetSettingsEntityAsync(cancellationToken);
@@ -49,6 +49,8 @@ public sealed class AttendanceService : IAttendanceService
         var todayDto = record is null
             ? null
             : MapRecord(record, settings, timeZone);
+        var canPunchOut = nextAction != AttendanceNextActionDto.PunchOut
+            || _statusCalculator.CanPunchOutNow(settings, timeZone, DateTime.UtcNow);
 
         return new AttendanceMeDto(
             developer.Id,
@@ -56,7 +58,9 @@ public sealed class AttendanceService : IAttendanceService
             developer.IsActive,
             nextAction,
             todayDto,
-            settings.OfficeTimeZoneId);
+            settings.OfficeTimeZoneId,
+            canPunchOut,
+            settings.BufferEndTime);
     }
 
     public async Task<Result<AttendancePunchResultDto>> PunchAsync(string userEmail, CancellationToken cancellationToken = default)
@@ -99,6 +103,12 @@ public sealed class AttendanceService : IAttendanceService
         }
         else if (nextAction == AttendanceNextActionDto.PunchOut)
         {
+            if (!_statusCalculator.CanPunchOutNow(settings, timeZone, nowUtc))
+            {
+                return Result<AttendancePunchResultDto>.Failure(
+                    $"Punch out is available after {settings.BufferEndTime:HH:mm} office time.");
+            }
+
             record.PunchOutUtc = nowUtc;
             await _attendanceRepository.UpdateRecordAsync(record, cancellationToken);
         }

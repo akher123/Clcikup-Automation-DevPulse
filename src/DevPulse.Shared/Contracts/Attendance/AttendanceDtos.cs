@@ -29,7 +29,9 @@ public record AttendanceMeDto(
     bool CanPunch,
     AttendanceNextActionDto NextAction,
     AttendanceRecordDto? TodayRecord,
-    string OfficeTimeZoneId);
+    string OfficeTimeZoneId,
+    bool CanPunchOut = true,
+    TimeOnly? BufferEndTime = null);
 
 public record AttendanceSettingsDto(
     TimeOnly WorkStartTime,

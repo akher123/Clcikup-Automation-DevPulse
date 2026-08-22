@@ -95,6 +95,12 @@ public sealed class AttendanceStatusCalculator
         return DateOnly.FromDateTime(localNow);
     }
 
+    public bool CanPunchOutNow(AttendanceSettings settings, TimeZoneInfo timeZone, DateTime utcNow)
+    {
+        var localNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, timeZone);
+        return TimeOnly.FromDateTime(localNow) >= settings.BufferEndTime;
+    }
+
     public static bool IsWeekend(DateOnly date, int weekendDaysBitmask)
     {
         var dayBit = 1 << (int)date.DayOfWeek;
