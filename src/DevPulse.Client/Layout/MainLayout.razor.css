@@ -17,7 +17,11 @@
     bottom: 0;
     z-index: 200;
     overflow: hidden;
-    transition: width 0.25s ease;
+    transition: width 0.25s ease, transform 0.25s ease;
+}
+
+.sidebar-backdrop {
+    display: none;
 }
 
 .sidebar > ::deep .nav-menu {
@@ -109,12 +113,81 @@
     max-width: none;
 }
 
+@media (min-width: 992px) {
+    .sidebar {
+        transform: none;
+    }
+
+    .app-shell.mobile-nav-open .sidebar {
+        transform: none;
+    }
+
+    .sidebar.mobile-open {
+        transform: none;
+    }
+}
+
 @media (max-width: 991.98px) {
+    .main-wrapper {
+        margin-left: 0;
+    }
+
+    .app-shell.sidebar-collapsed .main-wrapper {
+        margin-left: 0;
+    }
+
+    .app-shell.sidebar-collapsed .sidebar.collapsed:not(.mobile-open) {
+        transform: translateX(-100%);
+    }
+
+    .sidebar {
+        width: min(var(--dp-sidebar-width), 85vw);
+        max-width: 18rem;
+        transform: translateX(-100%);
+        z-index: 300;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
+    }
+
+    .sidebar.collapsed,
+    .sidebar.mobile-open {
+        width: min(var(--dp-sidebar-width), 85vw);
+        max-width: 18rem;
+    }
+
+    .app-shell.mobile-nav-open .sidebar,
+    .sidebar.mobile-open {
+        transform: translateX(0);
+    }
+
+    .sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        z-index: 250;
+        animation: sidebar-backdrop-in 0.2s ease;
+    }
+
+    @keyframes sidebar-backdrop-in {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
     .app-content {
         padding: 1.25rem 0.75rem 2rem;
     }
 
     .app-header {
         padding: 0 1rem;
+    }
+
+    .sidebar-toggle {
+        width: 2.75rem;
+        height: 2.75rem;
     }
 }
