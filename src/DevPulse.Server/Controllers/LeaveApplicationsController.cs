@@ -52,6 +52,20 @@ public sealed class LeaveApplicationsController : ControllerBase
         return Ok(balances);
     }
 
+    [HttpGet("analytics")]
+    [ProducesResponseType(typeof(LeaveAnalyticsSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetAnalytics([FromQuery] int year, CancellationToken cancellationToken)
+    {
+        if (year < 1900 || year > 2100)
+        {
+            return BadRequest(new { error = "Year must be between 1900 and 2100." });
+        }
+
+        var analytics = await _leaveService.GetTeamAnalyticsAsync(year, cancellationToken);
+        return Ok(analytics);
+    }
+
     [HttpPost("calculate-days")]
     [ProducesResponseType(typeof(LeaveDayCountDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

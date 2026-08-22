@@ -1170,6 +1170,21 @@ code {
     color: #b91c1c;
 }
 
+.perf-pill.tone-danger {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.perf-pill.tone-warning {
+    background: #fffbeb;
+    color: #b45309;
+}
+
+.perf-pill.tone-accent {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
 .mini-metric {
     min-width: 4.5rem;
 }
@@ -2729,5 +2744,306 @@ button.holiday-day:hover {
         display: block;
         width: 100%;
         margin: 0 0 0.35rem !important;
+    }
+}
+
+/* Leave Analytics */
+.leave-analytics-page {
+    padding-bottom: 1.5rem;
+}
+
+.leave-analytics-hero {
+    background: linear-gradient(135deg, #0f766e 0%, #0284c7 52%, #2563eb 100%);
+}
+
+.leave-analytics-year-toolbar {
+    margin: 0;
+}
+
+.leave-analytics-kpi-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.leave-analytics-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--dp-border);
+    border-radius: var(--dp-radius-lg);
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.leave-analytics-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.8125rem;
+    color: var(--dp-text-secondary);
+}
+
+.leave-analytics-legend-swatch {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 0.2rem;
+    flex-shrink: 0;
+}
+
+.leave-analytics-legend-consumed {
+    background: var(--dp-success);
+}
+
+.leave-analytics-legend-pending {
+    background: var(--dp-warning);
+}
+
+.leave-analytics-legend-remaining {
+    background: #94a3b8;
+}
+
+.leave-attention-panel .card-title-bar {
+    background: linear-gradient(90deg, #fff7ed 0%, #ffffff 100%);
+}
+
+.leave-attention-grid {
+    padding: 0.25rem 0.75rem 0.85rem;
+}
+
+.leave-attention-card {
+    border-left: 3px solid var(--dp-warning);
+}
+
+.leave-attention-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+}
+
+.leave-attention-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+}
+
+.leave-attention-tag-pending {
+    background: #fffbeb;
+    color: #b45309;
+}
+
+.leave-attention-tag-critical {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.leave-donut-wrap {
+    position: relative;
+}
+
+.leave-donut-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    padding-bottom: 1.5rem;
+}
+
+.leave-donut-center-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--dp-text);
+    line-height: 1;
+}
+
+.leave-donut-center-label {
+    margin-top: 0.2rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dp-text-muted);
+}
+
+.leave-donut-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--dp-border);
+}
+
+.leave-donut-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    text-align: center;
+}
+
+.leave-donut-stat-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--dp-text-muted);
+}
+
+.leave-donut-stat-value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--dp-text);
+}
+
+.leave-type-rank-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.leave-type-rank-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.leave-type-rank-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+}
+
+.leave-type-rank-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--dp-text);
+}
+
+.leave-type-rank-meta {
+    font-size: 0.75rem;
+    color: var(--dp-text-muted);
+    white-space: nowrap;
+}
+
+.leave-type-rank-bar {
+    display: flex;
+    height: 0.45rem;
+    border-radius: 999px;
+    overflow: hidden;
+    background: #eef2f7;
+}
+
+.leave-type-rank-seg {
+    display: block;
+    height: 100%;
+}
+
+.leave-type-rank-seg-used {
+    background: var(--dp-success);
+}
+
+.leave-type-rank-seg-pending {
+    background: var(--dp-warning);
+}
+
+.chart-panel-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: var(--dp-text-secondary);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.chart-footnote {
+    font-size: 0.75rem;
+    color: var(--dp-text-muted);
+}
+
+.leave-analytics-empty-chart {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 12rem;
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--dp-text-muted);
+    font-size: 0.875rem;
+}
+
+.leave-analytics-empty-icon {
+    font-size: 2rem;
+    color: var(--dp-success);
+    line-height: 1;
+}
+
+.leave-table-subtitle {
+    margin-top: 0.15rem;
+    font-size: 0.8125rem;
+    color: var(--dp-text-muted);
+}
+
+.leave-metric-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 0.45rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.leave-metric-pill-success {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.leave-metric-pill-warning {
+    background: #fffbeb;
+    color: #b45309;
+}
+
+.leave-analytics-table td:nth-child(2) {
+    white-space: normal;
+    min-width: 10rem;
+}
+
+@media (max-width: 1399.98px) {
+    .leave-analytics-kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .leave-analytics-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .leave-donut-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .leave-type-rank-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .leave-analytics-kpi-grid {
+        grid-template-columns: 1fr;
     }
 }

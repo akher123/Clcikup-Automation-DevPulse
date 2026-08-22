@@ -36,6 +36,10 @@ public interface ILeaveRepository
         int year,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<LeaveApplication>> GetApplicationsForTeamBalanceAsync(
+        int year,
+        CancellationToken cancellationToken = default);
+
     Task<bool> HasOverlappingLeaveAsync(
         Guid applicantDeveloperId,
         DateOnly fromDate,

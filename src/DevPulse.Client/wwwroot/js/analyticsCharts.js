@@ -349,3 +349,330 @@ export function renderWeeklyThroughput(canvasId, labels, values) {
 
     charts.set(canvasId, chart);
 }
+
+export function renderLeaveBalanceMix(canvasId, consumed, pending, remaining) {
+    ensureChartJs();
+    destroyChart(canvasId);
+
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        return;
+    }
+
+    const chart = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: ['Consumed', 'Pending', 'Remaining'],
+            datasets: [{
+                data: [consumed, pending, remaining],
+                backgroundColor: [palette.success, palette.warning, palette.muted],
+                borderWidth: 3,
+                borderColor: '#ffffff',
+                hoverOffset: 8,
+                spacing: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '68%',
+            animation: {
+                animateRotate: true,
+                duration: 800
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 10,
+                        boxHeight: 10,
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        color: palette.text,
+                        font: { size: 12, weight: '500' },
+                        padding: 14
+                    }
+                },
+                tooltip: {
+                    ...tooltipDefaults(),
+                    callbacks: {
+                        label(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const value = context.parsed;
+                            const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return ` ${context.label}: ${value.toFixed(1)} day(s) (${pct}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    charts.set(canvasId, chart);
+}
+
+export function renderDeveloperLeaveStacked(canvasId, labels, consumed, pending, remaining) {
+    ensureChartJs();
+    destroyChart(canvasId);
+
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        return;
+    }
+
+    const chart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Consumed',
+                    data: consumed,
+                    backgroundColor: palette.successSoft,
+                    hoverBackgroundColor: palette.success,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                    maxBarThickness: 36,
+                    barPercentage: 0.72,
+                    categoryPercentage: 0.7
+                },
+                {
+                    label: 'Pending',
+                    data: pending,
+                    backgroundColor: palette.warningSoft,
+                    hoverBackgroundColor: palette.warning,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                    maxBarThickness: 36,
+                    barPercentage: 0.72,
+                    categoryPercentage: 0.7
+                },
+                {
+                    label: 'Remaining',
+                    data: remaining,
+                    backgroundColor: 'rgba(148, 163, 184, 0.55)',
+                    hoverBackgroundColor: palette.muted,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                    maxBarThickness: 36,
+                    barPercentage: 0.72,
+                    categoryPercentage: 0.7
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            animation: {
+                duration: 700,
+                easing: 'easeOutQuart'
+            },
+            plugins: {
+                legend: legendDefaults(),
+                tooltip: {
+                    ...tooltipDefaults(),
+                    callbacks: {
+                        label(context) {
+                            return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)} day(s)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { display: false },
+                    border: { display: false },
+                    ticks: {
+                        color: palette.text,
+                        font: { size: 11, weight: '500' },
+                        maxRotation: 45,
+                        minRotation: 0
+                    }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    border: { display: false },
+                    ticks: {
+                        color: palette.text,
+                        font: { size: 11 },
+                        callback(value) {
+                            return `${value}d`;
+                        }
+                    },
+                    grid: {
+                        color: palette.grid,
+                        drawTicks: false
+                    }
+                }
+            }
+        }
+    });
+
+    charts.set(canvasId, chart);
+}
+
+export function renderLeaveTypeBreakdown(canvasId, labels, consumed, pending) {
+    ensureChartJs();
+    destroyChart(canvasId);
+
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        return;
+    }
+
+    const chart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Consumed',
+                    data: consumed,
+                    backgroundColor: palette.successSoft,
+                    hoverBackgroundColor: palette.success,
+                    borderRadius: 8,
+                    borderSkipped: false,
+                    maxBarThickness: 40,
+                    barPercentage: 0.65,
+                    categoryPercentage: 0.65
+                },
+                {
+                    label: 'Pending',
+                    data: pending,
+                    backgroundColor: palette.warningSoft,
+                    hoverBackgroundColor: palette.warning,
+                    borderRadius: 8,
+                    borderSkipped: false,
+                    maxBarThickness: 40,
+                    barPercentage: 0.65,
+                    categoryPercentage: 0.65
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            animation: {
+                duration: 700,
+                easing: 'easeOutQuart'
+            },
+            plugins: {
+                legend: legendDefaults(),
+                tooltip: {
+                    ...tooltipDefaults(),
+                    callbacks: {
+                        label(context) {
+                            return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)} day(s)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    border: { display: false },
+                    ticks: {
+                        color: palette.text,
+                        font: { size: 11, weight: '500' }
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    border: { display: false },
+                    ticks: {
+                        color: palette.text,
+                        font: { size: 11 },
+                        callback(value) {
+                            return `${value}d`;
+                        }
+                    },
+                    grid: {
+                        color: palette.grid,
+                        drawTicks: false
+                    }
+                }
+            }
+        }
+    });
+
+    charts.set(canvasId, chart);
+}
+
+export function renderLeavePendingRanking(canvasId, labels, pendingDays) {
+    ensureChartJs();
+    destroyChart(canvasId);
+
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        return;
+    }
+
+    const chart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Pending days',
+                data: pendingDays,
+                backgroundColor: palette.warningSoft,
+                hoverBackgroundColor: palette.warning,
+                borderRadius: 8,
+                borderSkipped: false,
+                maxBarThickness: 28,
+                barPercentage: 0.6,
+                categoryPercentage: 0.75
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 700,
+                easing: 'easeOutQuart'
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    ...tooltipDefaults(),
+                    callbacks: {
+                        label(context) {
+                            return ` ${context.parsed.x.toFixed(1)} day(s) pending`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    border: { display: false },
+                    ticks: {
+                        color: palette.text,
+                        font: { size: 11 },
+                        callback(value) {
+                            return `${value}d`;
+                        }
+                    },
+                    grid: {
+                        color: palette.grid,
+                        drawTicks: false
+                    }
+                },
+                y: {
+                    grid: { display: false },
+                    border: { display: false },
+                    ticks: {
+                        color: palette.text,
+                        font: { size: 11, weight: '500' }
+                    }
+                }
+            }
+        }
+    });
+
+    charts.set(canvasId, chart);
+}

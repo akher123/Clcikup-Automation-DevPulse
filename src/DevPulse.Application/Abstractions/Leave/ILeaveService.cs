@@ -21,6 +21,8 @@ public interface ILeaveService
 
     Task<IReadOnlyList<LeaveBalanceDto>> GetBalancesAsync(string userEmail, int year, CancellationToken cancellationToken = default);
 
+    Task<LeaveAnalyticsSummaryDto> GetTeamAnalyticsAsync(int year, CancellationToken cancellationToken = default);
+
     Task<Result<LeaveDayCountDto>> CalculateDaysAsync(LeaveDayCountRequest request, CancellationToken cancellationToken = default);
 
     Task<Result<LeaveApplicationDto>> SubmitApplicationAsync(

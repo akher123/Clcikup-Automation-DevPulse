@@ -103,3 +103,21 @@ public record LeaveMeDto(
     Guid? DeveloperId,
     string? DeveloperName,
     bool CanApply);
+
+public record DeveloperLeaveBalanceDto(
+    Guid DeveloperId,
+    string DeveloperName,
+    Guid LeaveTypeId,
+    string LeaveTypeName,
+    int DaysPerYear,
+    decimal UsedDays,
+    decimal PendingDays,
+    decimal RemainingDays);
+
+public record LeaveAnalyticsSummaryDto(
+    int Year,
+    decimal TotalUsedDays,
+    decimal TotalPendingDays,
+    decimal TotalRemainingDays,
+    int ActiveDevelopers,
+    IReadOnlyList<DeveloperLeaveBalanceDto> Balances);

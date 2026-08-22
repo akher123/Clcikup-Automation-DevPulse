@@ -185,6 +185,67 @@ public sealed class LeaveService : ILeaveService
         return balances;
     }
 
+    public async Task<LeaveAnalyticsSummaryDto> GetTeamAnalyticsAsync(int year, CancellationToken cancellationToken = default)
+    {
+        var developers = await _developerRepository.GetActiveWithEmailAsync(cancellationToken);
+        var leaveTypes = await _leaveRepository.GetActiveLeaveTypesAsync(cancellationToken);
+        var applications = await _leaveRepository.GetApplicationsForTeamBalanceAsync(year, cancellationToken);
+
+        var balances = new List<DeveloperLeaveBalanceDto>(developers.Count * Math.Max(leaveTypes.Count, 1));
+        decimal totalUsed = 0;
+        decimal totalPending = 0;
+        decimal totalRemaining = 0;
+
+        foreach (var developer in developers)
+        {
+            foreach (var leaveType in leaveTypes)
+            {
+                decimal usedDays = 0;
+                decimal pendingDays = 0;
+
+                foreach (var app in applications)
+                {
+                    if (app.ApplicantDeveloperId != developer.Id || app.LeaveTypeId != leaveType.Id)
+                    {
+                        continue;
+                    }
+
+                    if (app.Status == LeaveApplicationStatus.Approved)
+                    {
+                        usedDays += app.RequestedDays;
+                    }
+                    else if (app.Status == LeaveApplicationStatus.Pending)
+                    {
+                        pendingDays += app.RequestedDays;
+                    }
+                }
+
+                var remainingDays = leaveType.DaysPerYear - usedDays - pendingDays;
+                totalUsed += usedDays;
+                totalPending += pendingDays;
+                totalRemaining += remainingDays;
+
+                balances.Add(new DeveloperLeaveBalanceDto(
+                    developer.Id,
+                    developer.Name,
+                    leaveType.Id,
+                    leaveType.Name,
+                    leaveType.DaysPerYear,
+                    usedDays,
+                    pendingDays,
+                    remainingDays));
+            }
+        }
+
+        return new LeaveAnalyticsSummaryDto(
+            year,
+            totalUsed,
+            totalPending,
+            totalRemaining,
+            developers.Count,
+            balances);
+    }
+
     public async Task<Result<LeaveDayCountDto>> CalculateDaysAsync(LeaveDayCountRequest request, CancellationToken cancellationToken = default)
     {
         var leaveType = await _leaveRepository.GetLeaveTypeByIdAsync(request.LeaveTypeId, cancellationToken);

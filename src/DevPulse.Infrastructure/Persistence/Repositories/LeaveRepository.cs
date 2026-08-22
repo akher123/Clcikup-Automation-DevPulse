@@ -116,6 +116,22 @@ public sealed class LeaveRepository : ILeaveRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<LeaveApplication>> GetApplicationsForTeamBalanceAsync(
+        int year,
+        CancellationToken cancellationToken = default)
+    {
+        var yearStart = new DateOnly(year, 1, 1);
+        var yearEnd = new DateOnly(year, 12, 31);
+
+        return await QueryApplications()
+            .Where(x =>
+                x.FromDate <= yearEnd
+                && x.ToDate >= yearStart
+                && (x.Status == LeaveApplicationStatus.Approved || x.Status == LeaveApplicationStatus.Pending))
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> HasOverlappingLeaveAsync(
         Guid applicantDeveloperId,
         DateOnly fromDate,

@@ -21,6 +21,8 @@ public interface ILeaveApiClient
 
     Task<IReadOnlyList<LeaveBalanceDto>> GetBalancesAsync(int year, CancellationToken cancellationToken = default);
 
+    Task<LeaveAnalyticsSummaryDto> GetTeamAnalyticsAsync(int year, CancellationToken cancellationToken = default);
+
     Task<LeaveDayCountDto?> CalculateDaysAsync(LeaveDayCountRequest request, CancellationToken cancellationToken = default);
 
     Task<LeaveApplicationDto?> SubmitApplicationAsync(CreateLeaveApplicationRequest request, CancellationToken cancellationToken = default);
@@ -97,6 +99,12 @@ public sealed class LeaveApiClient : ILeaveApiClient
     {
         var balances = await _httpClient.GetFromJsonAsync<List<LeaveBalanceDto>>($"api/leave/balances?year={year}", _jsonOptions, cancellationToken);
         return balances ?? [];
+    }
+
+    public async Task<LeaveAnalyticsSummaryDto> GetTeamAnalyticsAsync(int year, CancellationToken cancellationToken = default)
+    {
+        var analytics = await _httpClient.GetFromJsonAsync<LeaveAnalyticsSummaryDto>($"api/leave/analytics?year={year}", _jsonOptions, cancellationToken);
+        return analytics ?? new LeaveAnalyticsSummaryDto(year, 0, 0, 0, 0, []);
     }
 
     public async Task<LeaveDayCountDto?> CalculateDaysAsync(LeaveDayCountRequest request, CancellationToken cancellationToken = default)

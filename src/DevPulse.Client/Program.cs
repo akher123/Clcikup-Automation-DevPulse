@@ -14,6 +14,10 @@ builder.Services.AddSingleton(AppJsonOptions.Default);
 builder.Services.AddAuthorizationCore(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole(DevPulse.Shared.Constants.AppRoles.Admin));
+    options.AddPolicy("CanViewReports", policy =>
+        policy.RequireRole(
+            DevPulse.Shared.Constants.AppRoles.Admin,
+            DevPulse.Shared.Constants.AppRoles.User));
 });
 
 builder.Services.AddScoped<CookieAuthenticationStateProvider>();

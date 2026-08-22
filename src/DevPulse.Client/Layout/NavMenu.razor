@@ -117,6 +117,16 @@
                         <span class="nav-label">Analytics</span>
                     </NavLink>
                 </div>
+                <AuthorizeView Policy="CanViewReports">
+                    <Authorized>
+                        <div class="nav-item">
+                            <NavLink class="nav-link nav-link-sub" href="leave-analytics" title="Leave Analytics" @onclick="HandleNavigate">
+                                <span class="nav-icon bi-bar-chart" aria-hidden="true"></span>
+                                <span class="nav-label">Leave Analytics</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
                 <div class="nav-item">
                     <NavLink class="nav-link nav-link-sub" href="reports" title="Reports" @onclick="HandleNavigate">
                         <span class="nav-icon bi-chart" aria-hidden="true"></span>
@@ -213,7 +223,7 @@
     {
         "clickup-accounts" or "developers" or "users" => "management",
         "leave" or "holidays" or "leave-types" or "leave-settings" => "time-off",
-        "analytics" or "reports" => "analytics",
+        "analytics" or "reports" or "leave-analytics" => "analytics",
         _ => null
     };
 
