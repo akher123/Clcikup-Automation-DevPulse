@@ -50,3 +50,9 @@ public record SyncDevelopersResult(
     int MappingsAdded);
 
 public record SyncFromClickUpRequest(Guid? ClickUpAccountId = null);
+
+public record DeveloperRegistryQuery(
+    Guid? ClickUpAccountId = null,
+    string? Status = null,
+    WorkRole? WorkRole = null,
+    string? Search = null);

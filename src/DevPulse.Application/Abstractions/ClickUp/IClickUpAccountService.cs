@@ -13,6 +13,8 @@ public interface IClickUpAccountService
 
     Task<Result<ClickUpAccountDto>> UpdateAsync(Guid id, UpdateClickUpAccountRequest request, CancellationToken cancellationToken = default);
 
+    Task<Result<ClickUpAccountDto>> UpdateStatusAsync(Guid id, UpdateClickUpAccountStatusRequest request, CancellationToken cancellationToken = default);
+
     Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<Result<ClickUpConnectionTestDto>> TestConnectionAsync(Guid id, CancellationToken cancellationToken = default);

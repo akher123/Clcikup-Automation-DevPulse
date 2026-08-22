@@ -121,6 +121,28 @@ public sealed class ClickUpAccountService : IClickUpAccountService
         return Result<ClickUpAccountDto>.Success(MapToDto(account));
     }
 
+    public async Task<Result<ClickUpAccountDto>> UpdateStatusAsync(
+        Guid id,
+        UpdateClickUpAccountStatusRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var account = await _repository.GetByIdAsync(id, cancellationToken);
+        if (account is null)
+        {
+            return Result<ClickUpAccountDto>.Failure("ClickUp account was not found.");
+        }
+
+        account.IsActive = request.IsActive;
+        await _repository.UpdateAsync(account, cancellationToken);
+
+        _logger.LogInformation(
+            "Updated ClickUp account {AccountName} registry status to {Status}",
+            account.Name,
+            account.IsActive ? "active" : "inactive");
+
+        return Result<ClickUpAccountDto>.Success(MapToDto(account));
+    }
+
     public async Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var account = await _repository.GetByIdAsync(id, cancellationToken);
@@ -221,11 +243,6 @@ public sealed class ClickUpAccountService : IClickUpAccountService
             return Result<ClickUpUserLookupDto>.Failure("No ClickUp account is connected for this workspace.");
         }
 
-        if (!account.IsActive)
-        {
-            return Result<ClickUpUserLookupDto>.Failure("ClickUp account for this workspace is inactive.");
-        }
-
         if (DemoSeedData.IsDemoWorkspace(account.WorkspaceId))
         {
             return Result<ClickUpUserLookupDto>.Failure("Member lookup is not available for the demo workspace.");
@@ -301,11 +318,6 @@ public sealed class ClickUpAccountService : IClickUpAccountService
         if (account is null)
         {
             return Result<(ClickUpAccount, string)>.Failure("ClickUp account was not found.");
-        }
-
-        if (!account.IsActive)
-        {
-            return Result<(ClickUpAccount, string)>.Failure("ClickUp account is inactive.");
         }
 
         return Result<(ClickUpAccount, string)>.Success((account, _tokenProtector.Unprotect(account.EncryptedAccessToken)));

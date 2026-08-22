@@ -9,6 +9,8 @@ public interface IClickUpAccountApiClient
 
     Task<ClickUpAccountDto?> CreateAccountAsync(CreateClickUpAccountRequest request, CancellationToken cancellationToken = default);
 
+    Task<ClickUpAccountDto?> UpdateAccountStatusAsync(Guid accountId, bool isActive, CancellationToken cancellationToken = default);
+
     Task<ClickUpConnectionTestDto?> TestConnectionAsync(Guid accountId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ClickUpMemberDto>> GetMembersAsync(Guid accountId, CancellationToken cancellationToken = default);
@@ -43,6 +45,25 @@ public sealed class ClickUpAccountApiClient : IClickUpAccountApiClient
         {
             var error = await response.Content.ReadAsStringAsync(cancellationToken);
             throw new InvalidOperationException($"Failed to create account: {error}");
+        }
+
+        return await response.Content.ReadFromJsonAsync<ClickUpAccountDto>(cancellationToken);
+    }
+
+    public async Task<ClickUpAccountDto?> UpdateAccountStatusAsync(
+        Guid accountId,
+        bool isActive,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.PatchAsJsonAsync(
+            $"api/clickup/accounts/{accountId}/status",
+            new UpdateClickUpAccountStatusRequest(isActive),
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(ParseApiError(error, "Failed to update account status"));
         }
 
         return await response.Content.ReadFromJsonAsync<ClickUpAccountDto>(cancellationToken);

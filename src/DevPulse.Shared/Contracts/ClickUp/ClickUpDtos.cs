@@ -19,6 +19,8 @@ public record UpdateClickUpAccountRequest(
     string WorkspaceId,
     string? AccessToken);
 
+public record UpdateClickUpAccountStatusRequest(bool IsActive);
+
 public record ClickUpConnectionTestDto(
     Guid AccountId,
     string AccountName,

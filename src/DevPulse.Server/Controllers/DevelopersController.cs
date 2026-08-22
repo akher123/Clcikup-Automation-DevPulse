@@ -26,6 +26,17 @@ public sealed class DevelopersController : ControllerBase
         return Ok(developers);
     }
 
+    [HttpGet("registry")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(IReadOnlyList<DeveloperDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRegistry(
+        [FromQuery] DeveloperRegistryQuery query,
+        CancellationToken cancellationToken)
+    {
+        var developers = await _developerService.GetRegistryAsync(query, cancellationToken);
+        return Ok(developers);
+    }
+
     [HttpGet("{id:guid}")]
     [Authorize(Policy = "CanViewReports")]
     [ProducesResponseType(typeof(DeveloperDto), StatusCodes.Status200OK)]

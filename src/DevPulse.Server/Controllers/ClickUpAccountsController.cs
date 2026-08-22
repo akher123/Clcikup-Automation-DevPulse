@@ -69,6 +69,19 @@ public sealed class ClickUpAccountsController : ControllerBase
         return Ok(result.Value);
     }
 
+    [HttpPatch("{id:guid}/status")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(ClickUpAccountDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateStatus(
+        Guid id,
+        [FromBody] UpdateClickUpAccountStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _accountService.UpdateStatusAsync(id, request, cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : NotFound(new { error = result.Error });
+    }
+
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

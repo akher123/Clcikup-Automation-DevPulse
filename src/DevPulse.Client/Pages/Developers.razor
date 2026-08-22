@@ -11,7 +11,7 @@
 <div class="page-header">
     <div>
         <h1>Developers</h1>
-        <p class="text-muted">Manage the developer registry and cross-workspace ClickUp mappings.</p>
+        <p class="text-muted">Manage the developer registry and cross-workspace ClickUp mappings. Only developers mapped to active ClickUp accounts are listed.</p>
     </div>
     <div class="d-flex gap-2 align-items-center flex-wrap">
         @if (_clickUpAccounts.Count > 0)
@@ -142,11 +142,12 @@ else
                                class="form-control form-control-sm"
                                placeholder="Name or email..."
                                @bind="_developerSearch"
-                               @bind:event="oninput" />
+                               @bind:event="oninput"
+                               @bind:after="LoadDevelopersAsync" />
                     </div>
                     <div class="col-md-3 col-lg-2">
                         <label class="form-label mb-1" for="developerRoleFilter">Role</label>
-                        <select id="developerRoleFilter" class="form-select form-select-sm" @bind="_roleFilter">
+                        <select id="developerRoleFilter" class="form-select form-select-sm" @bind="_roleFilter" @bind:after="LoadDevelopersAsync">
                             <option value="all">All</option>
                             <option value="developer">Developer</option>
                             <option value="qa">QA</option>
@@ -154,7 +155,7 @@ else
                     </div>
                     <div class="col-md-3 col-lg-2">
                         <label class="form-label mb-1" for="developerStatusFilter">Status</label>
-                        <select id="developerStatusFilter" class="form-select form-select-sm" @bind="_statusFilter">
+                        <select id="developerStatusFilter" class="form-select form-select-sm" @bind="_statusFilter" @bind:after="LoadDevelopersAsync">
                             <option value="all">All</option>
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
@@ -162,7 +163,7 @@ else
                     </div>
                     <div class="col-md-5 col-lg-5">
                         <p class="text-muted small mb-0">
-                            Showing @FilteredDevelopers().Count() of @_developers.Count developer@(_developers.Count == 1 ? "" : "s")
+                            Showing @_developers.Count developer@(_developers.Count == 1 ? "" : "s")
                             @if (HasActiveFilters)
                             {
                                 <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline" @onclick="ClearFilters">Clear filters</button>
@@ -171,7 +172,7 @@ else
                     </div>
                 </div>
             </div>
-            @if (!FilteredDevelopers().Any())
+            @if (_developers.Count == 0)
             {
                 <div class="empty-state border-0">
                     <h5>No developers match your filters</h5>
@@ -198,7 +199,7 @@ else
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var developer in FilteredDevelopers())
+                            @foreach (var developer in _developers)
                             {
                                 <tr>
                                     <td><strong>@developer.Name</strong></td>
@@ -320,7 +321,7 @@ else
 
         try
         {
-            var developers = await DeveloperApi.GetDevelopersAsync();
+            var developers = await DeveloperApi.GetRegistryDevelopersAsync(BuildRegistryQuery());
             _developers.Clear();
             _developers.AddRange(developers);
         }
@@ -436,10 +437,10 @@ else
         }
     }
 
-    private Task OnAccountSelectionChanged(string? accountId)
+    private async Task OnAccountSelectionChanged(string? accountId)
     {
         _selectedAccountId = accountId ?? string.Empty;
-        return Task.CompletedTask;
+        await LoadDevelopersAsync();
     }
 
     private bool HasActiveFilters =>
@@ -448,50 +449,34 @@ else
         || !string.Equals(_statusFilter, "all", StringComparison.OrdinalIgnoreCase)
         || !string.Equals(_roleFilter, "all", StringComparison.OrdinalIgnoreCase);
 
-    private void ClearFilters()
+    private async Task ClearFilters()
     {
         _developerSearch = string.Empty;
         _selectedAccountId = string.Empty;
         _statusFilter = "all";
         _roleFilter = "all";
+        await LoadDevelopersAsync();
     }
 
-    private IEnumerable<DeveloperDto> FilteredDevelopers()
+    private DeveloperRegistryQuery BuildRegistryQuery()
     {
-        IEnumerable<DeveloperDto> results = _developers;
+        Guid? accountId = Guid.TryParse(_selectedAccountId, out var id) ? id : null;
+        WorkRole? workRole = _roleFilter.ToLowerInvariant() switch
+        {
+            "developer" => WorkRole.Developer,
+            "qa" => WorkRole.QA,
+            _ => null
+        };
 
-        if (Guid.TryParse(_selectedAccountId, out var accountId))
-        {
-            results = results.Where(d =>
-                d.Mappings.Any(m => m.ClickUpAccountId == accountId));
-        }
+        string? status = string.Equals(_statusFilter, "all", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : _statusFilter;
 
-        if (string.Equals(_statusFilter, "active", StringComparison.OrdinalIgnoreCase))
-        {
-            results = results.Where(d => d.IsActive);
-        }
-        else if (string.Equals(_statusFilter, "inactive", StringComparison.OrdinalIgnoreCase))
-        {
-            results = results.Where(d => !d.IsActive);
-        }
+        string? search = string.IsNullOrWhiteSpace(_developerSearch)
+            ? null
+            : _developerSearch.Trim();
 
-        if (string.Equals(_roleFilter, "developer", StringComparison.OrdinalIgnoreCase))
-        {
-            results = results.Where(d => d.WorkRole == WorkRole.Developer);
-        }
-        else if (string.Equals(_roleFilter, "qa", StringComparison.OrdinalIgnoreCase))
-        {
-            results = results.Where(d => d.WorkRole == WorkRole.QA);
-        }
-
-        if (!string.IsNullOrWhiteSpace(_developerSearch))
-        {
-            results = results.Where(d =>
-                d.Name.Contains(_developerSearch, StringComparison.OrdinalIgnoreCase)
-                || (d.Email?.Contains(_developerSearch, StringComparison.OrdinalIgnoreCase) ?? false));
-        }
-
-        return results;
+        return new DeveloperRegistryQuery(accountId, status, workRole, search);
     }
 
     private async Task SyncFromClickUpAsync()

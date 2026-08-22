@@ -1,5 +1,6 @@
 using DevPulse.Application.Abstractions.Persistence;
 using DevPulse.Domain.Entities;
+using DevPulse.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevPulse.Infrastructure.Persistence.Repositories;
@@ -19,9 +20,48 @@ public sealed class DeveloperRepository : IDeveloperRepository
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Developer>> GetRegistryAsync(
+        Guid? clickUpAccountId = null,
+        bool? isActive = null,
+        WorkRole? workRole = null,
+        string? search = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = QueryWithMappings()
+            .Where(x => x.ClickUpMappings.Any(m => m.ClickUpAccount.IsActive));
+
+        if (clickUpAccountId.HasValue)
+        {
+            query = query.Where(x => x.ClickUpMappings.Any(m => m.ClickUpAccountId == clickUpAccountId.Value));
+        }
+
+        if (isActive.HasValue)
+        {
+            query = query.Where(x => x.IsActive == isActive.Value);
+        }
+
+        if (workRole.HasValue)
+        {
+            query = query.Where(x => x.WorkRole == workRole.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            query = query.Where(x =>
+                x.Name.Contains(term)
+                || (x.Email != null && x.Email.Contains(term)));
+        }
+
+        return await query
+            .OrderBy(x => x.Name)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Developer>> GetWithMappingsAsync(CancellationToken cancellationToken = default) =>
         await QueryWithMappings()
-            .Where(x => x.ClickUpMappings.Any())
+            .Where(x => x.ClickUpMappings.Any(m => m.ClickUpAccount.IsActive))
             .OrderBy(x => x.Name)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -29,6 +69,7 @@ public sealed class DeveloperRepository : IDeveloperRepository
     public async Task<IReadOnlyList<Developer>> GetByIdsWithMappingsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default) =>
         await QueryWithMappings()
             .Where(x => ids.Contains(x.Id))
+            .Where(x => x.ClickUpMappings.Any(m => m.ClickUpAccount.IsActive))
             .OrderBy(x => x.Name)
             .AsNoTracking()
             .ToListAsync(cancellationToken);

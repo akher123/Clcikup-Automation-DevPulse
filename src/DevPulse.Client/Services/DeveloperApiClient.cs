@@ -7,6 +7,10 @@ public interface IDeveloperApiClient
 {
     Task<IReadOnlyList<DeveloperDto>> GetDevelopersAsync(CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<DeveloperDto>> GetRegistryDevelopersAsync(
+        DeveloperRegistryQuery query,
+        CancellationToken cancellationToken = default);
+
     Task<DeveloperDto?> CreateDeveloperAsync(CreateDeveloperRequest request, CancellationToken cancellationToken = default);
 
     Task<DeveloperDto?> UpdateDeveloperAsync(Guid id, UpdateDeveloperRequest request, CancellationToken cancellationToken = default);
@@ -35,6 +39,17 @@ public sealed class DeveloperApiClient : IDeveloperApiClient
     public async Task<IReadOnlyList<DeveloperDto>> GetDevelopersAsync(CancellationToken cancellationToken = default)
     {
         var developers = await _httpClient.GetFromJsonAsync<List<DeveloperDto>>("api/developers", cancellationToken);
+        return developers ?? [];
+    }
+
+    public async Task<IReadOnlyList<DeveloperDto>> GetRegistryDevelopersAsync(
+        DeveloperRegistryQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var queryString = BuildRegistryQueryString(query);
+        var developers = await _httpClient.GetFromJsonAsync<List<DeveloperDto>>(
+            $"api/developers/registry{queryString}",
+            cancellationToken);
         return developers ?? [];
     }
 
@@ -117,5 +132,32 @@ public sealed class DeveloperApiClient : IDeveloperApiClient
         }
 
         return string.IsNullOrWhiteSpace(rawError) ? fallback : rawError;
+    }
+
+    private static string BuildRegistryQueryString(DeveloperRegistryQuery query)
+    {
+        var parameters = new List<string>();
+
+        if (query.ClickUpAccountId.HasValue)
+        {
+            parameters.Add($"clickUpAccountId={query.ClickUpAccountId.Value}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Status) && !string.Equals(query.Status, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            parameters.Add($"status={Uri.EscapeDataString(query.Status)}");
+        }
+
+        if (query.WorkRole.HasValue)
+        {
+            parameters.Add($"workRole={(int)query.WorkRole.Value}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            parameters.Add($"search={Uri.EscapeDataString(query.Search)}");
+        }
+
+        return parameters.Count == 0 ? string.Empty : "?" + string.Join("&", parameters);
     }
 }

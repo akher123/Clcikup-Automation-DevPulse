@@ -7,10 +7,23 @@ public interface IDeveloperRepository
     Task<IReadOnlyList<Developer>> GetAllAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Returns all developers that have at least one ClickUp mapping, regardless of IsActive.
+    /// Returns developers with at least one mapping to an active ClickUp account, with optional registry filters.
+    /// </summary>
+    Task<IReadOnlyList<Developer>> GetRegistryAsync(
+        Guid? clickUpAccountId = null,
+        bool? isActive = null,
+        Domain.Enums.WorkRole? workRole = null,
+        string? search = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns developers with at least one mapping to an active ClickUp account.
     /// </summary>
     Task<IReadOnlyList<Developer>> GetWithMappingsAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Returns matching developers that have at least one mapping to an active ClickUp account.
+    /// </summary>
     Task<IReadOnlyList<Developer>> GetByIdsWithMappingsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default);
 
     Task<Developer?> GetByIdWithMappingsAsync(Guid id, CancellationToken cancellationToken = default);

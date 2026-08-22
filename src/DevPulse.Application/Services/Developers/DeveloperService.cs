@@ -41,6 +41,31 @@ public sealed class DeveloperService : IDeveloperService
         return developers.Select(MapToDto).ToList();
     }
 
+    public async Task<IReadOnlyList<DeveloperDto>> GetRegistryAsync(
+        DeveloperRegistryQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        bool? isActive = query.Status?.Trim().ToLowerInvariant() switch
+        {
+            "active" => true,
+            "inactive" => false,
+            _ => null
+        };
+
+        Domain.Enums.WorkRole? workRole = query.WorkRole.HasValue
+            ? (Domain.Enums.WorkRole)(int)query.WorkRole.Value
+            : null;
+
+        var developers = await _developerRepository.GetRegistryAsync(
+            query.ClickUpAccountId,
+            isActive,
+            workRole,
+            query.Search,
+            cancellationToken);
+
+        return developers.Select(MapToDto).ToList();
+    }
+
     public async Task<Result<DeveloperDto>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var developer = await _developerRepository.GetByIdWithMappingsAsync(id, cancellationToken);
@@ -233,19 +258,14 @@ public sealed class DeveloperService : IDeveloperService
                 return Result<SyncDevelopersResult>.Failure("ClickUp account was not found.");
             }
 
-            if (!account.IsActive)
-            {
-                return Result<SyncDevelopersResult>.Failure("The selected ClickUp account is inactive.");
-            }
-
             accounts = [account];
         }
         else
         {
-            accounts = await _accountRepository.GetActiveAsync(cancellationToken);
+            accounts = await _accountRepository.GetAllAsync(cancellationToken);
             if (accounts.Count == 0)
             {
-                return Result<SyncDevelopersResult>.Failure("No active ClickUp accounts configured.");
+                return Result<SyncDevelopersResult>.Failure("No ClickUp accounts configured.");
             }
         }
 
@@ -385,6 +405,7 @@ public sealed class DeveloperService : IDeveloperService
             developer.IsActive,
             developer.CreatedAtUtc,
             developer.ClickUpMappings
+                .Where(m => m.ClickUpAccount?.IsActive == true)
                 .Select(m => new DeveloperClickUpMappingDto(
                     m.Id,
                     m.ClickUpAccountId,

@@ -644,7 +644,8 @@
     protected override async Task OnInitializedAsync()
     {
         ApplyPresetDates(PeriodPreset.ThisMonth);
-        await Task.WhenAll(LoadAccountsAsync(), LoadDevelopersAsync(), LoadSyncStatusAsync());
+        await LoadAccountsAsync();
+        await Task.WhenAll(LoadDevelopersAsync(), LoadSyncStatusAsync());
         SelectAllFilteredDevelopers();
     }
 
@@ -837,7 +838,7 @@
         {
             var developers = await DeveloperApi.GetDevelopersAsync();
             _developers.Clear();
-            _developers.AddRange(developers.Where(d => d.IsActive));
+            _developers.AddRange(developers);
         }
         catch (Exception ex)
         {

@@ -60,11 +60,11 @@ public sealed class ReportService : IReportService
             return Result<DeveloperReportResponse>.Failure("No matching developers were found.");
         }
 
-        // IsActive is registry-only; inactive developers remain in reports and analytics.
-        var accounts = await _accountRepository.GetActiveAsync(cancellationToken);
+        // IsActive is registry-only for developers and ClickUp accounts; inactive records remain in reports and analytics.
+        var accounts = await _accountRepository.GetAllAsync(cancellationToken);
         if (accounts.Count == 0)
         {
-            return Result<DeveloperReportResponse>.Failure("No active ClickUp accounts configured.");
+            return Result<DeveloperReportResponse>.Failure("No ClickUp accounts configured.");
         }
 
         if (request.AccountIds is { Count: > 0 })

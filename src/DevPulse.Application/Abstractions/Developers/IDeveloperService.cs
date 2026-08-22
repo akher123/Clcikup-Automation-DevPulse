@@ -7,6 +7,10 @@ public interface IDeveloperService
 {
     Task<IReadOnlyList<DeveloperDto>> GetAllAsync(CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<DeveloperDto>> GetRegistryAsync(
+        DeveloperRegistryQuery query,
+        CancellationToken cancellationToken = default);
+
     Task<Result<DeveloperDto>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<Result<DeveloperDto>> CreateAsync(CreateDeveloperRequest request, CancellationToken cancellationToken = default);
