@@ -24,76 +24,120 @@
 
     @if (_isLoading)
     {
-        <div class="attendance-skeleton" aria-hidden="true">
-            <div class="attendance-skeleton-card"></div>
-            <div class="attendance-skeleton-card"></div>
+        <div class="attendance-settings-skeleton" aria-hidden="true">
+            <div class="attendance-settings-skeleton-toolbar"></div>
+            <div class="attendance-settings-skeleton-grid">
+                <div class="attendance-settings-skeleton-card"></div>
+                <div class="attendance-settings-skeleton-card"></div>
+            </div>
         </div>
         <LoadingIndicator Text="Loading settings..." />
     }
     else
     {
-        <div class="form-card card mb-4">
-            <div class="card-body">
-                <div class="attendance-section-header">
-                    <span class="attendance-section-icon bi-clock" aria-hidden="true"></span>
-                    <div>
-                        <h5 class="card-title mb-1">Working hours</h5>
-                        <p class="attendance-section-desc mb-0">Official start and end times for a standard work day.</p>
+        <div class="attendance-settings-workspace">
+            <div class="filter-card card attendance-settings-toolbar">
+                <div class="card-body">
+                    <div class="attendance-settings-status" aria-label="Settings summary">
+                        <div class="attendance-settings-status-item">
+                            <span class="attendance-settings-status-label">Work day</span>
+                            <span class="attendance-settings-status-value">@FormatTime(_workStart) – @FormatTime(_workEnd)</span>
+                        </div>
+                        <div class="attendance-settings-status-item">
+                            <span class="attendance-settings-status-label">On-time until</span>
+                            <span class="attendance-settings-status-value">@FormatTime(_bufferStart)</span>
+                        </div>
+                        <div class="attendance-settings-status-item">
+                            <span class="attendance-settings-status-label">Full day after</span>
+                            <span class="attendance-settings-status-value">@FormatTime(_bufferEnd)</span>
+                        </div>
+                        <div class="attendance-settings-status-item attendance-settings-status-item-wide">
+                            <span class="attendance-settings-status-label">Time zone</span>
+                            <span class="attendance-settings-status-value">@GetTimeZoneLabel()</span>
+                        </div>
+                    </div>
+
+                    <div class="attendance-settings-actions">
+                        <BusyButton CssClass="btn btn-primary" IsBusy="_isBusy" BusyText="Saving..." OnClick="SaveAsync">Save settings</BusyButton>
                     </div>
                 </div>
-                <div class="row g-3 mt-2">
-                    <div class="col-md-6">
-                        <label class="form-label">Work start</label>
-                        <input type="time" class="form-control" @bind="_workStart" />
+            </div>
+
+            <div class="attendance-settings-panel">
+                <div class="attendance-settings-layout">
+                    <div class="form-card card attendance-settings-card">
+                        <div class="card-body">
+                            <div class="attendance-section-header">
+                                <span class="attendance-section-icon bi-clock" aria-hidden="true"></span>
+                                <div>
+                                    <h5 class="card-title mb-1">Working hours</h5>
+                                    <p class="attendance-section-desc mb-0">Official start and end times for a standard work day.</p>
+                                </div>
+                            </div>
+
+                            <div class="attendance-settings-form-grid">
+                                <div class="attendance-settings-field">
+                                    <label class="form-label">Work start</label>
+                                    <input type="time" class="form-control" @bind="_workStart" />
+                                </div>
+                                <div class="attendance-settings-field">
+                                    <label class="form-label">Work end</label>
+                                    <input type="time" class="form-control" @bind="_workEnd" />
+                                </div>
+                            </div>
+
+                            <div class="attendance-settings-divider"></div>
+
+                            <div class="attendance-section-header">
+                                <span class="attendance-section-icon bi-sliders" aria-hidden="true"></span>
+                                <div>
+                                    <h5 class="card-title mb-1">Buffer times</h5>
+                                    <p class="attendance-section-desc mb-0">
+                                        Latest arrival still counted as on-time, and earliest departure still counted as a full day.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="attendance-settings-form-grid">
+                                <div class="attendance-settings-field">
+                                    <label class="form-label">Buffer start</label>
+                                    <input type="time" class="form-control" @bind="_bufferStart" />
+                                    <div class="form-text">On-time arrival until this time.</div>
+                                </div>
+                                <div class="attendance-settings-field">
+                                    <label class="form-label">Buffer end</label>
+                                    <input type="time" class="form-control" @bind="_bufferEnd" />
+                                    <div class="form-text">Full day if leaving after this time.</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Work end</label>
-                        <input type="time" class="form-control" @bind="_workEnd" />
+
+                    <div class="form-card card attendance-settings-card">
+                        <div class="card-body">
+                            <div class="attendance-section-header">
+                                <span class="attendance-section-icon bi-globe2" aria-hidden="true"></span>
+                                <div>
+                                    <h5 class="card-title mb-1">Office time zone</h5>
+                                    <p class="attendance-section-desc mb-0">IANA time zone used for punch dates and on-time calculations.</p>
+                                </div>
+                            </div>
+
+                            <div class="attendance-settings-field attendance-settings-field-full">
+                                <label class="form-label">Time zone ID</label>
+                                <input class="form-control" @bind="_timeZoneId" placeholder="Asia/Dhaka" />
+                            </div>
+
+                            <div class="attendance-settings-timezone-preview">
+                                <span class="attendance-settings-timezone-preview-label">Office time now</span>
+                                <strong class="attendance-settings-timezone-preview-value">@GetOfficeTimePreview()</strong>
+                                <span class="attendance-settings-timezone-preview-note">@GetTimeZoneLabel()</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="form-card card mb-4">
-            <div class="card-body">
-                <div class="attendance-section-header">
-                    <span class="attendance-section-icon bi-sliders" aria-hidden="true"></span>
-                    <div>
-                        <h5 class="card-title mb-1">Buffer times</h5>
-                        <p class="attendance-section-desc mb-0">
-                            Buffer start is the latest arrival still counted as on-time. Buffer end is the earliest departure still counted as a full day.
-                        </p>
-                    </div>
-                </div>
-                <div class="row g-3 mt-2">
-                    <div class="col-md-6">
-                        <label class="form-label">Buffer start (on-time arrival until)</label>
-                        <input type="time" class="form-control" @bind="_bufferStart" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Buffer end (full day if leaving after)</label>
-                        <input type="time" class="form-control" @bind="_bufferEnd" />
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="form-card card mb-4">
-            <div class="card-body">
-                <div class="attendance-section-header">
-                    <span class="attendance-section-icon bi-globe2" aria-hidden="true"></span>
-                    <div>
-                        <h5 class="card-title mb-1">Office time zone</h5>
-                        <p class="attendance-section-desc mb-0">IANA time zone used for punch dates and on-time calculations.</p>
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <input class="form-control" @bind="_timeZoneId" placeholder="Asia/Dhaka" />
-                </div>
-            </div>
-        </div>
-
-        <BusyButton CssClass="btn btn-primary" IsBusy="_isBusy" BusyText="Saving..." OnClick="SaveAsync">Save Settings</BusyButton>
     }
 </div>
 
@@ -159,6 +203,44 @@
         finally
         {
             _isBusy = false;
+        }
+    }
+
+    private static string FormatTime(TimeOnly time) => time.ToString("h:mm tt");
+
+    private string GetTimeZoneLabel()
+    {
+        if (string.IsNullOrWhiteSpace(_timeZoneId))
+        {
+            return "Not set";
+        }
+
+        try
+        {
+            var tz = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
+            return tz.IsDaylightSavingTime(DateTime.UtcNow) ? tz.DaylightName : tz.StandardName;
+        }
+        catch
+        {
+            return _timeZoneId;
+        }
+    }
+
+    private string GetOfficeTimePreview()
+    {
+        if (string.IsNullOrWhiteSpace(_timeZoneId))
+        {
+            return "—";
+        }
+
+        try
+        {
+            var tz = TimeZoneInfo.FindSystemTimeZoneById(_timeZoneId);
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).ToString("ddd, h:mm tt");
+        }
+        catch
+        {
+            return "Invalid time zone";
         }
     }
 }
