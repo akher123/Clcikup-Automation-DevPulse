@@ -20,7 +20,6 @@ public sealed class LeaveTypesController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Policy = "CanViewReports")]
     [ProducesResponseType(typeof(IReadOnlyList<LeaveTypeDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetAll([FromQuery] bool activeOnly = false, CancellationToken cancellationToken = default)

@@ -10,7 +10,7 @@ namespace DevPulse.Server.Controllers;
 
 [ApiController]
 [Route("api/leave")]
-[Authorize(Policy = "CanViewReports")]
+[Authorize]
 public sealed class LeaveApplicationsController : ControllerBase
 {
     private readonly ILeaveService _leaveService;
@@ -53,6 +53,7 @@ public sealed class LeaveApplicationsController : ControllerBase
     }
 
     [HttpGet("analytics")]
+    [Authorize(Policy = "CanViewReports")]
     [ProducesResponseType(typeof(LeaveAnalyticsSummaryDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetAnalytics([FromQuery] int year, CancellationToken cancellationToken)

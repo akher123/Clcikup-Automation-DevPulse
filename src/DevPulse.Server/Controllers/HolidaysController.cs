@@ -18,7 +18,6 @@ public sealed class HolidaysController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Policy = "CanViewReports")]
     [ProducesResponseType(typeof(IReadOnlyList<HolidayDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetByYear([FromQuery] int year, CancellationToken cancellationToken)
@@ -33,7 +32,6 @@ public sealed class HolidaysController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    [Authorize(Policy = "CanViewReports")]
     [ProducesResponseType(typeof(HolidayDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)

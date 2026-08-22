@@ -62,54 +62,58 @@
                 </Authorized>
             </AuthorizeView>
 
-            <NavSubmenu Title="Time Off"
-                        GroupId="time-off"
-                        IconClass="bi-calendar-check"
-                        IsExpanded="@(IsGroupExpanded("time-off"))"
-                        HasActiveChild="@IsGroupActive("time-off")"
-                        IsExpandedChanged="@(value => SetGroupExpanded("time-off", value))"
-                        SidebarCollapsed="IsCollapsed">
-                <div class="nav-item">
-                    <NavLink class="nav-link nav-link-sub" href="attendance" title="Attendance" @onclick="HandleNavigate">
-                        <span class="nav-icon bi-fingerprint" aria-hidden="true"></span>
-                        <span class="nav-label">Attendance</span>
-                    </NavLink>
-                </div>
-                <div class="nav-item">
-                    <NavLink class="nav-link nav-link-sub" href="leave" title="Leave Applications" @onclick="HandleNavigate">
-                        <span class="nav-icon bi-calendar-check" aria-hidden="true"></span>
-                        <span class="nav-label">Leave Applications</span>
-                    </NavLink>
-                </div>
-                <div class="nav-item">
-                    <NavLink class="nav-link nav-link-sub" href="holidays" title="Holiday Calendar" @onclick="HandleNavigate">
-                        <span class="nav-icon bi-calendar" aria-hidden="true"></span>
-                        <span class="nav-label">Holiday Calendar</span>
-                    </NavLink>
-                </div>
-                <AuthorizeView Roles="@AppRoles.Admin">
-                    <Authorized>
+            <AuthorizeView Roles="@($"{AppRoles.Admin},{AppRoles.User}")">
+                <Authorized>
+                    <NavSubmenu Title="Time Off"
+                                GroupId="time-off"
+                                IconClass="bi-calendar-check"
+                                IsExpanded="@(IsGroupExpanded("time-off"))"
+                                HasActiveChild="@IsGroupActive("time-off")"
+                                IsExpandedChanged="@(value => SetGroupExpanded("time-off", value))"
+                                SidebarCollapsed="IsCollapsed">
                         <div class="nav-item">
-                            <NavLink class="nav-link nav-link-sub" href="leave-types" title="Leave Types" @onclick="HandleNavigate">
-                                <span class="nav-icon bi-list-check" aria-hidden="true"></span>
-                                <span class="nav-label">Leave Types</span>
+                            <NavLink class="nav-link nav-link-sub" href="attendance" title="Attendance" @onclick="HandleNavigate">
+                                <span class="nav-icon bi-fingerprint" aria-hidden="true"></span>
+                                <span class="nav-label">Attendance</span>
                             </NavLink>
                         </div>
                         <div class="nav-item">
-                            <NavLink class="nav-link nav-link-sub" href="leave-settings" title="Leave Settings" @onclick="HandleNavigate">
-                                <span class="nav-icon bi-gear" aria-hidden="true"></span>
-                                <span class="nav-label">Leave Settings</span>
+                            <NavLink class="nav-link nav-link-sub" href="leave" title="Leave Applications" @onclick="HandleNavigate">
+                                <span class="nav-icon bi-calendar-check" aria-hidden="true"></span>
+                                <span class="nav-label">Leave Applications</span>
                             </NavLink>
                         </div>
                         <div class="nav-item">
-                            <NavLink class="nav-link nav-link-sub" href="attendance-settings" title="Attendance Settings" @onclick="HandleNavigate">
-                                <span class="nav-icon bi-clock" aria-hidden="true"></span>
-                                <span class="nav-label">Attendance Settings</span>
+                            <NavLink class="nav-link nav-link-sub" href="holidays" title="Holiday Calendar" @onclick="HandleNavigate">
+                                <span class="nav-icon bi-calendar" aria-hidden="true"></span>
+                                <span class="nav-label">Holiday Calendar</span>
                             </NavLink>
                         </div>
-                    </Authorized>
-                </AuthorizeView>
-            </NavSubmenu>
+                        <AuthorizeView Roles="@AppRoles.Admin">
+                            <Authorized Context="adminNav">
+                                <div class="nav-item">
+                                    <NavLink class="nav-link nav-link-sub" href="leave-types" title="Leave Types" @onclick="HandleNavigate">
+                                        <span class="nav-icon bi-list-check" aria-hidden="true"></span>
+                                        <span class="nav-label">Leave Types</span>
+                                    </NavLink>
+                                </div>
+                                <div class="nav-item">
+                                    <NavLink class="nav-link nav-link-sub" href="leave-settings" title="Leave Settings" @onclick="HandleNavigate">
+                                        <span class="nav-icon bi-gear" aria-hidden="true"></span>
+                                        <span class="nav-label">Leave Settings</span>
+                                    </NavLink>
+                                </div>
+                                <div class="nav-item">
+                                    <NavLink class="nav-link nav-link-sub" href="attendance-settings" title="Attendance Settings" @onclick="HandleNavigate">
+                                        <span class="nav-icon bi-clock" aria-hidden="true"></span>
+                                        <span class="nav-label">Attendance Settings</span>
+                                    </NavLink>
+                                </div>
+                            </Authorized>
+                        </AuthorizeView>
+                    </NavSubmenu>
+                </Authorized>
+            </AuthorizeView>
 
             @if (!IsCollapsed)
             {
