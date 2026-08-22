@@ -29,5 +29,6 @@ builder.Services.AddScoped<IDeveloperApiClient, DeveloperApiClient>();
 builder.Services.AddScoped<IReportApiClient, ReportApiClient>();
 builder.Services.AddScoped<IAnalyticsApiClient, AnalyticsApiClient>();
 builder.Services.AddScoped<IUserApiClient, UserApiClient>();
+builder.Services.AddScoped<IHolidayApiClient, HolidayApiClient>();
 
 await builder.Build().RunAsync();

@@ -26,6 +26,8 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
 
     public DbSet<DeveloperKpiSnapshot> DeveloperKpiSnapshots => Set<DeveloperKpiSnapshot>();
 
+    public DbSet<CompanyHoliday> CompanyHolidays => Set<CompanyHoliday>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -148,6 +150,15 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
                 .WithMany()
                 .HasForeignKey(x => x.DeveloperId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CompanyHoliday>(entity =>
+        {
+            entity.ToTable("CompanyHolidays");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Reason).HasMaxLength(500);
+            entity.HasIndex(x => new { x.FromDate, x.ToDate });
         });
     }
 }

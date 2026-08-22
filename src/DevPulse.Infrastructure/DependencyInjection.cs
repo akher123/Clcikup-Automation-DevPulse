@@ -74,6 +74,7 @@ public static class DependencyInjection
         services.AddScoped<ISyncedTaskRepository, SyncedTaskRepository>();
         services.AddScoped<ITaskAssignmentPeriodRepository, TaskAssignmentPeriodRepository>();
         services.AddScoped<IKpiSyncRunRepository, KpiSyncRunRepository>();
+        services.AddScoped<IHolidayRepository, HolidayRepository>();
         services.AddSingleton<JwtTokenGenerator>();
         services.AddSingleton<ClickUpApiRateLimiter>();
         services.AddScoped<IAuthService, AuthService>();
