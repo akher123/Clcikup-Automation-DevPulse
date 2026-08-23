@@ -594,7 +594,8 @@
         }
 
         return _developers.Where(d =>
-            d.Mappings.Any(m => m.ClickUpAccountId == _selectedAccountId.Value)
+            d.IsActive
+            && d.Mappings.Any(m => m.ClickUpAccountId == _selectedAccountId.Value)
             && _workRoleFilter switch
             {
                 WorkRoleFilter.Developer => d.WorkRole == WorkRole.Developer,
