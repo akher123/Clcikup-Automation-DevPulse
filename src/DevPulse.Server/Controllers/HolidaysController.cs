@@ -1,8 +1,3 @@
-using DevPulse.Application.Abstractions.Holidays;
-using DevPulse.Shared.Contracts.Holidays;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-
 namespace DevPulse.Server.Controllers;
 
 [ApiController]

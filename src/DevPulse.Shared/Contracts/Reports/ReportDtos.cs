@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace DevPulse.Shared.Contracts.Reports;
 
 public record DeveloperReportRequest(

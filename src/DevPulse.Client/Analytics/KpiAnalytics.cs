@@ -1,5 +1,3 @@
-using DevPulse.Shared.Contracts.Reports;
-
 namespace DevPulse.Client.Analytics;
 
 public sealed record NamedCount(string Name, int Count);

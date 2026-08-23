@@ -1,8 +1,3 @@
-using DevPulse.Application.Abstractions.Attendance;
-using DevPulse.Shared.Contracts.Attendance;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-
 namespace DevPulse.Server.Controllers;
 
 [ApiController]

@@ -1,5 +1,4 @@
 using System.Threading.Channels;
-using DevPulse.Application.Abstractions.Leave;
 
 namespace DevPulse.Infrastructure.Services;
 

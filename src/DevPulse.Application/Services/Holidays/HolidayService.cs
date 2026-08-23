@@ -1,10 +1,3 @@
-using DevPulse.Application.Abstractions.Holidays;
-using DevPulse.Application.Abstractions.Persistence;
-using DevPulse.Domain.Entities;
-using DevPulse.Shared.Common;
-using DevPulse.Shared.Contracts.Holidays;
-using Microsoft.Extensions.Logging;
-
 namespace DevPulse.Application.Services.Holidays;
 
 public sealed class HolidayService : IHolidayService

@@ -1,6 +1,3 @@
-using DevPulse.Shared.Common;
-using DevPulse.Shared.Contracts.Leave;
-
 namespace DevPulse.Application.Abstractions.Leave;
 
 public interface ILeaveService

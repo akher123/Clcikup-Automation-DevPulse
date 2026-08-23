@@ -1,23 +1,12 @@
-using DevPulse.Application.Abstractions.Auth;
-using DevPulse.Application.Abstractions.Leave;
-using DevPulse.Application.Abstractions.Persistence;
-using DevPulse.Application.Abstractions.Security;
-using DevPulse.Application.Abstractions.ClickUp;
-using DevPulse.Application.Options;
 using DevPulse.Infrastructure.ClickUp;
-using DevPulse.Infrastructure.Identity;
 using DevPulse.Infrastructure.Jobs;
 using DevPulse.Infrastructure.Persistence;
 using DevPulse.Infrastructure.Persistence.Repositories;
 using DevPulse.Infrastructure.Security;
 using DevPulse.Infrastructure.Services;
-using DevPulse.Shared.Constants;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace DevPulse.Infrastructure;
 

@@ -1,7 +1,3 @@
-using DevPulse.Shared.Common;
-using DevPulse.Shared.Contracts.Analytics;
-using DevPulse.Shared.Contracts.Reports;
-
 namespace DevPulse.Application.Abstractions.Analytics;
 
 public interface IKpiSyncService

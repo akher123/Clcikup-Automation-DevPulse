@@ -1,7 +1,5 @@
 @page "/leave-analytics"
 @attribute [Authorize(Policy = "CanViewReports")]
-@using DevPulse.Client.Analytics
-@using DevPulse.Shared.Contracts.Leave
 @implements IAsyncDisposable
 @inject ILeaveApiClient LeaveApi
 @inject IJSRuntime JS

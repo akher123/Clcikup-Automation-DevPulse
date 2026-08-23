@@ -1,7 +1,3 @@
-using DevPulse.Application.Abstractions.Persistence;
-using DevPulse.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
-
 namespace DevPulse.Infrastructure.Persistence.Repositories;
 
 public sealed class HolidayRepository : IHolidayRepository

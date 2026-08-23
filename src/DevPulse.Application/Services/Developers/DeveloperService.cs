@@ -1,13 +1,3 @@
-using DevPulse.Application.Abstractions.Developers;
-using DevPulse.Application.Abstractions.Persistence;
-using DevPulse.Application.Abstractions.Security;
-using DevPulse.Application.Abstractions.ClickUp;
-using DevPulse.Domain.Entities;
-using DevPulse.Shared.Common;
-using DevPulse.Shared.Constants;
-using DevPulse.Shared.Contracts.Developers;
-using Microsoft.Extensions.Logging;
-
 namespace DevPulse.Application.Services.Developers;
 
 public sealed class DeveloperService : IDeveloperService
@@ -297,7 +287,7 @@ public sealed class DeveloperService : IDeveloperService
                 var developer = await _developerRepository.GetByEmailAsync(normalizedEmail, cancellationToken);
                 if (developer is null)
                 {
-                  
+
                     developer = new Developer
                     {
                         Name = member.Username.Trim(),
@@ -413,7 +403,7 @@ public sealed class DeveloperService : IDeveloperService
                     m.ClickUpUserId))
                 .OrderBy(m => m.AccountName)
                 .ToList(),
-            (WorkRole)(int)developer.WorkRole,
+            (DevPulse.Shared.Contracts.Developers.WorkRole)(int)developer.WorkRole,
             developer.ReportingManagerDeveloperId,
             developer.ReportingManager?.Name);
 }

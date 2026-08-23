@@ -1,7 +1,5 @@
 @page "/leave-types"
 @attribute [Authorize(Policy = "AdminOnly")]
-@using DevPulse.Shared.Constants
-@using DevPulse.Shared.Contracts.Leave
 @inject ILeaveApiClient LeaveApi
 
 <PageTitle>@AppBranding.PageTitle("Leave Types")</PageTitle>

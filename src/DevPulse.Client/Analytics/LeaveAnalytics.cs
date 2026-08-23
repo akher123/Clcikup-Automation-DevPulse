@@ -1,5 +1,3 @@
-using DevPulse.Shared.Contracts.Leave;
-
 namespace DevPulse.Client.Analytics;
 
 public sealed record DeveloperLeaveSummary(

@@ -1,6 +1,5 @@
 @page "/clickup-accounts"
 @attribute [Authorize(Roles = AppRoles.Admin)]
-@using DevPulse.Client.Models
 @inject IClickUpAccountApiClient AccountApi
 
 <PageTitle>@AppBranding.PageTitle("ClickUp Accounts")</PageTitle>

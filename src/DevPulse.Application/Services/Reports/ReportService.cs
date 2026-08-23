@@ -1,16 +1,3 @@
-using DevPulse.Application.Abstractions.ClickUp;
-using DevPulse.Application.Abstractions.Persistence;
-using DevPulse.Application.Abstractions.Reports;
-using DevPulse.Application.Abstractions.Security;
-using DevPulse.Application.Options;
-using DevPulse.Domain.Entities;
-using DevPulse.Shared.Common;
-using DevPulse.Shared.Constants;
-using DevPulse.Shared.Contracts.ClickUp;
-using DevPulse.Shared.Contracts.Reports;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-
 namespace DevPulse.Application.Services.Reports;
 
 public sealed class ReportService : IReportService

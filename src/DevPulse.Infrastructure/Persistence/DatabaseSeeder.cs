@@ -1,14 +1,4 @@
-using DevPulse.Application.Abstractions.Security;
-using DevPulse.Application.Options;
-using DevPulse.Domain.Entities;
-using DevPulse.Infrastructure.Identity;
-using DevPulse.Shared.Constants;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace DevPulse.Infrastructure.Persistence;
 

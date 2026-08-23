@@ -1,4 +1,3 @@
-using DevPulse.Application.Abstractions.Security;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace DevPulse.Infrastructure.Security;

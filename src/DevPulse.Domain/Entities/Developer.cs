@@ -1,5 +1,3 @@
-using DevPulse.Domain.Enums;
-
 namespace DevPulse.Domain.Entities;
 
 /// <summary>

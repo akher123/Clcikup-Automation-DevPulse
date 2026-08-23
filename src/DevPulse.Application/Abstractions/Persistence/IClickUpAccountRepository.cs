@@ -1,6 +1,3 @@
-using DevPulse.Domain.Entities;
-using DevPulse.Shared.Contracts.ClickUp;
-
 namespace DevPulse.Application.Abstractions.Persistence;
 
 public interface IClickUpAccountRepository

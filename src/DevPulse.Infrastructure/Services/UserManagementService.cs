@@ -1,10 +1,3 @@
-using DevPulse.Application.Abstractions.Auth;
-using DevPulse.Infrastructure.Identity;
-using DevPulse.Shared.Common;
-using DevPulse.Shared.Constants;
-using DevPulse.Shared.Contracts.Auth;
-using Microsoft.AspNetCore.Identity;
-
 namespace DevPulse.Infrastructure.Services;
 
 public sealed class UserManagementService : IUserManagementService

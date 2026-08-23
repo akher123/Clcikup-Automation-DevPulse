@@ -1,10 +1,3 @@
-using System.Security.Claims;
-using DevPulse.Application.Abstractions.Leave;
-using DevPulse.Shared.Constants;
-using DevPulse.Shared.Contracts.Leave;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-
 namespace DevPulse.Server.Controllers;
 
 [ApiController]

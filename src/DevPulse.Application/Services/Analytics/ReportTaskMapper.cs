@@ -1,6 +1,3 @@
-using DevPulse.Domain.Entities;
-using DevPulse.Shared.Contracts.Reports;
-
 namespace DevPulse.Application.Services.Analytics;
 
 internal static class ReportTaskMapper

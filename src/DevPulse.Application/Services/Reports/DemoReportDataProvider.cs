@@ -1,8 +1,3 @@
-using DevPulse.Application.Abstractions.Persistence;
-using DevPulse.Domain.Entities;
-using DevPulse.Shared.Constants;
-using DevPulse.Shared.Contracts.Reports;
-
 namespace DevPulse.Application.Services.Reports;
 
 /// <summary>

@@ -1,9 +1,5 @@
 @page "/analytics"
 @attribute [Authorize]
-@using DevPulse.Client.Analytics
-@using DevPulse.Shared.Contracts.Analytics
-@using DevPulse.Shared.Contracts.ClickUp
-@using DevPulse.Shared.Contracts.Developers
 @implements IAsyncDisposable
 @inject IClickUpAccountApiClient AccountApi
 @inject IDeveloperApiClient DeveloperApi

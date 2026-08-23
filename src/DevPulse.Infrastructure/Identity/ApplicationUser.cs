@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Identity;
-
 namespace DevPulse.Infrastructure.Identity;
 
 public sealed class ApplicationUser : IdentityUser<Guid>

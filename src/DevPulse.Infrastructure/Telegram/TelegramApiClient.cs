@@ -1,7 +1,5 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using DevPulse.Application.Abstractions.Leave;
-using Microsoft.Extensions.Logging;
 
 namespace DevPulse.Infrastructure.Telegram;
 

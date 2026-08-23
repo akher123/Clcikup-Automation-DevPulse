@@ -1,6 +1,3 @@
-using System.Text.Json.Serialization;
-using DevPulse.Shared.Contracts.Reports;
-
 namespace DevPulse.Shared.Contracts.Analytics;
 
 public record KpiSyncStatusResponse(

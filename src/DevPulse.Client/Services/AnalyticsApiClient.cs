@@ -1,7 +1,3 @@
-using System.Net.Http.Json;
-using System.Text.Json;
-using DevPulse.Shared.Contracts.Analytics;
-
 namespace DevPulse.Client.Services;
 
 public interface IAnalyticsApiClient

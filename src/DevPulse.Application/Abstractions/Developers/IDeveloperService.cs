@@ -1,6 +1,3 @@
-using DevPulse.Shared.Common;
-using DevPulse.Shared.Contracts.Developers;
-
 namespace DevPulse.Application.Abstractions.Developers;
 
 public interface IDeveloperService

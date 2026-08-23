@@ -1,6 +1,3 @@
-using System.Net.Http.Json;
-using DevPulse.Shared.Contracts.ClickUp;
-
 namespace DevPulse.Client.Services;
 
 public interface IClickUpAccountApiClient

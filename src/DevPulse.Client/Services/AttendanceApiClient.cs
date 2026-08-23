@@ -1,8 +1,3 @@
-using System.Net.Http.Json;
-using System.Text.Json;
-using DevPulse.Shared.Contracts.Attendance;
-using DevPulse.Shared.Serialization;
-
 namespace DevPulse.Client.Services;
 
 public interface IAttendanceApiClient

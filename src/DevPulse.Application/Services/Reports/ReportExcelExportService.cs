@@ -1,7 +1,4 @@
 using ClosedXML.Excel;
-using DevPulse.Application.Abstractions.Reports;
-using DevPulse.Shared.Constants;
-using DevPulse.Shared.Contracts.Reports;
 
 namespace DevPulse.Application.Services.Reports;
 

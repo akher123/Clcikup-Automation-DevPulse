@@ -1,7 +1,5 @@
 @page "/attendance-settings"
 @attribute [Authorize(Policy = "AdminOnly")]
-@using DevPulse.Shared.Constants
-@using DevPulse.Shared.Contracts.Attendance
 @inject IAttendanceApiClient AttendanceApi
 
 <PageTitle>@AppBranding.PageTitle("Attendance Settings")</PageTitle>

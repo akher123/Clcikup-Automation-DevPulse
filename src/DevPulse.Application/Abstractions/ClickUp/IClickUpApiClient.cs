@@ -1,5 +1,3 @@
-using DevPulse.Shared.Contracts.ClickUp;
-
 namespace DevPulse.Application.Abstractions.ClickUp;
 
 public interface IClickUpApiClient

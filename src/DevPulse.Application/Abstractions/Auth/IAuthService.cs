@@ -1,6 +1,3 @@
-using DevPulse.Shared.Contracts.Auth;
-using DevPulse.Shared.Common;
-
 namespace DevPulse.Application.Abstractions.Auth;
 
 public interface IAuthService

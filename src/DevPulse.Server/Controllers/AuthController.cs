@@ -1,11 +1,5 @@
-using System.Security.Claims;
-using DevPulse.Application.Abstractions.Auth;
-using DevPulse.Shared.Constants;
-using DevPulse.Shared.Contracts.Auth;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 
 namespace DevPulse.Server.Controllers;
 

@@ -1,8 +1,3 @@
-using DevPulse.Application.Abstractions.ClickUp;
-using DevPulse.Shared.Contracts.ClickUp;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-
 namespace DevPulse.Server.Controllers;
 
 [ApiController]

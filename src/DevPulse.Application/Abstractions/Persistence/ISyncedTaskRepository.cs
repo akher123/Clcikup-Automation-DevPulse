@@ -1,5 +1,3 @@
-using DevPulse.Domain.Entities;
-
 namespace DevPulse.Application.Abstractions.Persistence;
 
 public interface ISyncedTaskRepository

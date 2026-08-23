@@ -1,10 +1,3 @@
-using DevPulse.Application.Abstractions.Analytics;
-using DevPulse.Application.Options;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-
 namespace DevPulse.Infrastructure.Jobs;
 
 /// <summary>

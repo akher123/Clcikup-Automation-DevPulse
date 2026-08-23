@@ -1,8 +1,3 @@
-using DevPulse.Application.Abstractions.Persistence;
-using DevPulse.Domain.Entities;
-using DevPulse.Domain.Enums;
-using Microsoft.EntityFrameworkCore;
-
 namespace DevPulse.Infrastructure.Persistence.Repositories;
 
 public sealed class LeaveRepository : ILeaveRepository

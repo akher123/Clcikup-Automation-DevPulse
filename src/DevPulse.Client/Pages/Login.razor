@@ -1,8 +1,6 @@
 @page "/login"
 @layout EmptyLayout
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
-@using DevPulse.Client.Services.Auth
-@using DevPulse.Shared.Contracts.Auth
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider

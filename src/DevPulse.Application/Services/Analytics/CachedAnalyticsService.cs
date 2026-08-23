@@ -1,10 +1,3 @@
-using DevPulse.Application.Abstractions.Analytics;
-using DevPulse.Application.Abstractions.Persistence;
-using DevPulse.Shared.Common;
-using DevPulse.Shared.Contracts.Analytics;
-using DevPulse.Shared.Contracts.Reports;
-using Microsoft.Extensions.Logging;
-
 namespace DevPulse.Application.Services.Analytics;
 
 public sealed class CachedAnalyticsService : ICachedAnalyticsService

@@ -1,13 +1,3 @@
-using DevPulse.Application.Abstractions.Persistence;
-using DevPulse.Application.Abstractions.Security;
-using DevPulse.Application.Abstractions.ClickUp;
-using DevPulse.Domain.Entities;
-using DevPulse.Domain.Enums;
-using DevPulse.Shared.Common;
-using DevPulse.Shared.Constants;
-using DevPulse.Shared.Contracts.ClickUp;
-using Microsoft.Extensions.Logging;
-
 namespace DevPulse.Application.Services.ClickUp;
 
 /// <summary>

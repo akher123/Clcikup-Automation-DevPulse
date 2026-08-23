@@ -1,8 +1,4 @@
-using DevPulse.Domain.Entities;
-using DevPulse.Infrastructure.Identity;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
 
 namespace DevPulse.Infrastructure.Persistence;
 

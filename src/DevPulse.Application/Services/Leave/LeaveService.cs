@@ -1,11 +1,3 @@
-using DevPulse.Application.Abstractions.Auth;
-using DevPulse.Application.Abstractions.Leave;
-using DevPulse.Application.Abstractions.Persistence;
-using DevPulse.Domain.Entities;
-using DevPulse.Domain.Enums;
-using DevPulse.Shared.Common;
-using DevPulse.Shared.Contracts.Leave;
-
 namespace DevPulse.Application.Services.Leave;
 
 public sealed class LeaveService : ILeaveService

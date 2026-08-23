@@ -1,8 +1,4 @@
 using DevPulse.Client;
-using DevPulse.Client.Services;
-using DevPulse.Client.Services.Auth;
-using DevPulse.Shared.Serialization;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 

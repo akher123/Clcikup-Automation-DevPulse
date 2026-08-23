@@ -1,9 +1,3 @@
-using DevPulse.Application.Abstractions.Analytics;
-using DevPulse.Shared.Contracts.Analytics;
-using DevPulse.Shared.Contracts.Reports;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-
 namespace DevPulse.Server.Controllers;
 
 [ApiController]

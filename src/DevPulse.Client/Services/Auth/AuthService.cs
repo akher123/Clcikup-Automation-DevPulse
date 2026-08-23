@@ -1,9 +1,3 @@
-using System.Net.Http.Json;
-using System.Text.Json;
-using DevPulse.Shared.Contracts.Auth;
-using DevPulse.Shared.Serialization;
-using Microsoft.AspNetCore.Components.Authorization;
-
 namespace DevPulse.Client.Services.Auth;
 
 public interface IAuthService

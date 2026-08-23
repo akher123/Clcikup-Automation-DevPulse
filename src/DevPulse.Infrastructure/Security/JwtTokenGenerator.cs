@@ -1,8 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using DevPulse.Infrastructure.Identity;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace DevPulse.Infrastructure.Security;

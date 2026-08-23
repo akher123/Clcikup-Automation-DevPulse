@@ -1,6 +1,3 @@
-using DevPulse.Shared.Common;
-using DevPulse.Shared.Contracts.Attendance;
-
 namespace DevPulse.Application.Abstractions.Attendance;
 
 public interface IAttendanceService

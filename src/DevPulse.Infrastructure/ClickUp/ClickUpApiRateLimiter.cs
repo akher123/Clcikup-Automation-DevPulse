@@ -1,7 +1,3 @@
-using DevPulse.Application.Options;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-
 namespace DevPulse.Infrastructure.ClickUp;
 
 /// <summary>

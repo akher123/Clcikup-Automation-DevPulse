@@ -1,14 +1,4 @@
-using DevPulse.Application.Abstractions.Auth;
-using DevPulse.Application.Abstractions.Leave;
-using DevPulse.Application.Abstractions.Persistence;
-using DevPulse.Application.Options;
-using DevPulse.Infrastructure.Identity;
-using Microsoft.AspNetCore.Identity;
-using DevPulse.Shared.Common;
-using DevPulse.Shared.Contracts.Leave;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace DevPulse.Infrastructure.Services;
 

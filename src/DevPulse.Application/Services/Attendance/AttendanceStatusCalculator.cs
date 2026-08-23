@@ -1,7 +1,3 @@
-using DevPulse.Domain.Entities;
-using DevPulse.Domain.Enums;
-using DevPulse.Shared.Contracts.Attendance;
-
 namespace DevPulse.Application.Services.Attendance;
 
 public sealed class AttendanceStatusCalculator

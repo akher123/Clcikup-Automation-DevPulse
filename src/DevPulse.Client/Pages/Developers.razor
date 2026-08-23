@@ -1,8 +1,5 @@
 @page "/developers"
 @attribute [Authorize(Roles = AppRoles.Admin)]
-@using DevPulse.Shared.Constants
-@using DevPulse.Shared.Contracts.ClickUp
-@using DevPulse.Shared.Contracts.Developers
 @inject IDeveloperApiClient DeveloperApi
 @inject IClickUpAccountApiClient ClickUpAccountApi
 

@@ -1,5 +1,3 @@
-using DevPulse.Shared.Contracts.ClickUp;
-
 namespace DevPulse.Client.Models;
 
 public class CreateClickUpAccountFormModel

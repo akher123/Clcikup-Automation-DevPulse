@@ -1,6 +1,3 @@
-using DevPulse.Shared.Common;
-using DevPulse.Shared.Contracts.Holidays;
-
 namespace DevPulse.Application.Abstractions.Holidays;
 
 public interface IHolidayService

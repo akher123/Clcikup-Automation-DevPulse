@@ -1,6 +1,3 @@
-using DevPulse.Domain.Entities;
-using DevPulse.Domain.Enums;
-
 namespace DevPulse.Application.Abstractions.Persistence;
 
 public interface IAttendanceRepository
