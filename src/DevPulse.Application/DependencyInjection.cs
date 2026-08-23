@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<LeaveDayCalculator>();
         services.AddScoped<ILeaveService, LeaveService>();
         services.AddScoped<AttendanceStatusCalculator>();
+        services.AddScoped<IAttendanceService, AttendanceService>();
         services.AddScoped<IHubstaffOrganizationService, HubstaffOrganizationService>();
         services.AddScoped<IHubstaffSyncService, HubstaffSyncService>();
         services.AddScoped<IHubstaffAnalyticsService, HubstaffAnalyticsService>();
