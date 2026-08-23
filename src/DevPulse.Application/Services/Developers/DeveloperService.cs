@@ -6,6 +6,8 @@ public sealed class DeveloperService : IDeveloperService
     private readonly IClickUpAccountRepository _accountRepository;
     private readonly IClickUpAccountService _accountService;
     private readonly IClickUpApiClient _apiClient;
+    private readonly IHubstaffOrganizationRepository _hubstaffOrganizationRepository;
+    private readonly IHubstaffOrganizationService _hubstaffOrganizationService;
     private readonly ITokenProtector _tokenProtector;
     private readonly ILogger<DeveloperService> _logger;
 
@@ -14,6 +16,8 @@ public sealed class DeveloperService : IDeveloperService
         IClickUpAccountRepository accountRepository,
         IClickUpAccountService accountService,
         IClickUpApiClient apiClient,
+        IHubstaffOrganizationRepository hubstaffOrganizationRepository,
+        IHubstaffOrganizationService hubstaffOrganizationService,
         ITokenProtector tokenProtector,
         ILogger<DeveloperService> logger)
     {
@@ -21,6 +25,8 @@ public sealed class DeveloperService : IDeveloperService
         _accountRepository = accountRepository;
         _accountService = accountService;
         _apiClient = apiClient;
+        _hubstaffOrganizationRepository = hubstaffOrganizationRepository;
+        _hubstaffOrganizationService = hubstaffOrganizationService;
         _tokenProtector = tokenProtector;
         _logger = logger;
     }
@@ -323,6 +329,169 @@ public sealed class DeveloperService : IDeveloperService
         return Result<SyncDevelopersResult>.Success(new SyncDevelopersResult(created, updated, mappingsAdded));
     }
 
+    public async Task<Result<DeveloperDto>> AddHubstaffMappingAsync(
+        Guid developerId,
+        AddDeveloperHubstaffMappingRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var developer = await _developerRepository.GetByIdWithMappingsAsync(developerId, cancellationToken);
+        if (developer is null)
+        {
+            return Result<DeveloperDto>.Failure("Developer was not found.");
+        }
+
+        var organization = await _hubstaffOrganizationRepository.GetByIdAsync(request.HubstaffOrganizationId, cancellationToken);
+        if (organization is null)
+        {
+            return Result<DeveloperDto>.Failure("Hubstaff organization was not found.");
+        }
+
+        if (await _developerRepository.HubstaffMappingExistsAsync(developerId, request.HubstaffOrganizationId, cancellationToken))
+        {
+            return Result<DeveloperDto>.Failure("This developer is already mapped to the selected Hubstaff organization.");
+        }
+
+        await _developerRepository.AddHubstaffMappingAsync(new DeveloperHubstaffMapping
+        {
+            DeveloperId = developerId,
+            HubstaffOrganizationId = request.HubstaffOrganizationId,
+            HubstaffUserId = request.HubstaffUserId
+        }, cancellationToken);
+
+        var updated = await _developerRepository.GetByIdWithMappingsAsync(developerId, cancellationToken);
+        return Result<DeveloperDto>.Success(MapToDto(updated!));
+    }
+
+    public async Task<Result<DeveloperDto>> AddHubstaffMappingByEmailAsync(
+        Guid developerId,
+        AddDeveloperHubstaffMappingByEmailRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email))
+        {
+            return Result<DeveloperDto>.Failure("Email is required to resolve the Hubstaff user.");
+        }
+
+        var membersResult = await _hubstaffOrganizationService.GetMembersAsync(request.HubstaffOrganizationId, cancellationToken);
+        if (membersResult.IsFailure || membersResult.Value is null)
+        {
+            return Result<DeveloperDto>.Failure(membersResult.Error ?? "Failed to load Hubstaff members.");
+        }
+
+        var normalizedEmail = NormalizeEmail(request.Email);
+        var member = membersResult.Value.FirstOrDefault(m =>
+            NormalizeEmail(m.Email) == normalizedEmail);
+
+        if (member is null)
+        {
+            return Result<DeveloperDto>.Failure("No Hubstaff member matched the provided email.");
+        }
+
+        return await AddHubstaffMappingAsync(
+            developerId,
+            new AddDeveloperHubstaffMappingRequest(request.HubstaffOrganizationId, member.HubstaffUserId),
+            cancellationToken);
+    }
+
+    public async Task<Result<DeveloperDto>> RemoveHubstaffMappingAsync(
+        Guid developerId,
+        Guid mappingId,
+        CancellationToken cancellationToken = default)
+    {
+        var developer = await _developerRepository.GetByIdWithMappingsAsync(developerId, cancellationToken);
+        if (developer is null)
+        {
+            return Result<DeveloperDto>.Failure("Developer was not found.");
+        }
+
+        if (developer.HubstaffMappings.All(m => m.Id != mappingId))
+        {
+            return Result<DeveloperDto>.Failure("Hubstaff mapping was not found for this developer.");
+        }
+
+        await _developerRepository.RemoveHubstaffMappingAsync(mappingId, cancellationToken);
+        var updated = await _developerRepository.GetByIdWithMappingsAsync(developerId, cancellationToken);
+        return Result<DeveloperDto>.Success(MapToDto(updated!));
+    }
+
+    public async Task<Result<SyncFromHubstaffResult>> SyncFromHubstaffAsync(
+        SyncFromHubstaffRequest? request = null,
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<HubstaffOrganization> organizations;
+        if (request?.HubstaffOrganizationId is Guid orgId)
+        {
+            var organization = await _hubstaffOrganizationRepository.GetByIdAsync(orgId, cancellationToken);
+            if (organization is null)
+            {
+                return Result<SyncFromHubstaffResult>.Failure("Hubstaff organization was not found.");
+            }
+
+            organizations = [organization];
+        }
+        else
+        {
+            organizations = await _hubstaffOrganizationRepository.GetActiveAsync(cancellationToken);
+            if (organizations.Count == 0)
+            {
+                return Result<SyncFromHubstaffResult>.Failure("No Hubstaff organizations configured.");
+            }
+        }
+
+        var created = 0;
+        var updated = 0;
+        var mappingsAdded = 0;
+
+        foreach (var organization in organizations)
+        {
+            var membersResult = await _hubstaffOrganizationService.GetMembersAsync(organization.Id, cancellationToken);
+            if (membersResult.IsFailure || membersResult.Value is null)
+            {
+                continue;
+            }
+
+            foreach (var member in membersResult.Value)
+            {
+                var normalizedEmail = NormalizeEmail(member.Email);
+                if (normalizedEmail is null || string.IsNullOrWhiteSpace(member.Name))
+                {
+                    continue;
+                }
+
+                var developer = await _developerRepository.GetByEmailAsync(normalizedEmail, cancellationToken);
+                if (developer is null)
+                {
+                    developer = new Developer
+                    {
+                        Name = member.Name.Trim(),
+                        Email = normalizedEmail
+                    };
+                    await _developerRepository.AddAsync(developer, cancellationToken);
+                    created++;
+                }
+                else if (!string.Equals(developer.Name, member.Name.Trim(), StringComparison.Ordinal))
+                {
+                    developer.Name = member.Name.Trim();
+                    await _developerRepository.UpdateAsync(developer, cancellationToken);
+                    updated++;
+                }
+
+                if (!await _developerRepository.HubstaffMappingExistsAsync(developer.Id, organization.Id, cancellationToken))
+                {
+                    await _developerRepository.AddHubstaffMappingAsync(new DeveloperHubstaffMapping
+                    {
+                        DeveloperId = developer.Id,
+                        HubstaffOrganizationId = organization.Id,
+                        HubstaffUserId = member.HubstaffUserId
+                    }, cancellationToken);
+                    mappingsAdded++;
+                }
+            }
+        }
+
+        return Result<SyncFromHubstaffResult>.Success(new SyncFromHubstaffResult(created, updated, mappingsAdded));
+    }
+
     private static Result ValidateDeveloperRequest(string name, string? email)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -405,5 +574,14 @@ public sealed class DeveloperService : IDeveloperService
                 .ToList(),
             (DevPulse.Shared.Contracts.Developers.WorkRole)(int)developer.WorkRole,
             developer.ReportingManagerDeveloperId,
-            developer.ReportingManager?.Name);
+            developer.ReportingManager?.Name,
+            developer.HubstaffMappings
+                .Where(m => m.HubstaffOrganization?.IsActive == true)
+                .Select(m => new DeveloperHubstaffMappingDto(
+                    m.Id,
+                    m.HubstaffOrganizationId,
+                    m.HubstaffOrganization?.Name ?? "Unknown",
+                    m.HubstaffUserId))
+                .OrderBy(m => m.OrganizationName)
+                .ToList());
 }

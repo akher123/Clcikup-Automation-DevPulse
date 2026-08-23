@@ -135,4 +135,44 @@ public sealed class DevelopersController : ControllerBase
         var result = await _developerService.SyncFromClickUpAsync(request, cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
+
+    [HttpPost("{id:guid}/hubstaff-mappings")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> AddHubstaffMapping(
+        Guid id,
+        [FromBody] AddDeveloperHubstaffMappingRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _developerService.AddHubstaffMappingAsync(id, request, cancellationToken);
+        return result.IsFailure ? BadRequest(new { error = result.Error }) : Ok(result.Value);
+    }
+
+    [HttpPost("{id:guid}/hubstaff-mappings/by-email")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> AddHubstaffMappingByEmail(
+        Guid id,
+        [FromBody] AddDeveloperHubstaffMappingByEmailRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _developerService.AddHubstaffMappingByEmailAsync(id, request, cancellationToken);
+        return result.IsFailure ? BadRequest(new { error = result.Error }) : Ok(result.Value);
+    }
+
+    [HttpDelete("{id:guid}/hubstaff-mappings/{mappingId:guid}")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> RemoveHubstaffMapping(Guid id, Guid mappingId, CancellationToken cancellationToken)
+    {
+        var result = await _developerService.RemoveHubstaffMappingAsync(id, mappingId, cancellationToken);
+        return result.IsFailure ? BadRequest(new { error = result.Error }) : Ok(result.Value);
+    }
+
+    [HttpPost("sync/hubstaff")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> SyncFromHubstaff(
+        [FromBody] SyncFromHubstaffRequest? request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _developerService.SyncFromHubstaffAsync(request, cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+    }
 }

@@ -22,6 +22,15 @@ public interface IDeveloperApiClient
     Task<SyncDevelopersResult?> SyncFromClickUpAsync(
         SyncFromClickUpRequest? request = null,
         CancellationToken cancellationToken = default);
+
+    Task<DeveloperDto?> AddHubstaffMappingByEmailAsync(
+        Guid developerId,
+        AddDeveloperHubstaffMappingByEmailRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<SyncFromHubstaffResult?> SyncFromHubstaffAsync(
+        SyncFromHubstaffRequest? request = null,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class DeveloperApiClient : IDeveloperApiClient
@@ -111,6 +120,39 @@ public sealed class DeveloperApiClient : IDeveloperApiClient
         }
 
         return await response.Content.ReadFromJsonAsync<SyncDevelopersResult>(cancellationToken);
+    }
+
+    public async Task<DeveloperDto?> AddHubstaffMappingByEmailAsync(
+        Guid developerId,
+        AddDeveloperHubstaffMappingByEmailRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.PostAsJsonAsync(
+            $"api/developers/{developerId}/hubstaff-mappings/by-email",
+            request,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(ParseApiError(error, "Failed to map developer to Hubstaff"));
+        }
+
+        return await response.Content.ReadFromJsonAsync<DeveloperDto>(cancellationToken);
+    }
+
+    public async Task<SyncFromHubstaffResult?> SyncFromHubstaffAsync(
+        SyncFromHubstaffRequest? request = null,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.PostAsJsonAsync("api/developers/sync/hubstaff", request ?? new SyncFromHubstaffRequest(null), cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(ParseApiError(error, "Failed to sync developers from Hubstaff"));
+        }
+
+        return await response.Content.ReadFromJsonAsync<SyncFromHubstaffResult>(cancellationToken);
     }
 
     private static string ParseApiError(string rawError, string fallback)

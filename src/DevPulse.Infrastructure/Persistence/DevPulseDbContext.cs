@@ -36,6 +36,14 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
 
     public DbSet<AttendanceCorrectionRequest> AttendanceCorrectionRequests => Set<AttendanceCorrectionRequest>();
 
+    public DbSet<HubstaffOrganization> HubstaffOrganizations => Set<HubstaffOrganization>();
+
+    public DbSet<DeveloperHubstaffMapping> DeveloperHubstaffMappings => Set<DeveloperHubstaffMapping>();
+
+    public DbSet<HubstaffDailyActivity> HubstaffDailyActivities => Set<HubstaffDailyActivity>();
+
+    public DbSet<HubstaffSyncRun> HubstaffSyncRuns => Set<HubstaffSyncRun>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -262,6 +270,66 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
                 .WithMany()
                 .HasForeignKey(x => x.DeveloperId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<HubstaffOrganization>(entity =>
+        {
+            entity.ToTable("HubstaffOrganizations");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.HubstaffOrganizationName).HasMaxLength(200);
+            entity.Property(x => x.EncryptedPersonalAccessToken).IsRequired();
+            entity.Property(x => x.LastValidationMessage).HasMaxLength(500);
+            entity.HasIndex(x => x.OrganizationId).IsUnique();
+        });
+
+        modelBuilder.Entity<DeveloperHubstaffMapping>(entity =>
+        {
+            entity.ToTable("DeveloperHubstaffMappings");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.HubstaffOrganizationId, x.DeveloperId }).IsUnique();
+            entity.HasIndex(x => new { x.HubstaffOrganizationId, x.HubstaffUserId }).IsUnique();
+
+            entity.HasOne(x => x.Developer)
+                .WithMany(x => x.HubstaffMappings)
+                .HasForeignKey(x => x.DeveloperId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.HubstaffOrganization)
+                .WithMany(x => x.Mappings)
+                .HasForeignKey(x => x.HubstaffOrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<HubstaffDailyActivity>(entity =>
+        {
+            entity.ToTable("HubstaffDailyActivities");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ProjectName).HasMaxLength(200);
+            entity.Property(x => x.HubstaffUserEmail).HasMaxLength(320);
+            entity.HasIndex(x => new { x.HubstaffOrganizationId, x.HubstaffDailyActivityId }).IsUnique();
+            entity.HasIndex(x => new { x.HubstaffOrganizationId, x.WorkDate });
+            entity.HasIndex(x => new { x.DeveloperId, x.WorkDate });
+            entity.HasIndex(x => new { x.HubstaffOrganizationId, x.HubstaffUserId, x.WorkDate });
+
+            entity.HasOne(x => x.HubstaffOrganization)
+                .WithMany(x => x.DailyActivities)
+                .HasForeignKey(x => x.HubstaffOrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.Developer)
+                .WithMany()
+                .HasForeignKey(x => x.DeveloperId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<HubstaffSyncRun>(entity =>
+        {
+            entity.ToTable("HubstaffSyncRuns");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ErrorMessage).HasMaxLength(2000);
+            entity.Property(x => x.Status).HasConversion<int>();
+            entity.HasIndex(x => x.StartedAtUtc);
         });
     }
 }

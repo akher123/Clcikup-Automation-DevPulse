@@ -1,7 +1,9 @@
 global using DevPulse.Application.Abstractions.Analytics;
 global using DevPulse.Application.Abstractions.Auth;
 global using DevPulse.Application.Abstractions.ClickUp;
+global using DevPulse.Application.Abstractions.Hubstaff;
 global using DevPulse.Application.Abstractions.Leave;
+global using DevPulse.Infrastructure.Hubstaff;
 global using DevPulse.Application.Abstractions.Persistence;
 global using DevPulse.Application.Abstractions.Security;
 global using DevPulse.Application.Options;

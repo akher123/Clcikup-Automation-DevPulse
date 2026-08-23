@@ -134,5 +134,45 @@ public sealed class DeveloperRepository : IDeveloperRepository
         _dbContext.Developers
             .Include(x => x.ReportingManager)
             .Include(x => x.ClickUpMappings)
-            .ThenInclude(x => x.ClickUpAccount);
+            .ThenInclude(x => x.ClickUpAccount)
+            .Include(x => x.HubstaffMappings)
+            .ThenInclude(x => x.HubstaffOrganization);
+
+    public async Task<IReadOnlyList<Developer>> GetAllWithHubstaffMappingsAsync(CancellationToken cancellationToken = default) =>
+        await QueryWithMappings()
+            .Where(x => x.HubstaffMappings.Any(m => m.HubstaffOrganization.IsActive))
+            .OrderBy(x => x.Name)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Developer>> GetByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default) =>
+        await _dbContext.Developers
+            .Where(x => ids.Contains(x.Id))
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+    public async Task<bool> HubstaffMappingExistsAsync(
+        Guid developerId,
+        Guid hubstaffOrganizationId,
+        CancellationToken cancellationToken = default) =>
+        await _dbContext.DeveloperHubstaffMappings
+            .AnyAsync(x => x.DeveloperId == developerId && x.HubstaffOrganizationId == hubstaffOrganizationId, cancellationToken);
+
+    public async Task AddHubstaffMappingAsync(DeveloperHubstaffMapping mapping, CancellationToken cancellationToken = default)
+    {
+        _dbContext.DeveloperHubstaffMappings.Add(mapping);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task RemoveHubstaffMappingAsync(Guid mappingId, CancellationToken cancellationToken = default)
+    {
+        var mapping = await _dbContext.DeveloperHubstaffMappings.FirstOrDefaultAsync(x => x.Id == mappingId, cancellationToken);
+        if (mapping is null)
+        {
+            return;
+        }
+
+        _dbContext.DeveloperHubstaffMappings.Remove(mapping);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
 }

@@ -43,4 +43,14 @@ public interface IDeveloperRepository
     Task<bool> MappingExistsAsync(Guid developerId, Guid accountId, CancellationToken cancellationToken = default);
 
     Task AddMappingAsync(DeveloperClickUpMapping mapping, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Developer>> GetAllWithHubstaffMappingsAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Developer>> GetByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default);
+
+    Task<bool> HubstaffMappingExistsAsync(Guid developerId, Guid hubstaffOrganizationId, CancellationToken cancellationToken = default);
+
+    Task AddHubstaffMappingAsync(DeveloperHubstaffMapping mapping, CancellationToken cancellationToken = default);
+
+    Task RemoveHubstaffMappingAsync(Guid mappingId, CancellationToken cancellationToken = default);
 }

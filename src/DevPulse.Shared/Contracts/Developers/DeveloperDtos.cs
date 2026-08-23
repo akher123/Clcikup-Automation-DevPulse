@@ -1,5 +1,7 @@
 namespace DevPulse.Shared.Contracts.Developers;
 
+using DevPulse.Shared.Contracts.Hubstaff;
+
 public enum WorkRole
 {
     Developer = 0,
@@ -15,7 +17,8 @@ public record DeveloperDto(
     IReadOnlyList<DeveloperClickUpMappingDto> Mappings,
     WorkRole WorkRole = WorkRole.Developer,
     Guid? ReportingManagerDeveloperId = null,
-    string? ReportingManagerName = null);
+    string? ReportingManagerName = null,
+    IReadOnlyList<DeveloperHubstaffMappingDto>? HubstaffMappings = null);
 
 public record DeveloperClickUpMappingDto(
     Guid Id,

@@ -8,6 +8,7 @@ global using DevPulse.Shared.Contracts.Auth;
 global using DevPulse.Shared.Contracts.ClickUp;
 global using DevPulse.Shared.Contracts.Developers;
 global using DevPulse.Shared.Contracts.Holidays;
+global using DevPulse.Shared.Contracts.Hubstaff;
 global using DevPulse.Shared.Contracts.Leave;
 global using DevPulse.Shared.Contracts.Reports;
 global using DevPulse.Shared.Serialization;

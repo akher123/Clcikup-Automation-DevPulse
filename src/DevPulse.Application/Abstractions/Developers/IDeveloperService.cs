@@ -26,4 +26,23 @@ public interface IDeveloperService
     Task<Result<SyncDevelopersResult>> SyncFromClickUpAsync(
         SyncFromClickUpRequest? request = null,
         CancellationToken cancellationToken = default);
+
+    Task<Result<DeveloperDto>> AddHubstaffMappingAsync(
+        Guid developerId,
+        AddDeveloperHubstaffMappingRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<DeveloperDto>> AddHubstaffMappingByEmailAsync(
+        Guid developerId,
+        AddDeveloperHubstaffMappingByEmailRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<DeveloperDto>> RemoveHubstaffMappingAsync(
+        Guid developerId,
+        Guid mappingId,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<SyncFromHubstaffResult>> SyncFromHubstaffAsync(
+        SyncFromHubstaffRequest? request = null,
+        CancellationToken cancellationToken = default);
 }

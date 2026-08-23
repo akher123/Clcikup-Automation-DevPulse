@@ -23,6 +23,8 @@ public static class DependencyInjection
         services.Configure<KpiSyncOptions>(configuration.GetSection(KpiSyncOptions.SectionName));
         services.Configure<ClickUpApiOptions>(configuration.GetSection(ClickUpApiOptions.SectionName));
         services.Configure<LeaveTelegramOptions>(configuration.GetSection(LeaveTelegramOptions.SectionName));
+        services.Configure<HubstaffSyncOptions>(configuration.GetSection(HubstaffSyncOptions.SectionName));
+        services.Configure<HubstaffApiOptions>(configuration.GetSection(HubstaffApiOptions.SectionName));
 
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
             {
@@ -68,6 +70,9 @@ public static class DependencyInjection
         services.AddScoped<IHolidayRepository, HolidayRepository>();
         services.AddScoped<ILeaveRepository, LeaveRepository>();
         services.AddScoped<IAttendanceRepository, AttendanceRepository>();
+        services.AddScoped<IHubstaffOrganizationRepository, HubstaffOrganizationRepository>();
+        services.AddScoped<IHubstaffDailyActivityRepository, HubstaffDailyActivityRepository>();
+        services.AddScoped<IHubstaffSyncRunRepository, HubstaffSyncRunRepository>();
         services.AddScoped<IUserEmailLookup, UserEmailLookup>();
         services.AddScoped<IUserDeveloperResolver, UserDeveloperResolver>();
         services.AddScoped<ILeaveTelegramService, LeaveTelegramService>();
@@ -76,9 +81,13 @@ public static class DependencyInjection
             sp.GetRequiredService<LeaveTelegramNotificationQueue>());
         services.AddSingleton<JwtTokenGenerator>();
         services.AddSingleton<ClickUpApiRateLimiter>();
+        services.AddSingleton<HubstaffApiRateLimiter>();
+        services.AddScoped<IHubstaffTokenProtector, HubstaffTokenProtector>();
+        services.AddScoped<IHubstaffTokenProvider, HubstaffTokenProvider>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddHostedService<KpiSyncBackgroundService>();
+        services.AddHostedService<HubstaffSyncBackgroundService>();
         services.AddHostedService<LeaveTelegramNotificationBackgroundService>();
 
         services.AddHttpClient<IClickUpApiClient, ClickUpApiClient>(client =>
@@ -86,6 +95,21 @@ public static class DependencyInjection
             client.BaseAddress = new Uri("https://api.clickup.com/api/v2/");
             client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
             client.Timeout = TimeSpan.FromDays(2);
+        });
+
+        services.AddHttpClient<IHubstaffAuthClient, HubstaffAuthClient>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<IOptions<HubstaffApiOptions>>().Value;
+            client.BaseAddress = new Uri(options.AuthBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        services.AddHttpClient<IHubstaffApiClient, HubstaffApiClient>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<IOptions<HubstaffApiOptions>>().Value;
+            client.BaseAddress = new Uri(options.ApiBaseUrl);
+            client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+            client.Timeout = TimeSpan.FromMinutes(5);
         });
 
         services.AddHttpClient<ITelegramApiClient, Telegram.TelegramApiClient>(client =>

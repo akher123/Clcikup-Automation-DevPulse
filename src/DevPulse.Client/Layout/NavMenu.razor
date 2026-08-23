@@ -45,6 +45,12 @@
                             </NavLink>
                         </div>
                         <div class="nav-item">
+                            <NavLink class="nav-link nav-link-sub" href="hubstaff-organizations" title="Hubstaff Organizations" @onclick="HandleNavigate">
+                                <span class="nav-icon bi-clock-history" aria-hidden="true"></span>
+                                <span class="nav-label">Hubstaff</span>
+                            </NavLink>
+                        </div>
+                        <div class="nav-item">
                             <NavLink class="nav-link nav-link-sub" href="developers" title="Developers" @onclick="HandleNavigate">
                                 <span class="nav-icon bi-people" aria-hidden="true"></span>
                                 <span class="nav-label">Developers</span>
@@ -142,6 +148,12 @@
                     </Authorized>
                 </AuthorizeView>
                 <div class="nav-item">
+                    <NavLink class="nav-link nav-link-sub" href="time-analytics" title="Time Tracking Analytics" @onclick="HandleNavigate">
+                        <span class="nav-icon bi-clock" aria-hidden="true"></span>
+                        <span class="nav-label">Time Tracking</span>
+                    </NavLink>
+                </div>
+                <div class="nav-item">
                     <NavLink class="nav-link nav-link-sub" href="reports" title="Reports" @onclick="HandleNavigate">
                         <span class="nav-icon bi-chart" aria-hidden="true"></span>
                         <span class="nav-label">Reports</span>
@@ -235,9 +247,9 @@
 
     private static string? GetGroupForPath(string path) => path switch
     {
-        "clickup-accounts" or "developers" or "users" => "management",
+        "clickup-accounts" or "hubstaff-organizations" or "developers" or "users" => "management",
         "leave" or "holidays" or "leave-types" or "leave-settings" or "attendance" or "attendance-settings" => "time-off",
-        "analytics" or "reports" or "leave-analytics" => "analytics",
+        "analytics" or "time-analytics" or "reports" or "leave-analytics" => "analytics",
         _ => null
     };
 

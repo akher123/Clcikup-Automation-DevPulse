@@ -32,5 +32,8 @@ builder.Services.AddScoped<IUserApiClient, UserApiClient>();
 builder.Services.AddScoped<IHolidayApiClient, HolidayApiClient>();
 builder.Services.AddScoped<ILeaveApiClient, LeaveApiClient>();
 builder.Services.AddScoped<IAttendanceApiClient, AttendanceApiClient>();
+builder.Services.AddScoped<IHubstaffOrganizationApiClient, HubstaffOrganizationApiClient>();
+builder.Services.AddScoped<IHubstaffSyncApiClient, HubstaffSyncApiClient>();
+builder.Services.AddScoped<IHubstaffAnalyticsApiClient, HubstaffAnalyticsApiClient>();
 
 await builder.Build().RunAsync();

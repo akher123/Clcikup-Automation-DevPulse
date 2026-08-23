@@ -2,6 +2,7 @@
 @attribute [Authorize(Roles = AppRoles.Admin)]
 @inject IDeveloperApiClient DeveloperApi
 @inject IClickUpAccountApiClient ClickUpAccountApi
+@inject IHubstaffOrganizationApiClient HubstaffOrgApi
 
 <PageTitle>@AppBranding.PageTitle("Developers")</PageTitle>
 
@@ -11,7 +12,7 @@
             <p class="analytics-eyebrow">Admin · Registry</p>
             <h1>Developer Registry</h1>
             <p class="analytics-lead">
-                Manage team members, roles, reporting lines, and cross-workspace ClickUp mappings.
+                Manage team members, roles, reporting lines, ClickUp mappings, and Hubstaff mappings.
             </p>
         </div>
         <div class="analytics-hero-actions">
@@ -26,6 +27,10 @@
             <BusyButton CssClass="btn btn-outline-light btn-sm" IsBusy="_isBusy" BusyText="Syncing..." OnClick="SyncFromClickUpAsync" Disabled="@(_clickUpAccounts.Count == 0)">
                 <span class="bi-arrow-repeat developers-btn-icon" aria-hidden="true"></span>
                 Sync from ClickUp
+            </BusyButton>
+            <BusyButton CssClass="btn btn-outline-light btn-sm" IsBusy="_isBusy" BusyText="Syncing..." OnClick="SyncFromHubstaffAsync" Disabled="@(_hubstaffOrganizations.Count == 0)">
+                <span class="bi-clock-history developers-btn-icon" aria-hidden="true"></span>
+                Sync from Hubstaff
             </BusyButton>
             <button class="btn btn-light btn-sm" @onclick="ShowAddForm">
                 <span class="bi-person-plus developers-btn-icon" aria-hidden="true"></span>
@@ -81,6 +86,37 @@
                 <div class="filter-actions mt-3">
                     <button class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="HideAddForm">Cancel</button>
                     <BusyButton CssClass="btn btn-primary" IsBusy="_isBusy" BusyText="Saving..." OnClick="CreateDeveloperAsync">Create Developer</BusyButton>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_hubstaffMappingDeveloperId.HasValue)
+    {
+        <div class="filter-card card mb-4 developers-form-card">
+            <div class="card-body">
+                <div class="filter-section-header mb-1">
+                    <span class="filter-section-label">Map to Hubstaff Organization</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Organization</label>
+                        <select class="form-select" @bind="_hubstaffMappingForm.OrganizationId">
+                            <option value="">Select organization...</option>
+                            @foreach (var org in _hubstaffOrganizations)
+                            {
+                                <option value="@org.Id">@org.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" @bind="_hubstaffMappingForm.Email" />
+                    </div>
+                </div>
+                <div class="filter-actions mt-3">
+                    <button class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="CancelHubstaffMappingForm">Cancel</button>
+                    <BusyButton CssClass="btn btn-primary" IsBusy="_isBusy" BusyText="Mapping..." OnClick="AddHubstaffMappingByEmailAsync">Map to Hubstaff</BusyButton>
                 </div>
             </div>
         </div>
@@ -300,6 +336,16 @@
                                                             @mapping.AccountName
                                                         </span>
                                                     }
+                                                    @if (developer.HubstaffMappings is not null)
+                                                    {
+                                                        @foreach (var mapping in developer.HubstaffMappings)
+                                                        {
+                                                            <span class="developer-mapping-badge" title="Hubstaff User ID: @mapping.HubstaffUserId">
+                                                                <span class="bi-clock-history" aria-hidden="true"></span>
+                                                                @mapping.OrganizationName
+                                                            </span>
+                                                        }
+                                                    }
                                                 </div>
                                             }
                                         </td>
@@ -307,7 +353,11 @@
                                             <div class="btn-group-actions">
                                                 <button class="btn btn-sm btn-outline-primary" disabled="@_isBusy" @onclick="() => ShowMappingForm(developer)" title="Map to ClickUp workspace">
                                                     <span class="bi-link-45deg" aria-hidden="true"></span>
-                                                    Map
+                                                    ClickUp
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-primary" disabled="@_isBusy" @onclick="() => ShowHubstaffMappingForm(developer)" title="Map to Hubstaff organization">
+                                                    <span class="bi-clock-history" aria-hidden="true"></span>
+                                                    Hubstaff
                                                 </button>
                                                 @if (developer.IsActive)
                                                 {
@@ -342,9 +392,12 @@
     private readonly List<DeveloperDto> _developers = [];
     private readonly List<DeveloperDto> _managerCandidates = [];
     private readonly List<ClickUpAccountDto> _clickUpAccounts = [];
+    private readonly List<HubstaffOrganizationDto> _hubstaffOrganizations = [];
     private CreateDeveloperFormModel _newDeveloper = new();
     private MappingFormModel _mappingForm = new();
+    private HubstaffMappingFormModel _hubstaffMappingForm = new();
     private Guid? _mappingDeveloperId;
+    private Guid? _hubstaffMappingDeveloperId;
     private string _selectedAccountId = string.Empty;
     private string _developerSearch = string.Empty;
     private string _statusFilter = "all";
@@ -357,7 +410,22 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await Task.WhenAll(LoadDevelopersAsync(), LoadClickUpAccountsAsync(), LoadManagerCandidatesAsync());
+        await Task.WhenAll(LoadDevelopersAsync(), LoadClickUpAccountsAsync(), LoadHubstaffOrganizationsAsync(), LoadManagerCandidatesAsync());
+    }
+
+    private async Task LoadHubstaffOrganizationsAsync()
+    {
+        try
+        {
+            var orgs = await HubstaffOrgApi.GetOrganizationsAsync();
+            _hubstaffOrganizations.Clear();
+            _hubstaffOrganizations.AddRange(orgs.Where(o => o.IsActive));
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = $"Failed to load Hubstaff organizations: {ex.Message}";
+        }
     }
 
     private async Task LoadClickUpAccountsAsync()
@@ -597,6 +665,81 @@
         }
     }
 
+    private async Task SyncFromHubstaffAsync()
+    {
+        _isBusy = true;
+        _message = null;
+
+        try
+        {
+            var result = await DeveloperApi.SyncFromHubstaffAsync(new SyncFromHubstaffRequest(null));
+            _isError = false;
+            _message = result is null
+                ? "Sync from Hubstaff completed."
+                : $"Sync from Hubstaff complete: {result.DevelopersCreated} created, {result.DevelopersUpdated} updated, {result.MappingsAdded} mappings added.";
+            await ReloadDevelopersAndManagerCandidatesAsync();
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void ShowHubstaffMappingForm(DeveloperDto developer)
+    {
+        _showAddForm = false;
+        _mappingDeveloperId = null;
+        _hubstaffMappingDeveloperId = developer.Id;
+        _hubstaffMappingForm = new HubstaffMappingFormModel
+        {
+            Email = developer.Email ?? string.Empty,
+            OrganizationId = _hubstaffOrganizations.Count == 1 ? _hubstaffOrganizations[0].Id.ToString() : string.Empty
+        };
+    }
+
+    private void CancelHubstaffMappingForm()
+    {
+        _hubstaffMappingDeveloperId = null;
+        _hubstaffMappingForm = new HubstaffMappingFormModel();
+    }
+
+    private async Task AddHubstaffMappingByEmailAsync()
+    {
+        if (!_hubstaffMappingDeveloperId.HasValue || !Guid.TryParse(_hubstaffMappingForm.OrganizationId, out var orgId))
+        {
+            _isError = true;
+            _message = "Select a Hubstaff organization.";
+            return;
+        }
+
+        _isBusy = true;
+        try
+        {
+            await DeveloperApi.AddHubstaffMappingByEmailAsync(
+                _hubstaffMappingDeveloperId.Value,
+                new AddDeveloperHubstaffMappingByEmailRequest(orgId, _hubstaffMappingForm.Email));
+
+            _hubstaffMappingDeveloperId = null;
+            _isError = false;
+            _message = "Developer mapped to Hubstaff successfully.";
+            await LoadDevelopersAsync();
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
     private async Task SetDeveloperActiveAsync(DeveloperDto developer, bool isActive)
     {
         _isBusy = true;
@@ -737,7 +880,8 @@
 
     private int GetQaCount() => _developers.Count(d => d.WorkRole == WorkRole.QA);
 
-    private int GetMappedCount() => _developers.Count(d => d.Mappings.Count > 0);
+    private int GetMappedCount() => _developers.Count(d =>
+        d.Mappings.Count > 0 || (d.HubstaffMappings?.Count ?? 0) > 0);
 
     private static string GetInitials(string name)
     {
@@ -798,6 +942,12 @@
     private sealed class MappingFormModel
     {
         public string WorkspaceId { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
+
+    private sealed class HubstaffMappingFormModel
+    {
+        public string OrganizationId { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
     }
 }

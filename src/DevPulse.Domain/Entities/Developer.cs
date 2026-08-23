@@ -32,4 +32,6 @@ public class Developer
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public ICollection<DeveloperClickUpMapping> ClickUpMappings { get; set; } = [];
+
+    public ICollection<DeveloperHubstaffMapping> HubstaffMappings { get; set; } = [];
 }
