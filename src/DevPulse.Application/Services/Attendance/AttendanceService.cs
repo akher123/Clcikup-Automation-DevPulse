@@ -11,19 +11,22 @@ public sealed class AttendanceService : IAttendanceService
     private readonly ILeaveRepository _leaveRepository;
     private readonly IHolidayRepository _holidayRepository;
     private readonly AttendanceStatusCalculator _statusCalculator;
+    private readonly IUserDeveloperResolver _userDeveloperResolver;
 
     public AttendanceService(
         IAttendanceRepository attendanceRepository,
         IDeveloperRepository developerRepository,
         ILeaveRepository leaveRepository,
         IHolidayRepository holidayRepository,
-        AttendanceStatusCalculator statusCalculator)
+        AttendanceStatusCalculator statusCalculator,
+        IUserDeveloperResolver userDeveloperResolver)
     {
         _attendanceRepository = attendanceRepository;
         _developerRepository = developerRepository;
         _leaveRepository = leaveRepository;
         _holidayRepository = holidayRepository;
         _statusCalculator = statusCalculator;
+        _userDeveloperResolver = userDeveloperResolver;
     }
 
     public async Task<AttendanceMeDto> GetMeAsync(string userEmail, CancellationToken cancellationToken = default)
@@ -524,15 +527,8 @@ public sealed class AttendanceService : IAttendanceService
         return (await _attendanceRepository.GetSettingsAsync(cancellationToken))!;
     }
 
-    private async Task<Developer?> ResolveDeveloperAsync(string userEmail, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(userEmail))
-        {
-            return null;
-        }
-
-        return await _developerRepository.GetByEmailIgnoreCaseAsync(userEmail, cancellationToken);
-    }
+    private Task<Developer?> ResolveDeveloperAsync(string userEmail, CancellationToken cancellationToken) =>
+        _userDeveloperResolver.ResolveAsync(userEmail, cancellationToken);
 
     private static AttendanceNextActionDto GetNextAction(AttendanceRecord? record)
     {

@@ -5,147 +5,182 @@
 
 <PageTitle>@AppBranding.PageTitle("Developers")</PageTitle>
 
-<div class="page-header">
-    <div>
-        <h1>Developers</h1>
-        <p class="text-muted">Manage the developer registry and cross-workspace ClickUp mappings. Only developers mapped to active ClickUp accounts are listed.</p>
-    </div>
-    <div class="d-flex gap-2 align-items-center flex-wrap">
-        @if (_clickUpAccounts.Count > 0)
-        {
-            <SearchableAccountSelect Accounts="_clickUpAccounts"
-                                     SelectedValue="_selectedAccountId"
-                                     SelectedValueChanged="OnAccountSelectionChanged"
-                                     CssClass="sync-account-select"
-                                     Disabled="@_isBusy" />
-        }
-        <BusyButton CssClass="btn btn-outline-primary" IsBusy="_isBusy" BusyText="Syncing..." OnClick="SyncFromClickUpAsync" Disabled="@(_clickUpAccounts.Count == 0)">
-            Sync from ClickUp
-        </BusyButton>
-        <button class="btn btn-primary" @onclick="ShowAddForm">Add Developer</button>
-    </div>
-</div>
-
-@if (!string.IsNullOrWhiteSpace(_message))
-{
-    <div class="alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
-}
-
-@if (_isBusy && !_isLoading)
-{
-    <LoadingIndicator Text="Processing..." />
-}
-
-@if (_showAddForm)
-{
-    <div class="form-card card">
-        <div class="card-body">
-            <h5 class="card-title">Add Developer</h5>
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Name</label>
-                    <input class="form-control" @bind="_newDeveloper.Name" placeholder="Jane Doe" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-control" @bind="_newDeveloper.Email" placeholder="jane@example.com" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Work role</label>
-                    <select class="form-select" @bind="_newDeveloper.WorkRole">
-                        <option value="@WorkRole.Developer">Developer</option>
-                        <option value="@WorkRole.QA">QA</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Reporting manager</label>
-                    <select class="form-select" @bind="_newDeveloper.ReportingManagerDeveloperId">
-                        <option value="">None</option>
-                        @foreach (var manager in GetActiveDevelopersForManagerSelect())
-                        {
-                            <option value="@manager.Id">@manager.Name</option>
-                        }
-                    </select>
-                </div>
-            </div>
-            <div class="mt-3 d-flex gap-2">
-                <BusyButton CssClass="btn btn-success" IsBusy="_isBusy" BusyText="Saving..." OnClick="CreateDeveloperAsync">Save</BusyButton>
-                <button class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="HideAddForm">Cancel</button>
-            </div>
-        </div>
-    </div>
-}
-
-@if (_mappingDeveloperId.HasValue)
-{
-    <div class="form-card card">
-        <div class="card-body">
-            <h5 class="card-title">Map to ClickUp Workspace</h5>
-            <p class="text-muted small mb-3">
-                Resolves the ClickUp user ID from the email address and links it to this developer.
+<div class="developers-page">
+    <div class="analytics-hero analytics-hero-compact developers-hero">
+        <div class="analytics-hero-copy">
+            <p class="analytics-eyebrow">Admin · Registry</p>
+            <h1>Developer Registry</h1>
+            <p class="analytics-lead">
+                Manage team members, roles, reporting lines, and cross-workspace ClickUp mappings.
             </p>
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Workspace</label>
-                    <select class="form-select" @bind="_mappingForm.WorkspaceId">
-                        <option value="">Select workspace...</option>
-                        @foreach (var account in _clickUpAccounts)
-                        {
-                            <option value="@account.WorkspaceId">@account.Name (@account.WorkspaceId)</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-control" @bind="_mappingForm.Email" placeholder="jane@example.com" />
-                </div>
-            </div>
-            <div class="mt-3 d-flex gap-2">
-                <BusyButton CssClass="btn btn-success" IsBusy="_isBusy" BusyText="Mapping..." OnClick="AddMappingByEmailAsync">Resolve &amp; Map</BusyButton>
-                <button class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="CancelMappingForm">Cancel</button>
-            </div>
+        </div>
+        <div class="analytics-hero-actions">
+            @if (_clickUpAccounts.Count > 0)
+            {
+                <SearchableAccountSelect Accounts="_clickUpAccounts"
+                                         SelectedValue="_selectedAccountId"
+                                         SelectedValueChanged="OnAccountSelectionChanged"
+                                         CssClass="sync-account-select developers-account-select"
+                                         Disabled="@_isBusy" />
+            }
+            <BusyButton CssClass="btn btn-outline-light btn-sm" IsBusy="_isBusy" BusyText="Syncing..." OnClick="SyncFromClickUpAsync" Disabled="@(_clickUpAccounts.Count == 0)">
+                <span class="bi-arrow-repeat developers-btn-icon" aria-hidden="true"></span>
+                Sync from ClickUp
+            </BusyButton>
+            <button class="btn btn-light btn-sm" @onclick="ShowAddForm">
+                <span class="bi-person-plus developers-btn-icon" aria-hidden="true"></span>
+                Add Developer
+            </button>
         </div>
     </div>
-}
 
-@if (_isLoading)
-{
-    <LoadingIndicator Text="Loading developers..." />
-}
-else if (_developers.Count == 0)
-{
-    <div class="empty-state">
-        <div class="empty-state-icon" aria-hidden="true">&#128101;</div>
-        <h5>No developers registered</h5>
-        <p class="text-muted mb-3">
-            Sync members from your connected ClickUp workspaces to build the developer registry automatically.
-        </p>
-        <BusyButton CssClass="btn btn-outline-primary me-2" IsBusy="_isBusy" BusyText="Syncing..." OnClick="SyncFromClickUpAsync" Disabled="@(_clickUpAccounts.Count == 0)">
-            Sync from ClickUp
-        </BusyButton>
-        <button class="btn btn-primary" @onclick="ShowAddForm">Add Developer</button>
-    </div>
-}
-else
-{
-    <div class="data-card card">
-        <div class="card-body p-0">
-            <div class="developer-filter-bar">
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <div class="alert @(_isError ? "alert-danger" : "alert-success") leave-alert" role="alert">@_message</div>
+    }
+
+    @if (_isBusy && !_isLoading)
+    {
+        <LoadingIndicator Text="Processing..." />
+    }
+
+    @if (_showAddForm)
+    {
+        <div class="filter-card card mb-4 developers-form-card">
+            <div class="card-body">
+                <div class="filter-section-header mb-3">
+                    <span class="filter-section-label">New Developer</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Name</label>
+                        <input class="form-control" @bind="_newDeveloper.Name" placeholder="Jane Doe" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" @bind="_newDeveloper.Email" placeholder="jane@example.com" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Work role</label>
+                        <select class="form-select" @bind="_newDeveloper.WorkRole">
+                            <option value="@WorkRole.Developer">Developer</option>
+                            <option value="@WorkRole.QA">QA</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Reporting manager</label>
+                        <select class="form-select" @bind="_newDeveloper.ReportingManagerDeveloperId">
+                            <option value="">None</option>
+                            @foreach (var manager in GetActiveDevelopersForManagerSelect())
+                            {
+                                <option value="@manager.Id">@manager.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="filter-actions mt-3">
+                    <button class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="HideAddForm">Cancel</button>
+                    <BusyButton CssClass="btn btn-primary" IsBusy="_isBusy" BusyText="Saving..." OnClick="CreateDeveloperAsync">Create Developer</BusyButton>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_mappingDeveloperId.HasValue)
+    {
+        <div class="filter-card card mb-4 developers-form-card">
+            <div class="card-body">
+                <div class="filter-section-header mb-1">
+                    <span class="filter-section-label">Map to ClickUp Workspace</span>
+                </div>
+                <p class="text-muted small mb-3">
+                    Resolves the ClickUp user ID from the email address and links it to this developer.
+                </p>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Workspace</label>
+                        <select class="form-select" @bind="_mappingForm.WorkspaceId">
+                            <option value="">Select workspace...</option>
+                            @foreach (var account in _clickUpAccounts)
+                            {
+                                <option value="@account.WorkspaceId">@account.Name (@account.WorkspaceId)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" @bind="_mappingForm.Email" placeholder="jane@example.com" />
+                    </div>
+                </div>
+                <div class="filter-actions mt-3">
+                    <button class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="CancelMappingForm">Cancel</button>
+                    <BusyButton CssClass="btn btn-primary" IsBusy="_isBusy" BusyText="Mapping..." OnClick="AddMappingByEmailAsync">Resolve &amp; Map</BusyButton>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator Text="Loading developers..." />
+    }
+    else if (_developers.Count == 0 && !HasActiveFilters)
+    {
+        <div class="developers-empty-state">
+            <div class="developers-empty-icon" aria-hidden="true">
+                <span class="bi-people"></span>
+            </div>
+            <h3>No developers registered</h3>
+            <p>Sync members from your connected ClickUp workspaces to build the registry automatically, or add one manually.</p>
+            <div class="developers-empty-actions">
+                <BusyButton CssClass="btn btn-outline-primary" IsBusy="_isBusy" BusyText="Syncing..." OnClick="SyncFromClickUpAsync" Disabled="@(_clickUpAccounts.Count == 0)">
+                    Sync from ClickUp
+                </BusyButton>
+                <button class="btn btn-primary" @onclick="ShowAddForm">Add Developer</button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="developers-stats">
+            <div class="developers-stat-card">
+                <span class="developers-stat-label">Total</span>
+                <span class="developers-stat-value">@_developers.Count</span>
+            </div>
+            <div class="developers-stat-card">
+                <span class="developers-stat-label">Active</span>
+                <span class="developers-stat-value developers-stat-value-success">@GetActiveCount()</span>
+            </div>
+            <div class="developers-stat-card">
+                <span class="developers-stat-label">QA</span>
+                <span class="developers-stat-value developers-stat-value-info">@GetQaCount()</span>
+            </div>
+            <div class="developers-stat-card">
+                <span class="developers-stat-label">Mapped</span>
+                <span class="developers-stat-value">@GetMappedCount()</span>
+            </div>
+        </div>
+
+        <div class="filter-card card mb-4 developers-toolbar">
+            <div class="card-body">
                 <div class="row g-2 align-items-end">
                     <div class="col-md-4 col-lg-3">
                         <label class="form-label mb-1" for="developerSearch">Search</label>
-                        <input id="developerSearch"
-                               type="search"
-                               class="form-control form-control-sm"
-                               placeholder="Name or email..."
-                               @bind="_developerSearch"
-                               @bind:event="oninput"
-                               @bind:after="LoadDevelopersAsync" />
+                        <div class="developers-search-wrap">
+                            <span class="bi-search developers-search-icon" aria-hidden="true"></span>
+                            <input id="developerSearch"
+                                   type="search"
+                                   class="form-control form-control-sm developers-search-input"
+                                   placeholder="Name or email..."
+                                   @bind="_developerSearch"
+                                   @bind:event="oninput"
+                                   @bind:after="LoadDevelopersAsync" />
+                        </div>
                     </div>
                     <div class="col-md-3 col-lg-2">
                         <label class="form-label mb-1" for="developerRoleFilter">Role</label>
                         <select id="developerRoleFilter" class="form-select form-select-sm" @bind="_roleFilter" @bind:after="LoadDevelopersAsync">
-                            <option value="all">All</option>
+                            <option value="all">All roles</option>
                             <option value="developer">Developer</option>
                             <option value="qa">QA</option>
                         </select>
@@ -153,126 +188,159 @@ else
                     <div class="col-md-3 col-lg-2">
                         <label class="form-label mb-1" for="developerStatusFilter">Status</label>
                         <select id="developerStatusFilter" class="form-select form-select-sm" @bind="_statusFilter" @bind:after="LoadDevelopersAsync">
-                            <option value="all">All</option>
+                            <option value="all">All statuses</option>
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
                         </select>
                     </div>
-                    <div class="col-md-5 col-lg-5">
-                        <p class="text-muted small mb-0">
-                            Showing @_developers.Count developer@(_developers.Count == 1 ? "" : "s")
+                    <div class="col-md-5 col-lg-5 d-flex align-items-end justify-content-lg-end">
+                        <div class="developers-filter-meta">
+                            <span class="filter-count-badge">
+                                @_developers.Count developer@(_developers.Count == 1 ? "" : "s")
+                            </span>
                             @if (HasActiveFilters)
                             {
-                                <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline" @onclick="ClearFilters">Clear filters</button>
+                                <button type="button" class="btn btn-link btn-sm developers-clear-filters" @onclick="ClearFilters">Clear filters</button>
                             }
-                        </p>
+                        </div>
                     </div>
                 </div>
             </div>
-            @if (_developers.Count == 0)
-            {
-                <div class="empty-state border-0">
-                    <h5>No developers match your filters</h5>
-                    <p class="text-muted mb-3">Try a different ClickUp account or search term.</p>
-                    @if (HasActiveFilters)
-                    {
-                        <button type="button" class="btn btn-outline-secondary" @onclick="ClearFilters">Clear filters</button>
-                    }
-                </div>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Reporting manager</th>
-                                <th>Status</th>
-                                <th>Workspace Mappings</th>
-                                <th class="text-end">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var developer in _developers)
-                            {
+        </div>
+
+        <div class="data-card card developers-table-card">
+            <div class="card-body p-0">
+                @if (_developers.Count == 0)
+                {
+                    <div class="developers-filter-empty">
+                        <span class="bi-funnel developers-filter-empty-icon" aria-hidden="true"></span>
+                        <h5>No developers match your filters</h5>
+                        <p class="text-muted mb-3">Try a different search term, role, or status.</p>
+                        @if (HasActiveFilters)
+                        {
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ClearFilters">Clear filters</button>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 developers-table">
+                            <thead>
                                 <tr>
-                                    <td><strong>@developer.Name</strong></td>
-                                    <td>@(developer.Email ?? "—")</td>
-                                    <td>
-                                        <select class="form-select form-select-sm"
-                                                style="width: auto; display: inline-block;"
-                                                disabled="@_isBusy"
-                                                value="@developer.WorkRole"
-                                                @onchange="e => SetWorkRoleAsync(developer, e.Value?.ToString())">
-                                            <option value="@WorkRole.Developer">Developer</option>
-                                            <option value="@WorkRole.QA">QA</option>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select class="form-select form-select-sm developer-manager-select"
-                                                disabled="@_isBusy"
-                                                value="@FormatManagerSelectValue(developer.ReportingManagerDeveloperId)"
-                                                @onchange="e => SetReportingManagerAsync(developer, e.Value?.ToString())">
-                                            <option value="">None</option>
-                                            @foreach (var manager in GetActiveDevelopersForManagerSelect(developer.Id))
-                                            {
-                                                <option value="@manager.Id">@manager.Name</option>
-                                            }
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <span class="badge @(developer.IsActive ? "text-bg-success" : "text-bg-secondary")">
-                                            @(developer.IsActive ? "Active" : "Inactive")
-                                        </span>
-                                    </td>
-                                    <td>
-                                        @if (developer.Mappings.Count == 0)
-                                        {
-                                            <span class="text-muted">None</span>
-                                        }
-                                        else
-                                        {
-                                            @foreach (var mapping in developer.Mappings)
-                                            {
-                                                <span class="badge text-bg-light text-dark me-1 mb-1" title="ClickUp User ID: @mapping.ClickUpUserId">
-                                                    @mapping.AccountName
+                                    <th>Developer</th>
+                                    <th>Role</th>
+                                    <th>Reporting manager</th>
+                                    <th>Status</th>
+                                    <th>Workspaces</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var developer in _developers)
+                                {
+                                    <tr class="@(developer.IsActive ? null : "developers-row-inactive")">
+                                        <td>
+                                            <div class="developers-person">
+                                                <span class="developers-avatar @GetRoleAvatarClass(developer.WorkRole)" aria-hidden="true">
+                                                    @GetInitials(developer.Name)
                                                 </span>
-                                            }
-                                        }
-                                    </td>
-                                    <td class="text-end">
-                                        <div class="btn-group-actions">
-                                            <button class="btn btn-sm btn-outline-primary" disabled="@_isBusy" @onclick="() => ShowMappingForm(developer)">Map Workspace</button>
-                                            @if (developer.IsActive)
+                                                <div class="developers-person-meta">
+                                                    <span class="developers-person-name">@developer.Name</span>
+                                                    @if (!string.IsNullOrWhiteSpace(developer.Email))
+                                                    {
+                                                        <span class="developers-person-email">@developer.Email</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="developers-person-email text-muted">No email</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <select class="form-select form-select-sm developers-role-select @GetRoleSelectClass(developer.WorkRole)"
+                                                    disabled="@_isBusy"
+                                                    value="@developer.WorkRole"
+                                                    @onchange="e => SetWorkRoleAsync(developer, e.Value?.ToString())">
+                                                <option value="@WorkRole.Developer">Developer</option>
+                                                <option value="@WorkRole.QA">QA</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select class="form-select form-select-sm developer-manager-select"
+                                                    disabled="@_isBusy"
+                                                    value="@FormatManagerSelectValue(developer.ReportingManagerDeveloperId)"
+                                                    @onchange="e => SetReportingManagerAsync(developer, e.Value?.ToString())">
+                                                <option value="">None</option>
+                                                @foreach (var manager in GetActiveDevelopersForManagerSelect(developer.Id, developer))
+                                                {
+                                                    <option value="@manager.Id">@manager.Name</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <span class="developers-status @(developer.IsActive ? "developers-status-active" : "developers-status-inactive")">
+                                                <span class="status-dot @(developer.IsActive ? "status-dot-active" : "status-dot-inactive")" aria-hidden="true"></span>
+                                                @(developer.IsActive ? "Active" : "Inactive")
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (developer.Mappings.Count == 0)
                                             {
-                                                <button class="btn btn-sm btn-outline-secondary" disabled="@_isBusy" @onclick="() => SetDeveloperActiveAsync(developer, false)" title="Mark inactive without affecting reports or analytics">
-                                                    Set Inactive
-                                                </button>
+                                                <span class="developers-unmapped">Not mapped</span>
                                             }
                                             else
                                             {
-                                                <button class="btn btn-sm btn-outline-success" disabled="@_isBusy" @onclick="() => SetDeveloperActiveAsync(developer, true)">
-                                                    Set Active
-                                                </button>
+                                                <div class="developers-mappings">
+                                                    @foreach (var mapping in developer.Mappings)
+                                                    {
+                                                        <span class="developer-mapping-badge" title="ClickUp User ID: @mapping.ClickUpUserId">
+                                                            <span class="bi-link-45deg" aria-hidden="true"></span>
+                                                            @mapping.AccountName
+                                                        </span>
+                                                    }
+                                                </div>
                                             }
-                                            <button class="btn btn-sm btn-outline-danger" disabled="@_isBusy" @onclick="() => DeleteDeveloperAsync(developer.Id)">Delete</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="btn-group-actions">
+                                                <button class="btn btn-sm btn-outline-primary" disabled="@_isBusy" @onclick="() => ShowMappingForm(developer)" title="Map to ClickUp workspace">
+                                                    <span class="bi-link-45deg" aria-hidden="true"></span>
+                                                    Map
+                                                </button>
+                                                @if (developer.IsActive)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-secondary" disabled="@_isBusy" @onclick="() => SetDeveloperActiveAsync(developer, false)" title="Mark inactive without affecting reports or analytics">
+                                                        Deactivate
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-sm btn-outline-success" disabled="@_isBusy" @onclick="() => SetDeveloperActiveAsync(developer, true)">
+                                                        Activate
+                                                    </button>
+                                                }
+                                                <button class="btn btn-sm btn-outline-danger" disabled="@_isBusy" @onclick="() => DeleteDeveloperAsync(developer.Id)" title="Delete developer">
+                                                    <span class="bi-trash" aria-hidden="true"></span>
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
         </div>
-    </div>
-}
+    }
+</div>
 
 @code {
     private readonly List<DeveloperDto> _developers = [];
+    private readonly List<DeveloperDto> _managerCandidates = [];
     private readonly List<ClickUpAccountDto> _clickUpAccounts = [];
     private CreateDeveloperFormModel _newDeveloper = new();
     private MappingFormModel _mappingForm = new();
@@ -289,7 +357,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await Task.WhenAll(LoadDevelopersAsync(), LoadClickUpAccountsAsync());
+        await Task.WhenAll(LoadDevelopersAsync(), LoadClickUpAccountsAsync(), LoadManagerCandidatesAsync());
     }
 
     private async Task LoadClickUpAccountsAsync()
@@ -331,6 +399,27 @@ else
         {
             _isLoading = false;
         }
+    }
+
+    private async Task LoadManagerCandidatesAsync()
+    {
+        try
+        {
+            var developers = await DeveloperApi.GetRegistryDevelopersAsync(
+                new DeveloperRegistryQuery(Status: "active"));
+            _managerCandidates.Clear();
+            _managerCandidates.AddRange(developers);
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = $"Failed to load reporting manager options: {ex.Message}";
+        }
+    }
+
+    private async Task ReloadDevelopersAndManagerCandidatesAsync()
+    {
+        await Task.WhenAll(LoadDevelopersAsync(), LoadManagerCandidatesAsync());
     }
 
     private void ShowAddForm()
@@ -397,7 +486,7 @@ else
             _mappingForm = new MappingFormModel();
             _isError = false;
             _message = "Developer mapped to ClickUp workspace successfully.";
-            await LoadDevelopersAsync();
+            await ReloadDevelopersAndManagerCandidatesAsync();
         }
         catch (Exception ex)
         {
@@ -421,7 +510,7 @@ else
             _showAddForm = false;
             _isError = false;
             _message = "Developer created successfully.";
-            await LoadDevelopersAsync();
+            await ReloadDevelopersAndManagerCandidatesAsync();
         }
         catch (Exception ex)
         {
@@ -495,7 +584,7 @@ else
             _message = result is null
                 ? $"Sync from {accountLabel} completed."
                 : $"Sync from {accountLabel} complete: {result.DevelopersCreated} created, {result.DevelopersUpdated} updated, {result.MappingsAdded} mappings added.";
-            await LoadDevelopersAsync();
+            await ReloadDevelopersAndManagerCandidatesAsync();
         }
         catch (Exception ex)
         {
@@ -528,7 +617,7 @@ else
             _message = isActive
                 ? $"{developer.Name} marked active."
                 : $"{developer.Name} marked inactive. Reports and analytics are unchanged.";
-            await LoadDevelopersAsync();
+            await ReloadDevelopersAndManagerCandidatesAsync();
         }
         catch (Exception ex)
         {
@@ -616,13 +705,58 @@ else
         }
     }
 
-    private IEnumerable<DeveloperDto> GetActiveDevelopersForManagerSelect(Guid? excludeDeveloperId = null) =>
-        _developers
-            .Where(d => d.IsActive && d.Id != excludeDeveloperId)
-            .OrderBy(d => d.Name);
+    private IEnumerable<DeveloperDto> GetActiveDevelopersForManagerSelect(
+        Guid? excludeDeveloperId = null,
+        DeveloperDto? forDeveloper = null)
+    {
+        var candidates = _managerCandidates
+            .Where(d => d.Id != excludeDeveloperId)
+            .ToList();
+
+        if (forDeveloper?.ReportingManagerDeveloperId is Guid managerId
+            && candidates.All(d => d.Id != managerId)
+            && !string.IsNullOrWhiteSpace(forDeveloper.ReportingManagerName))
+        {
+            candidates.Add(new DeveloperDto(
+                managerId,
+                forDeveloper.ReportingManagerName,
+                null,
+                false,
+                default,
+                [],
+                WorkRole.Developer));
+        }
+
+        return candidates.OrderBy(d => d.Name);
+    }
 
     private static string FormatManagerSelectValue(Guid? managerId) =>
         managerId?.ToString() ?? string.Empty;
+
+    private int GetActiveCount() => _developers.Count(d => d.IsActive);
+
+    private int GetQaCount() => _developers.Count(d => d.WorkRole == WorkRole.QA);
+
+    private int GetMappedCount() => _developers.Count(d => d.Mappings.Count > 0);
+
+    private static string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "?";
+        }
+
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return parts.Length >= 2
+            ? $"{char.ToUpperInvariant(parts[0][0])}{char.ToUpperInvariant(parts[1][0])}"
+            : char.ToUpperInvariant(parts[0][0]).ToString();
+    }
+
+    private static string GetRoleAvatarClass(WorkRole role) =>
+        role == WorkRole.QA ? "developers-avatar-qa" : "developers-avatar-dev";
+
+    private static string GetRoleSelectClass(WorkRole role) =>
+        role == WorkRole.QA ? "developers-role-select-qa" : "developers-role-select-dev";
 
     private async Task DeleteDeveloperAsync(Guid id)
     {
@@ -634,7 +768,7 @@ else
             await DeveloperApi.DeleteDeveloperAsync(id);
             _isError = false;
             _message = "Developer deleted.";
-            await LoadDevelopersAsync();
+            await ReloadDevelopersAndManagerCandidatesAsync();
         }
         catch (Exception ex)
         {

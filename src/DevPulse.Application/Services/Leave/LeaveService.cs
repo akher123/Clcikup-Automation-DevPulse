@@ -13,6 +13,7 @@ public sealed class LeaveService : ILeaveService
     private readonly ILeaveTelegramService _telegramService;
     private readonly ILeaveTelegramNotificationQueue _telegramNotificationQueue;
     private readonly IUserEmailLookup _userEmailLookup;
+    private readonly IUserDeveloperResolver _userDeveloperResolver;
 
     public LeaveService(
         ILeaveRepository leaveRepository,
@@ -20,7 +21,8 @@ public sealed class LeaveService : ILeaveService
         LeaveDayCalculator dayCalculator,
         ILeaveTelegramService telegramService,
         ILeaveTelegramNotificationQueue telegramNotificationQueue,
-        IUserEmailLookup userEmailLookup)
+        IUserEmailLookup userEmailLookup,
+        IUserDeveloperResolver userDeveloperResolver)
     {
         _leaveRepository = leaveRepository;
         _developerRepository = developerRepository;
@@ -28,6 +30,7 @@ public sealed class LeaveService : ILeaveService
         _telegramService = telegramService;
         _telegramNotificationQueue = telegramNotificationQueue;
         _userEmailLookup = userEmailLookup;
+        _userDeveloperResolver = userDeveloperResolver;
     }
 
     public async Task<LeaveMeDto> GetMeAsync(string userEmail, CancellationToken cancellationToken = default)
@@ -555,15 +558,8 @@ public sealed class LeaveService : ILeaveService
         return Result.Success();
     }
 
-    private async Task<Developer?> ResolveDeveloperAsync(string userEmail, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(userEmail))
-        {
-            return null;
-        }
-
-        return await _developerRepository.GetByEmailIgnoreCaseAsync(userEmail, cancellationToken);
-    }
+    private Task<Developer?> ResolveDeveloperAsync(string userEmail, CancellationToken cancellationToken) =>
+        _userDeveloperResolver.ResolveAsync(userEmail, cancellationToken);
 
     private static string BuildSubmittedMessage(LeaveApplication app) =>
         $"""

@@ -69,6 +69,7 @@ public static class DependencyInjection
         services.AddScoped<ILeaveRepository, LeaveRepository>();
         services.AddScoped<IAttendanceRepository, AttendanceRepository>();
         services.AddScoped<IUserEmailLookup, UserEmailLookup>();
+        services.AddScoped<IUserDeveloperResolver, UserDeveloperResolver>();
         services.AddScoped<ILeaveTelegramService, LeaveTelegramService>();
         services.AddSingleton<LeaveTelegramNotificationQueue>();
         services.AddSingleton<ILeaveTelegramNotificationQueue>(sp =>

@@ -13,18 +13,23 @@ public sealed record UserDto(
     string DisplayName,
     string Role,
     bool IsActive,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    Guid? DeveloperId = null,
+    string? DeveloperName = null);
 
 public sealed record CreateUserRequest(
     string Email,
     string Password,
     string DisplayName,
-    string Role);
+    string Role,
+    Guid? DeveloperId = null,
+    bool CreateDeveloper = false);
 
 public sealed record UpdateUserRequest(
     string DisplayName,
     string Role,
-    bool IsActive);
+    bool IsActive,
+    Guid? DeveloperId = null);
 
 public sealed record ChangePasswordRequest(string NewPassword);
 

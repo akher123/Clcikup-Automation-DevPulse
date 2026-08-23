@@ -43,6 +43,14 @@ public sealed class DevPulseDbContext : IdentityDbContext<ApplicationUser, Ident
         modelBuilder.Entity<ApplicationUser>(entity =>
         {
             entity.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
+            entity.HasIndex(x => x.DeveloperId)
+                .IsUnique()
+                .HasFilter("[DeveloperId] IS NOT NULL");
+
+            entity.HasOne(x => x.Developer)
+                .WithMany()
+                .HasForeignKey(x => x.DeveloperId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<ClickUpAccount>(entity =>

@@ -63,6 +63,14 @@ public sealed class AuthService : IAuthService
             : Result.Failure(result.Errors.Select(e => e.Description));
     }
 
-    internal static UserDto MapToDto(ApplicationUser user, string role) =>
-        new(user.Id, user.Email ?? string.Empty, user.DisplayName, role, user.IsActive, user.CreatedAtUtc);
+    internal static UserDto MapToDto(ApplicationUser user, string role, string? developerName = null) =>
+        new(
+            user.Id,
+            user.Email ?? string.Empty,
+            user.DisplayName,
+            role,
+            user.IsActive,
+            user.CreatedAtUtc,
+            user.DeveloperId,
+            developerName);
 }
