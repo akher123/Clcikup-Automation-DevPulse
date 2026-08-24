@@ -5,7 +5,7 @@ public interface IDeveloperRepository
     Task<IReadOnlyList<Developer>> GetAllAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Returns developers with at least one mapping to an active ClickUp account, with optional registry filters.
+    /// Returns all developers for the admin registry, with optional filters (ClickUp account, status, role, search).
     /// </summary>
     Task<IReadOnlyList<Developer>> GetRegistryAsync(
         Guid? clickUpAccountId = null,

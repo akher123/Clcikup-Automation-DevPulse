@@ -164,7 +164,7 @@
                                 <div class="attendance-today-punch">
                                     <FingerprintPunchButton NextAction="_me.NextAction"
                                                           IsDisabled="!CanUsePunchButton()"
-                                                          PunchOutLocked="@IsPunchOutLocked()"
+                                                          IsLocked="@IsPunchLocked()"
                                                           IsBusy="_isPunching"
                                                           Hint="@GetPunchHint()"
                                                           OnPunchComplete="PunchAsync" />
@@ -417,6 +417,11 @@
             return false;
         }
 
+        if (_me.NextAction == AttendanceNextActionDto.PunchIn && !IsPunchInAllowed())
+        {
+            return false;
+        }
+
         if (_me.NextAction == AttendanceNextActionDto.PunchOut && !IsPunchOutAllowed())
         {
             return false;
@@ -425,12 +430,33 @@
         return true;
     }
 
-    private bool IsPunchOutLocked() =>
-        _me.NextAction == AttendanceNextActionDto.PunchOut && !IsPunchOutAllowed();
+    private bool IsPunchLocked() =>
+        (_me.NextAction == AttendanceNextActionDto.PunchIn && !IsPunchInAllowed())
+        || (_me.NextAction == AttendanceNextActionDto.PunchOut && !IsPunchOutAllowed());
+
+    private bool IsPunchInAllowed()
+    {
+        if (_me.PunchInEarliestTime is null)
+        {
+            return _me.CanPunchIn;
+        }
+
+        try
+        {
+            var tz = TimeZoneInfo.FindSystemTimeZoneById(_me.OfficeTimeZoneId);
+            var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+            var currentTime = TimeOnly.FromDateTime(localNow);
+            return currentTime >= _me.PunchInEarliestTime.Value && _me.CanPunchIn;
+        }
+        catch
+        {
+            return _me.CanPunchIn;
+        }
+    }
 
     private bool IsPunchOutAllowed()
     {
-        if (_me.BufferEndTime is null)
+        if (_me.PunchOutEarliestTime is null)
         {
             return _me.CanPunchOut;
         }
@@ -439,7 +465,7 @@
         {
             var tz = TimeZoneInfo.FindSystemTimeZoneById(_me.OfficeTimeZoneId);
             var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
-            return TimeOnly.FromDateTime(localNow) >= _me.BufferEndTime.Value;
+            return TimeOnly.FromDateTime(localNow) >= _me.PunchOutEarliestTime.Value && _me.CanPunchOut;
         }
         catch
         {
@@ -447,14 +473,14 @@
         }
     }
 
-    private string FormatBufferEndTime()
+    private string FormatPunchTime(TimeOnly? time)
     {
-        if (_me.BufferEndTime is null)
+        if (time is null)
         {
-            return "buffer end time";
+            return "the configured time";
         }
 
-        return DateTime.Today.Add(_me.BufferEndTime.Value.ToTimeSpan()).ToString("h:mm tt");
+        return DateTime.Today.Add(time.Value.ToTimeSpan()).ToString("h:mm tt");
     }
 
     private RenderFragment AdminFilterBar(string title, Func<Task> loadAction) => @<div class="attendance-filter-bar card form-card">
@@ -639,9 +665,11 @@
 
     private string GetPunchHint() => _me.NextAction switch
     {
+        AttendanceNextActionDto.PunchIn when !IsPunchInAllowed() =>
+            $"Punch in opens at {FormatPunchTime(_me.PunchInEarliestTime)}.",
         AttendanceNextActionDto.PunchIn => "Press and hold the fingerprint for about one second.",
         AttendanceNextActionDto.PunchOut when !IsPunchOutAllowed() =>
-            $"Punch out is available after {FormatBufferEndTime()}.",
+            $"Punch out is available after {FormatPunchTime(_me.PunchOutEarliestTime)}.",
         AttendanceNextActionDto.PunchOut => "Hold again when you are ready to leave.",
         AttendanceNextActionDto.Complete => "You have already punched in and out today.",
         _ => string.Empty

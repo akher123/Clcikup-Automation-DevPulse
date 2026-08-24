@@ -23,6 +23,16 @@ public class AttendanceSettings
     /// </summary>
     public TimeOnly BufferEndTime { get; set; } = new(17, 45);
 
+    /// <summary>
+    /// How many minutes before work start punch in becomes available.
+    /// </summary>
+    public int PunchInAllowMinutesBeforeWorkStart { get; set; } = 60;
+
+    /// <summary>
+    /// How many minutes after work end punch out becomes available.
+    /// </summary>
+    public int PunchOutAllowMinutesAfterWorkEnd { get; set; } = 120;
+
     public string OfficeTimeZoneId { get; set; } = "Asia/Dhaka";
 
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;

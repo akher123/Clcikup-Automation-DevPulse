@@ -465,6 +465,16 @@ code {
     overflow: hidden;
 }
 
+.searchable-select-open {
+    z-index: 1050;
+}
+
+/* Hero sections clip dropdowns via overflow:hidden — lift stacking when open */
+.analytics-hero:has(.searchable-select-open) {
+    overflow: visible;
+    z-index: 100;
+}
+
 .searchable-select-search {
     border-radius: 0;
     border-left: none;
@@ -2291,7 +2301,17 @@ code {
 }
 
 .holiday-hero {
-    margin-bottom: 1rem;
+    background:
+        radial-gradient(ellipse 55% 80% at 88% 20%, rgba(251, 113, 133, 0.28), transparent 55%),
+        radial-gradient(ellipse 40% 60% at 8% 85%, rgba(251, 191, 36, 0.14), transparent 50%),
+        linear-gradient(135deg, #881337 0%, #be123c 40%, #c2410c 100%);
+    align-items: center;
+    margin-bottom: 1.25rem;
+}
+
+.holiday-btn-icon {
+    margin-right: 0.35rem;
+    opacity: 0.92;
 }
 
 .holiday-stats {
@@ -2302,14 +2322,67 @@ code {
 }
 
 .holiday-stat-card {
+    position: relative;
     background: var(--dp-surface);
     border: 1px solid var(--dp-border);
     border-radius: var(--dp-radius-lg);
     box-shadow: var(--dp-shadow-sm);
-    padding: 0.9rem 1rem;
+    padding: 0.95rem 1rem 0.95rem 3.5rem;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.2rem;
+    overflow: hidden;
+}
+
+.holiday-stat-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: var(--dp-radius-lg) 0 0 var(--dp-radius-lg);
+}
+
+.holiday-stat-card-holidays::before {
+    background: linear-gradient(180deg, #fb7185, #e11d48);
+}
+
+.holiday-stat-card-days::before {
+    background: linear-gradient(180deg, #fbbf24, #d97706);
+}
+
+.holiday-stat-card-next::before {
+    background: linear-gradient(180deg, #38bdf8, #0284c7);
+}
+
+.holiday-stat-icon {
+    position: absolute;
+    left: 0.95rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--dp-radius);
+    font-size: 0.9375rem;
+}
+
+.holiday-stat-card-holidays .holiday-stat-icon {
+    background: #fff1f2;
+    color: #e11d48;
+}
+
+.holiday-stat-card-days .holiday-stat-icon {
+    background: #fffbeb;
+    color: #d97706;
+}
+
+.holiday-stat-card-next .holiday-stat-icon {
+    background: #eff6ff;
+    color: #0284c7;
 }
 
 .holiday-stat-label {
@@ -2329,66 +2402,86 @@ code {
 }
 
 .holiday-stat-value-text {
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
     font-weight: 600;
-    color: var(--dp-primary-hover);
+    color: var(--dp-text);
+    line-height: 1.35;
 }
 
 .holiday-nav-card {
     margin-bottom: 1.25rem;
+    border-radius: var(--dp-radius-xl);
 }
 
 .holiday-nav-card .card-body {
-    padding: 0.85rem 1.1rem;
+    padding: 0.9rem 1.15rem;
 }
 
 .holiday-toolbar {
     display: flex;
     align-items: center;
-    gap: 0.625rem;
+    gap: 0.75rem;
     margin-bottom: 0;
     flex-wrap: wrap;
 }
 
+.holiday-year-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.2rem;
+    border-radius: 999px;
+    border: 1px solid var(--dp-border);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: var(--dp-shadow-sm);
+}
+
 .holiday-year-btn {
-    width: 2.125rem;
-    height: 2.125rem;
+    width: 2rem;
+    height: 2rem;
     padding: 0;
     line-height: 1;
-    font-size: 1.125rem;
-    border: 1px solid var(--dp-border);
-    border-radius: var(--dp-radius);
-    background: var(--dp-surface);
+    font-size: 0.875rem;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
     color: var(--dp-text-secondary);
     transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .holiday-year-btn:hover {
-    border-color: var(--dp-primary-muted);
     color: var(--dp-primary);
     background: var(--dp-primary-light);
 }
 
 .holiday-year-label {
-    min-width: 4.5rem;
+    min-width: 4.75rem;
     text-align: center;
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 700;
     color: var(--dp-text);
     letter-spacing: -0.02em;
+    padding: 0 0.35rem;
 }
 
 .holiday-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem 1rem;
+    gap: 0.75rem 1.25rem;
     align-items: center;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: var(--dp-bg);
+    border: 1px solid var(--dp-border);
 }
 
 .holiday-legend-item {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.45rem;
     font-size: 0.75rem;
     font-weight: 500;
     color: var(--dp-text-secondary);
@@ -2399,11 +2492,12 @@ code {
     height: 0.875rem;
     border-radius: var(--dp-radius-sm);
     border: 1px solid transparent;
+    flex-shrink: 0;
 }
 
 .holiday-legend-holiday {
-    background: var(--dp-primary-light);
-    border-color: rgba(var(--dp-primary-rgb), 0.25);
+    background: rgba(var(--dp-primary-rgb), 0.16);
+    border-color: rgba(var(--dp-primary-rgb), 0.28);
 }
 
 .holiday-legend-today {
@@ -2417,7 +2511,7 @@ code {
 
 .holiday-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+    grid-template-columns: minmax(0, 1fr) minmax(19rem, 23rem);
     gap: 1.25rem;
     align-items: start;
 }
@@ -2433,38 +2527,85 @@ code {
     border: 1px solid var(--dp-border);
     border-radius: var(--dp-radius-xl);
     box-shadow: var(--dp-shadow-sm);
-    padding: 1rem;
+    padding: 1.1rem 1.15rem 1.15rem;
     overflow: visible;
+    position: relative;
+}
+
+.holiday-quarter::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 1rem;
+    bottom: 1rem;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+}
+
+.holiday-quarter-q1::before {
+    background: linear-gradient(180deg, #38bdf8, #0284c7);
+}
+
+.holiday-quarter-q2::before {
+    background: linear-gradient(180deg, #4ade80, #059669);
+}
+
+.holiday-quarter-q3::before {
+    background: linear-gradient(180deg, #fbbf24, #d97706);
+}
+
+.holiday-quarter-q4::before {
+    background: linear-gradient(180deg, #fb7185, #e11d48);
 }
 
 .holiday-quarter-header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    margin-bottom: 0.875rem;
-    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.85rem;
     border-bottom: 1px solid var(--dp-border);
+}
+
+.holiday-quarter-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+    flex-wrap: wrap;
 }
 
 .holiday-quarter-title {
     margin: 0;
-    font-size: 0.9375rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--dp-text);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
 }
 
 .holiday-quarter-meta {
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     color: var(--dp-text-muted);
+}
+
+.holiday-quarter-count {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--dp-text-muted);
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    background: var(--dp-bg);
+    border: 1px solid var(--dp-border);
+    white-space: nowrap;
 }
 
 .holiday-quarter-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.875rem;
+    gap: 1rem;
     overflow: visible;
 }
 
@@ -2473,42 +2614,47 @@ code {
     border: 1px solid var(--dp-border);
     border-radius: var(--dp-radius-lg);
     box-shadow: var(--dp-shadow-sm);
-    padding: 0.75rem 0.625rem 0.625rem;
+    padding: 0.85rem 0.7rem 0.7rem;
     overflow: visible;
     position: relative;
     z-index: 0;
-    transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
 
 .holiday-month-card:hover {
     box-shadow: var(--dp-shadow-md);
+    border-color: var(--dp-border-strong);
 }
 
 .holiday-month-card-current {
-    border-color: rgba(var(--dp-primary-rgb), 0.35);
-    box-shadow: 0 0 0 1px rgba(var(--dp-primary-rgb), 0.08), var(--dp-shadow-sm);
+    border-color: rgba(var(--dp-primary-rgb), 0.4);
+    box-shadow: 0 0 0 1px rgba(var(--dp-primary-rgb), 0.1), var(--dp-shadow-sm);
+    background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
 }
 
 .holiday-month-card-has-holidays {
-    border-color: rgba(var(--dp-primary-rgb), 0.18);
+    border-color: rgba(var(--dp-primary-rgb), 0.22);
 }
 
 .holiday-month-card:has(.holiday-day-has-tooltip:hover),
 .holiday-month-card:has(.holiday-day-has-tooltip:focus-visible) {
     z-index: 5;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: var(--dp-shadow-md);
 }
 
 .holiday-month-header {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    margin-bottom: 0.55rem;
+    gap: 0.45rem;
+    margin-bottom: 0.65rem;
+    padding-bottom: 0.45rem;
+    border-bottom: 1px solid rgba(229, 231, 235, 0.85);
 }
 
 .holiday-month-name {
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     font-weight: 700;
     color: var(--dp-text);
     letter-spacing: 0.01em;
@@ -2518,15 +2664,15 @@ code {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 1.125rem;
-    height: 1.125rem;
-    padding: 0 0.3rem;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.35rem;
     border-radius: 999px;
     font-size: 0.625rem;
     font-weight: 700;
-    color: var(--dp-primary-hover);
-    background: var(--dp-primary-light);
-    border: 1px solid rgba(var(--dp-primary-rgb), 0.2);
+    color: #fff;
+    background: var(--dp-primary);
+    box-shadow: 0 1px 2px rgba(var(--dp-primary-rgb), 0.25);
 }
 
 .holiday-month-card-current .holiday-month-name {
@@ -2537,26 +2683,26 @@ code {
 .holiday-days {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 0.125rem;
+    gap: 0.2rem;
     overflow: visible;
 }
 
 .holiday-weekday {
     font-size: 0.625rem;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
     color: var(--dp-text-muted);
     text-align: center;
-    padding-bottom: 0.25rem;
+    padding-bottom: 0.35rem;
 }
 
 .holiday-day {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 1.75rem;
-    font-size: 0.6875rem;
+    min-height: 2rem;
+    font-size: 0.75rem;
     font-weight: 500;
     color: var(--dp-text-secondary);
     border-radius: var(--dp-radius-sm);
@@ -2640,7 +2786,8 @@ button.holiday-day {
 }
 
 button.holiday-day:hover {
-    border-color: var(--dp-primary-muted);
+    border-color: rgba(var(--dp-primary-rgb), 0.35);
+    transform: scale(1.05);
 }
 
 .holiday-day-empty {
@@ -2649,54 +2796,61 @@ button.holiday-day:hover {
 
 .holiday-day-weekend:not(.holiday-day-holiday) {
     color: var(--dp-text-muted);
+    background: rgba(248, 250, 252, 0.9);
 }
 
 .holiday-day-today:not(.holiday-day-holiday) {
-    box-shadow: inset 0 0 0 1.5px var(--dp-primary);
+    box-shadow: inset 0 0 0 2px var(--dp-primary);
+    color: var(--dp-primary-hover);
+    font-weight: 700;
+    background: rgba(var(--dp-primary-rgb), 0.06);
+}
+
+.holiday-day-holiday {
+    background: rgba(var(--dp-primary-rgb), 0.14);
     color: var(--dp-primary-hover);
     font-weight: 600;
 }
 
-.holiday-day-holiday {
-    background: var(--dp-primary-light);
-    color: var(--dp-primary-hover);
-    font-weight: 600;
+.holiday-day-holiday:not(.holiday-day-range-start):not(.holiday-day-range-end):not(.holiday-day-range-single) {
+    border-radius: 0;
 }
 
 .holiday-day-range-start {
     border-top-left-radius: var(--dp-radius);
     border-bottom-left-radius: var(--dp-radius);
-    background: linear-gradient(90deg, rgba(var(--dp-primary-rgb), 0.22), var(--dp-primary-light));
+    background: linear-gradient(90deg, rgba(var(--dp-primary-rgb), 0.28), rgba(var(--dp-primary-rgb), 0.14));
 }
 
 .holiday-day-range-end {
     border-top-right-radius: var(--dp-radius);
     border-bottom-right-radius: var(--dp-radius);
-    background: linear-gradient(90deg, var(--dp-primary-light), rgba(var(--dp-primary-rgb), 0.22));
+    background: linear-gradient(90deg, rgba(var(--dp-primary-rgb), 0.14), rgba(var(--dp-primary-rgb), 0.28));
 }
 
 .holiday-day-range-single {
     border-radius: var(--dp-radius);
-    background: rgba(var(--dp-primary-rgb), 0.18);
+    background: rgba(var(--dp-primary-rgb), 0.2);
 }
 
 .holiday-day-selected {
-    box-shadow: inset 0 0 0 2px var(--dp-primary-hover);
-    background: var(--dp-primary);
+    box-shadow: inset 0 0 0 2px #fff, 0 0 0 2px var(--dp-primary-hover);
+    background: var(--dp-primary) !important;
     color: #ffffff;
     font-weight: 700;
+    z-index: 1;
 }
 
 .holiday-day-selected.holiday-day-range-start {
-    background: linear-gradient(90deg, var(--dp-primary-hover), var(--dp-primary));
+    background: linear-gradient(90deg, var(--dp-primary-hover), var(--dp-primary)) !important;
 }
 
 .holiday-day-selected.holiday-day-range-end {
-    background: linear-gradient(90deg, var(--dp-primary), var(--dp-primary-hover));
+    background: linear-gradient(90deg, var(--dp-primary), var(--dp-primary-hover)) !important;
 }
 
 .holiday-day-selected.holiday-day-range-single {
-    background: var(--dp-primary-hover);
+    background: var(--dp-primary-hover) !important;
 }
 
 .holiday-list-panel {
@@ -2705,12 +2859,32 @@ button.holiday-day:hover {
     overflow: hidden;
     border-radius: var(--dp-radius-xl);
     box-shadow: var(--dp-shadow-md);
+    border: 1px solid var(--dp-border);
 }
 
 .holiday-list-header {
-    padding: 1rem 1.15rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 1.05rem 1.15rem;
     border-bottom: 1px solid var(--dp-border);
-    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    background:
+        radial-gradient(ellipse 80% 120% at 100% 0%, rgba(var(--dp-primary-rgb), 0.08), transparent 55%),
+        linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.holiday-list-header-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--dp-radius-lg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--dp-primary-light);
+    color: var(--dp-primary-hover);
+    font-size: 1.125rem;
+    flex-shrink: 0;
+    border: 1px solid rgba(var(--dp-primary-rgb), 0.15);
 }
 
 .holiday-list-title {
@@ -2728,7 +2902,8 @@ button.holiday-day:hover {
 .holiday-list-scroll {
     max-height: calc(100vh - var(--dp-header-height) - 11rem);
     overflow-y: auto;
-    padding: 0.75rem 1rem 1rem;
+    padding: 0.85rem 1rem 1rem;
+    background: var(--dp-bg);
 }
 
 .holiday-list-group + .holiday-list-group {
@@ -2743,7 +2918,8 @@ button.holiday-day:hover {
     text-transform: uppercase;
     letter-spacing: 0.07em;
     color: var(--dp-text-muted);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.55rem;
+    padding-left: 0.15rem;
 }
 
 .holiday-list-item {
@@ -2751,7 +2927,7 @@ button.holiday-day:hover {
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: start;
     gap: 0.75rem;
-    padding: 0.75rem;
+    padding: 0.8rem;
     margin-bottom: 0.5rem;
     border-radius: var(--dp-radius-lg);
     border: 1px solid var(--dp-border);
@@ -2761,40 +2937,61 @@ button.holiday-day:hover {
 }
 
 .holiday-list-item:hover {
-    border-color: rgba(var(--dp-primary-rgb), 0.25);
+    border-color: rgba(var(--dp-primary-rgb), 0.28);
     box-shadow: var(--dp-shadow-sm);
     transform: translateY(-1px);
 }
 
 .holiday-list-date-badge {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-width: 2.75rem;
-    min-height: 2.75rem;
-    padding: 0.25rem 0.35rem;
-    border-radius: var(--dp-radius);
-    background: var(--dp-primary-light);
+    min-width: 3rem;
+    min-height: 3rem;
+    padding: 0.3rem 0.4rem;
+    border-radius: var(--dp-radius-lg);
+    background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
     color: var(--dp-primary-hover);
-    font-size: 0.6875rem;
-    font-weight: 700;
-    line-height: 1.15;
+    line-height: 1.1;
     text-align: center;
+    border: 1px solid rgba(var(--dp-primary-rgb), 0.15);
+    flex-shrink: 0;
+}
+
+.holiday-list-date-month {
+    font-size: 0.5625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    opacity: 0.85;
+}
+
+.holiday-list-date-day {
+    font-size: 0.9375rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.holiday-list-date-span {
+    font-size: 0.625rem;
+    font-weight: 700;
+    line-height: 1.2;
 }
 
 .holiday-list-item-selected {
-    background: rgba(var(--dp-primary-rgb), 0.1);
+    background: rgba(var(--dp-primary-rgb), 0.08);
     border-color: rgba(var(--dp-primary-rgb), 0.45);
-    box-shadow: inset 0 0 0 1px rgba(var(--dp-primary-rgb), 0.12);
+    box-shadow: inset 0 0 0 1px rgba(var(--dp-primary-rgb), 0.1);
 }
 
 .holiday-list-item-selected .holiday-list-date-badge {
-    background: var(--dp-primary);
+    background: linear-gradient(180deg, var(--dp-primary) 0%, var(--dp-primary-hover) 100%);
     color: #ffffff;
+    border-color: transparent;
 }
 
 .holiday-list-item-selected:hover {
-    background: rgba(var(--dp-primary-rgb), 0.14);
+    background: rgba(var(--dp-primary-rgb), 0.12);
 }
 
 .holiday-list-item-selected .holiday-list-name {
@@ -2805,6 +3002,13 @@ button.holiday-day:hover {
     min-width: 0;
 }
 
+.holiday-list-name-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
 .holiday-list-name {
     font-size: 0.875rem;
     font-weight: 700;
@@ -2812,18 +3016,33 @@ button.holiday-day:hover {
     line-height: 1.3;
 }
 
+.holiday-duration-chip {
+    flex-shrink: 0;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #0369a1;
+    background: #e0f2fe;
+    border: 1px solid #bae6fd;
+    border-radius: 999px;
+    padding: 0.15rem 0.45rem;
+    white-space: nowrap;
+}
+
 .holiday-list-range {
     font-size: 0.75rem;
     font-weight: 500;
     color: var(--dp-text-secondary);
-    margin-top: 0.15rem;
+    margin-top: 0.2rem;
 }
 
 .holiday-list-reason {
     font-size: 0.8125rem;
     color: var(--dp-text-muted);
-    margin-top: 0.25rem;
+    margin-top: 0.3rem;
     line-height: 1.35;
+    font-style: italic;
 }
 
 .holiday-list-actions {
@@ -2839,30 +3058,29 @@ button.holiday-day:hover {
 
 .holiday-empty-state {
     text-align: center;
-    padding: 2.25rem 1rem;
+    padding: 2.5rem 1.25rem;
     color: var(--dp-text-secondary);
-    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    background: var(--dp-surface);
     border-radius: var(--dp-radius-lg);
     border: 1px dashed var(--dp-border);
 }
 
 .holiday-empty-icon {
-    width: 2.75rem;
-    height: 2.75rem;
+    width: 3rem;
+    height: 3rem;
     margin: 0 auto 0.85rem;
     border-radius: 999px;
-    background: var(--dp-primary-light);
-    border: 1px solid rgba(var(--dp-primary-rgb), 0.15);
-    position: relative;
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: #e11d48;
 }
 
 .holiday-empty-icon::before {
-    content: "";
-    position: absolute;
-    inset: 0.65rem 0.7rem 0.55rem;
-    border: 2px solid var(--dp-primary);
-    border-radius: 0.25rem;
-    opacity: 0.55;
+    content: none;
 }
 
 @media (max-width: 1199.98px) {
@@ -2907,6 +3125,11 @@ button.holiday-day:hover {
 
     .holiday-legend {
         justify-content: center;
+    }
+
+    .holiday-quarter-header {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
 
@@ -4331,8 +4554,67 @@ button.holiday-day:hover {
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem 1rem;
-    padding: 0.7rem 0.95rem;
+    gap: 0.85rem 1.25rem;
+    padding: 0.85rem 1rem;
+}
+
+.attendance-settings-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.65rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.attendance-settings-summary-block {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    min-width: 0;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--dp-border);
+    border-radius: var(--dp-radius-lg);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.attendance-settings-summary-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--dp-radius);
+    background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+    color: #4338ca;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+.attendance-settings-summary-label {
+    display: block;
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dp-text-muted);
+    margin-bottom: 0.1rem;
+}
+
+.attendance-settings-summary-value {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--dp-text);
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+}
+
+.attendance-settings-summary-meta {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.6875rem;
+    color: var(--dp-text-muted);
+    line-height: 1.35;
 }
 
 .attendance-settings-status {
@@ -4394,6 +4676,248 @@ button.holiday-day:hover {
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
     gap: 0.85rem;
     align-items: start;
+}
+
+.attendance-settings-layout-v2 {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
+    gap: 0.85rem;
+    align-items: start;
+}
+
+.attendance-settings-main,
+.attendance-settings-side {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    min-width: 0;
+}
+
+.attendance-settings-subsection {
+    margin-top: 1.15rem;
+}
+
+.attendance-settings-subsection:first-of-type {
+    margin-top: 1rem;
+}
+
+.attendance-settings-subtitle {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--dp-text-muted);
+    margin-bottom: 0.65rem;
+}
+
+.attendance-settings-subtitle-desc {
+    font-size: 0.8125rem;
+    color: var(--dp-text-secondary);
+    margin: -0.35rem 0 0.75rem;
+    line-height: 1.45;
+}
+
+.attendance-settings-timeline {
+    margin-top: 1.25rem;
+    padding: 1rem 0.75rem 0.35rem;
+    border: 1px solid var(--dp-border);
+    border-radius: var(--dp-radius-lg);
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    overflow-x: auto;
+}
+
+.attendance-settings-timeline-track {
+    position: relative;
+    height: 2.75rem;
+    min-width: 28rem;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: visible;
+}
+
+.attendance-settings-timeline-zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 999px;
+    opacity: 0.85;
+}
+
+.attendance-settings-timeline-zone.punch-in {
+    background: linear-gradient(90deg, #dbeafe, #bfdbfe);
+}
+
+.attendance-settings-timeline-zone.work {
+    background: linear-gradient(90deg, #c7d2fe, #a5b4fc);
+}
+
+.attendance-settings-timeline-zone.punch-out {
+    background: linear-gradient(90deg, #fde68a, #fcd34d);
+}
+
+.attendance-settings-timeline-marker {
+    position: absolute;
+    top: -0.35rem;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 3.5rem;
+    z-index: 1;
+}
+
+.attendance-settings-timeline-marker-line {
+    width: 2px;
+    height: 3.5rem;
+    background: #64748b;
+    border-radius: 1px;
+}
+
+.attendance-settings-timeline-marker.start .attendance-settings-timeline-marker-line,
+.attendance-settings-timeline-marker.end .attendance-settings-timeline-marker-line {
+    background: #4338ca;
+    width: 3px;
+}
+
+.attendance-settings-timeline-marker.punch-in .attendance-settings-timeline-marker-line,
+.attendance-settings-timeline-marker.punch-out .attendance-settings-timeline-marker-line {
+    background: #0284c7;
+}
+
+.attendance-settings-timeline-marker.buffer .attendance-settings-timeline-marker-line {
+    background: #0d9488;
+    height: 2.75rem;
+}
+
+.attendance-settings-timeline-marker-label {
+    margin-top: 0.2rem;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--dp-text-muted);
+    white-space: nowrap;
+}
+
+.attendance-settings-timeline-marker-time {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--dp-text);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.attendance-settings-timeline-scale {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2.35rem;
+    padding: 0 0.15rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--dp-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.attendance-settings-rule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    margin-top: 1rem;
+}
+
+.attendance-settings-rule {
+    padding: 0.85rem;
+    border: 1px solid var(--dp-border);
+    border-radius: var(--dp-radius-lg);
+    background: var(--dp-bg);
+}
+
+.attendance-settings-rule-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.75rem;
+}
+
+.attendance-settings-rule-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--dp-radius);
+    background: #eff6ff;
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+.attendance-settings-rule-title {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--dp-text);
+    line-height: 1.25;
+}
+
+.attendance-settings-rule-desc {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--dp-text-muted);
+    margin-top: 0.05rem;
+}
+
+.attendance-settings-rule-input {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.attendance-settings-rule-input .form-control {
+    max-width: 5.5rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.attendance-settings-rule-unit {
+    font-size: 0.8125rem;
+    color: var(--dp-text-secondary);
+    white-space: nowrap;
+}
+
+.attendance-settings-preview-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.65rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    color: var(--dp-text-secondary);
+}
+
+.attendance-settings-preview-pill strong {
+    color: var(--dp-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.attendance-settings-preview-pill.punch-in {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+}
+
+.attendance-settings-preview-pill.punch-out {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #b45309;
+}
+
+.attendance-settings-timezone-preview-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
 }
 
 .attendance-settings-card {
@@ -4482,20 +5006,45 @@ button.holiday-day:hover {
     gap: 0.85rem;
 }
 
+.attendance-settings-skeleton-grid-v2 {
+    grid-template-columns: 1.35fr 0.65fr;
+}
+
 .attendance-settings-skeleton-card {
     height: 14rem;
 }
 
+.attendance-settings-skeleton-card-main {
+    height: 20rem;
+}
+
+@media (max-width: 1199.98px) {
+    .attendance-settings-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 991.98px) {
     .attendance-settings-layout,
-    .attendance-settings-skeleton-grid {
+    .attendance-settings-layout-v2,
+    .attendance-settings-skeleton-grid,
+    .attendance-settings-skeleton-grid-v2 {
         grid-template-columns: 1fr;
+    }
+
+    .attendance-settings-summary {
+        grid-template-columns: 1fr 1fr;
     }
 }
 
 @media (max-width: 767.98px) {
     .attendance-settings-toolbar .card-body {
         align-items: stretch;
+    }
+
+    .attendance-settings-summary {
+        grid-template-columns: 1fr;
+        width: 100%;
     }
 
     .attendance-settings-status {

@@ -1,7 +1,7 @@
-<div class="fingerprint-punch @GetStateClass() @(IsDisabled ? "disabled" : null) @(PunchOutLocked ? "fingerprint-punch-locked" : null) @(IsPressing ? "pressing" : null)">
+<div class="fingerprint-punch @GetStateClass() @(IsDisabled ? "disabled" : null) @(IsLocked ? "fingerprint-punch-locked" : null) @(IsPressing ? "pressing" : null)">
     <button type="button"
             class="fingerprint-punch-btn"
-            disabled="@(IsDisabled || IsBusy || PunchOutLocked)"
+            disabled="@(IsDisabled || IsBusy || IsLocked)"
             aria-label="@GetLabel()"
             @onpointerdown="StartPress"
             @onpointerup="CancelPress"
@@ -37,7 +37,7 @@
     public bool IsBusy { get; set; }
 
     [Parameter]
-    public bool PunchOutLocked { get; set; }
+    public bool IsLocked { get; set; }
 
     [Parameter]
     public string? Hint { get; set; }
@@ -59,8 +59,9 @@
 
     private string GetLabel() => NextAction switch
     {
+        AttendanceNextActionDto.PunchIn when IsLocked => "Punch In Locked",
         AttendanceNextActionDto.PunchIn => "Hold to Punch In",
-        AttendanceNextActionDto.PunchOut when PunchOutLocked => "Punch Out Locked",
+        AttendanceNextActionDto.PunchOut when IsLocked => "Punch Out Locked",
         AttendanceNextActionDto.PunchOut => "Hold to Punch Out",
         AttendanceNextActionDto.Complete => "Day Complete",
         _ => "Hold to Punch"
@@ -74,7 +75,7 @@
 
     private void StartPress(PointerEventArgs args)
     {
-        if (IsDisabled || IsBusy || PunchOutLocked || NextAction == AttendanceNextActionDto.Complete)
+        if (IsDisabled || IsBusy || IsLocked || NextAction == AttendanceNextActionDto.Complete)
         {
             return;
         }

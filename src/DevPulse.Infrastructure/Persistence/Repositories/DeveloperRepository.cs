@@ -22,12 +22,12 @@ public sealed class DeveloperRepository : IDeveloperRepository
         string? search = null,
         CancellationToken cancellationToken = default)
     {
-        var query = QueryWithMappings()
-            .Where(x => x.ClickUpMappings.Any(m => m.ClickUpAccount.IsActive));
+        var query = QueryWithMappings();
 
         if (clickUpAccountId.HasValue)
         {
-            query = query.Where(x => x.ClickUpMappings.Any(m => m.ClickUpAccountId == clickUpAccountId.Value));
+            query = query.Where(x => x.ClickUpMappings.Any(m =>
+                m.ClickUpAccountId == clickUpAccountId.Value && m.ClickUpAccount.IsActive));
         }
 
         if (isActive.HasValue)

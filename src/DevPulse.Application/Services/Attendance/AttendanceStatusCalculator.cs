@@ -43,19 +43,35 @@ public sealed class AttendanceStatusCalculator
         return AttendanceDayStatusDto.OnTime;
     }
 
-    public decimal? ComputeWorkHours(AttendanceRecord record)
+    public decimal? ComputeWorkHours(
+        AttendanceRecord record,
+        AttendanceSettings settings,
+        TimeZoneInfo timeZone)
     {
         if (!record.PunchInUtc.HasValue || !record.PunchOutUtc.HasValue)
         {
             return null;
         }
 
-        var duration = record.PunchOutUtc.Value - record.PunchInUtc.Value;
-        if (duration <= TimeSpan.Zero)
+        var punchInLocal = TimeZoneInfo.ConvertTimeFromUtc(record.PunchInUtc.Value, timeZone);
+        var punchOutLocal = TimeZoneInfo.ConvertTimeFromUtc(record.PunchOutUtc.Value, timeZone);
+        var punchInTime = TimeOnly.FromDateTime(punchInLocal);
+        var punchOutTime = TimeOnly.FromDateTime(punchOutLocal);
+
+        var effectiveIn = punchInTime <= settings.BufferStartTime
+            ? settings.WorkStartTime
+            : punchInTime;
+
+        var effectiveOut = punchOutTime >= settings.BufferEndTime
+            ? settings.WorkEndTime
+            : punchOutTime;
+
+        if (effectiveOut <= effectiveIn)
         {
             return null;
         }
 
+        var duration = effectiveOut.ToTimeSpan() - effectiveIn.ToTimeSpan();
         return Math.Round((decimal)duration.TotalHours, 2);
     }
 
@@ -91,15 +107,52 @@ public sealed class AttendanceStatusCalculator
         return DateOnly.FromDateTime(localNow);
     }
 
+    public TimeOnly GetPunchInEarliestTime(AttendanceSettings settings) =>
+        SubtractMinutes(settings.WorkStartTime, settings.PunchInAllowMinutesBeforeWorkStart);
+
+    public TimeOnly GetPunchOutEarliestTime(AttendanceSettings settings) =>
+        AddMinutes(settings.WorkEndTime, settings.PunchOutAllowMinutesAfterWorkEnd);
+
+    public bool CanPunchInNow(AttendanceSettings settings, TimeZoneInfo timeZone, DateTime utcNow)
+    {
+        var localNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, timeZone);
+        var currentTime = TimeOnly.FromDateTime(localNow);
+        var earliest = GetPunchInEarliestTime(settings);
+        return currentTime >= earliest && currentTime <= settings.WorkEndTime;
+    }
+
     public bool CanPunchOutNow(AttendanceSettings settings, TimeZoneInfo timeZone, DateTime utcNow)
     {
         var localNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, timeZone);
-        return TimeOnly.FromDateTime(localNow) >= settings.BufferEndTime;
+        var currentTime = TimeOnly.FromDateTime(localNow);
+        return currentTime >= GetPunchOutEarliestTime(settings);
     }
 
     public static bool IsWeekend(DateOnly date, int weekendDaysBitmask)
     {
         var dayBit = 1 << (int)date.DayOfWeek;
         return (weekendDaysBitmask & dayBit) != 0;
+    }
+
+    private static TimeOnly AddMinutes(TimeOnly time, int minutes)
+    {
+        var totalMinutes = time.Hour * 60 + time.Minute + minutes;
+        if (totalMinutes >= 24 * 60)
+        {
+            return new TimeOnly(23, 59);
+        }
+
+        return TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(totalMinutes));
+    }
+
+    private static TimeOnly SubtractMinutes(TimeOnly time, int minutes)
+    {
+        var totalMinutes = time.Hour * 60 + time.Minute - minutes;
+        if (totalMinutes <= 0)
+        {
+            return TimeOnly.MinValue;
+        }
+
+        return TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(totalMinutes));
     }
 }

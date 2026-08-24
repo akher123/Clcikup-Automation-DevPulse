@@ -143,13 +143,34 @@ public static class DatabaseSeeder
 
     private static async Task SeedAttendanceSettingsAsync(DevPulseDbContext dbContext, ILogger logger)
     {
-        if (await dbContext.AttendanceSettings.AnyAsync())
+        if (!await dbContext.AttendanceSettings.AnyAsync())
         {
+            dbContext.AttendanceSettings.Add(new AttendanceSettings());
+            await dbContext.SaveChangesAsync();
+            logger.LogInformation("Seeded default attendance settings.");
             return;
         }
 
-        dbContext.AttendanceSettings.Add(new AttendanceSettings());
-        await dbContext.SaveChangesAsync();
-        logger.LogInformation("Seeded default attendance settings.");
+        var settings = await dbContext.AttendanceSettings.FirstAsync();
+        var updated = false;
+
+        if (settings.PunchInAllowMinutesBeforeWorkStart == 0)
+        {
+            settings.PunchInAllowMinutesBeforeWorkStart = 60;
+            updated = true;
+        }
+
+        if (settings.PunchOutAllowMinutesAfterWorkEnd == 0)
+        {
+            settings.PunchOutAllowMinutesAfterWorkEnd = 120;
+            updated = true;
+        }
+
+        if (updated)
+        {
+            settings.UpdatedAtUtc = DateTime.UtcNow;
+            await dbContext.SaveChangesAsync();
+            logger.LogInformation("Backfilled attendance punch window defaults.");
+        }
     }
 }
