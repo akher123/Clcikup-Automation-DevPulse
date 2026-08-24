@@ -6357,6 +6357,468 @@ button.holiday-day:hover {
     }
 }
 
+/* Leave Types page */
+.leave-types-page {
+    max-width: 100%;
+}
+
+.leave-types-hero {
+    background:
+        radial-gradient(ellipse 55% 80% at 88% 20%, rgba(167, 139, 250, 0.32), transparent 55%),
+        radial-gradient(ellipse 40% 60% at 8% 85%, rgba(192, 132, 252, 0.16), transparent 50%),
+        linear-gradient(135deg, #4c1d95 0%, #6d28d9 45%, #7c3aed 100%);
+    align-items: center;
+}
+
+.leave-types-hero .analytics-lead {
+    max-width: 38rem;
+}
+
+.leave-types-btn-icon {
+    margin-right: 0.35rem;
+    opacity: 0.92;
+}
+
+.leave-types-form-card .card-body {
+    padding: 1.1rem 1.25rem;
+}
+
+.leave-types-active-toggle {
+    margin-bottom: 0.35rem;
+}
+
+.leave-types-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.leave-types-stat-card {
+    position: relative;
+    background: var(--dp-surface);
+    border: 1px solid var(--dp-border);
+    border-radius: var(--dp-radius-lg);
+    box-shadow: var(--dp-shadow-sm);
+    padding: 0.95rem 1rem 0.95rem 3.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    overflow: hidden;
+}
+
+.leave-types-stat-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: var(--dp-radius-lg) 0 0 var(--dp-radius-lg);
+}
+
+.leave-types-stat-card-total::before {
+    background: linear-gradient(180deg, #a78bfa, #7c3aed);
+}
+
+.leave-types-stat-card-active::before {
+    background: linear-gradient(180deg, #34d399, #059669);
+}
+
+.leave-types-stat-card-allowance::before {
+    background: linear-gradient(180deg, #38bdf8, #0284c7);
+}
+
+.leave-types-stat-card-modes::before {
+    background: linear-gradient(180deg, #fbbf24, #d97706);
+}
+
+.leave-types-stat-icon {
+    position: absolute;
+    left: 0.95rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--dp-radius);
+    font-size: 0.9375rem;
+}
+
+.leave-types-stat-card-total .leave-types-stat-icon {
+    background: #f5f3ff;
+    color: #7c3aed;
+}
+
+.leave-types-stat-card-active .leave-types-stat-icon {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.leave-types-stat-card-allowance .leave-types-stat-icon {
+    background: #eff6ff;
+    color: #0284c7;
+}
+
+.leave-types-stat-card-modes .leave-types-stat-icon {
+    background: #fffbeb;
+    color: #d97706;
+}
+
+.leave-types-stat-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dp-text-muted);
+}
+
+.leave-types-stat-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--dp-text);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.leave-types-stat-value-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--dp-text);
+    line-height: 1.35;
+}
+
+.leave-types-stat-card-wide {
+    grid-column: span 1;
+}
+
+.leave-types-toolbar .card-body {
+    padding: 0.85rem 1.1rem;
+}
+
+.leave-types-search-wrap {
+    position: relative;
+}
+
+.leave-types-search-icon {
+    position: absolute;
+    left: 0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--dp-text-muted);
+    font-size: 0.8125rem;
+    pointer-events: none;
+}
+
+.leave-types-search-input {
+    padding-left: 2rem;
+}
+
+.leave-types-filter-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.leave-types-clear-filters {
+    padding: 0;
+    text-decoration: none;
+}
+
+.leave-types-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    gap: 1rem;
+}
+
+.leave-type-card {
+    position: relative;
+    background: var(--dp-surface);
+    border: 1px solid var(--dp-border);
+    border-radius: var(--dp-radius-xl);
+    box-shadow: var(--dp-shadow-sm);
+    overflow: hidden;
+    transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.leave-type-card:hover {
+    box-shadow: var(--dp-shadow-md);
+    border-color: color-mix(in srgb, var(--dp-border) 70%, #6366f1);
+}
+
+.leave-type-card-inactive {
+    opacity: 0.82;
+}
+
+.leave-type-card-accent {
+    height: 3px;
+    width: 100%;
+}
+
+.leave-type-card-working .leave-type-card-accent {
+    background: linear-gradient(90deg, #3b82f6, #2563eb);
+}
+
+.leave-type-card-calendar .leave-type-card-accent {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.leave-type-card-body {
+    padding: 1rem 1.05rem 0.95rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 100%;
+}
+
+.leave-type-card-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.75rem;
+    align-items: start;
+}
+
+.leave-type-card-icon {
+    flex-shrink: 0;
+    width: 2.35rem;
+    height: 2.35rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--dp-radius-lg);
+    font-size: 1rem;
+}
+
+.leave-type-icon-working {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1d4ed8;
+}
+
+.leave-type-icon-calendar {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #b45309;
+}
+
+.leave-type-card-heading {
+    min-width: 0;
+}
+
+.leave-type-card-name {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--dp-text);
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+}
+
+.leave-type-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--dp-text-secondary);
+}
+
+.leave-type-status-active {
+    color: #047857;
+}
+
+.leave-type-status-inactive {
+    color: var(--dp-text-muted);
+}
+
+.leave-type-days-badge {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 3.25rem;
+    padding: 0.35rem 0.55rem;
+    border-radius: var(--dp-radius-lg);
+    background: var(--dp-bg);
+    border: 1px solid var(--dp-border);
+}
+
+.leave-type-days-value {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--dp-text);
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+.leave-type-days-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--dp-text-muted);
+    margin-top: 0.1rem;
+}
+
+.leave-type-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.leave-type-mode-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem;
+}
+
+.leave-type-mode-working {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.leave-type-mode-calendar {
+    background: #fffbeb;
+    color: #b45309;
+}
+
+.leave-type-policy {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--dp-text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.leave-type-policy-empty {
+    color: var(--dp-text-muted);
+    font-style: italic;
+}
+
+.leave-type-card-footer {
+    margin-top: auto;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--dp-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.leave-type-created {
+    font-size: 0.75rem;
+    color: var(--dp-text-muted);
+}
+
+.leave-types-empty-state,
+.leave-types-filter-empty {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+}
+
+.leave-types-empty-state {
+    background: var(--dp-surface);
+    border: 1px dashed var(--dp-border);
+    border-radius: var(--dp-radius-xl);
+}
+
+.leave-types-filter-empty-card .card-body {
+    padding: 2rem 1.5rem;
+}
+
+.leave-types-empty-icon,
+.leave-types-filter-empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    margin-bottom: 0.85rem;
+    border-radius: 50%;
+    background: #f5f3ff;
+    color: #7c3aed;
+    font-size: 1.35rem;
+}
+
+.leave-types-empty-state h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--dp-text);
+}
+
+.leave-types-empty-state p {
+    margin: 0 auto;
+    max-width: 26rem;
+    color: var(--dp-text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.leave-types-empty-actions {
+    margin-top: 1rem;
+}
+
+@media (max-width: 991.98px) {
+    .leave-types-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .leave-types-hero {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .leave-types-hero .analytics-hero-actions {
+        width: 100%;
+    }
+
+    .leave-type-card-header {
+        grid-template-columns: auto 1fr;
+    }
+
+    .leave-type-days-badge {
+        grid-column: 2;
+        justify-self: end;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .leave-types-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .leave-types-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .leave-type-card-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .leave-type-card-footer .btn-group-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .leave-type-card-footer .btn-group-actions .btn {
+        flex: 1 1 0;
+    }
+}
+
 /* Developers page */
 .developers-page {
     max-width: 100%;
@@ -7361,3 +7823,71 @@ button.holiday-day:hover {
         min-width: 0;
     }
 }
+
+/* Delete confirmation dialog */
+body.delete-confirm-open {
+    overflow: hidden;
+}
+
+.delete-confirm-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+}
+
+.delete-confirm-dialog {
+    width: min(100%, 24rem);
+    background: var(--dp-surface);
+    border: 1px solid var(--dp-border);
+    border-radius: var(--dp-radius-xl);
+    box-shadow: var(--dp-shadow-lg, 0 20px 40px rgba(15, 23, 42, 0.18));
+    padding: 1.35rem 1.35rem 1.15rem;
+    text-align: center;
+    outline: none;
+}
+
+.delete-confirm-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 0.85rem;
+    border-radius: 50%;
+    background: #fef2f2;
+    color: #dc2626;
+    font-size: 1.35rem;
+}
+
+.delete-confirm-title {
+    margin: 0 0 0.45rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--dp-text);
+    letter-spacing: -0.02em;
+}
+
+.delete-confirm-message {
+    margin: 0 0 1.15rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--dp-text-secondary);
+}
+
+.delete-confirm-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: wrap;
+}
+
+.delete-confirm-actions .btn {
+    min-width: 6.5rem;
+}
+
