@@ -111,6 +111,9 @@ public sealed class AttendanceStatusCalculator
         SubtractMinutes(settings.WorkStartTime, settings.PunchInAllowMinutesBeforeWorkStart);
 
     public TimeOnly GetPunchOutEarliestTime(AttendanceSettings settings) =>
+        settings.WorkEndTime;
+
+    public TimeOnly GetPunchOutLatestTime(AttendanceSettings settings) =>
         AddMinutes(settings.WorkEndTime, settings.PunchOutAllowMinutesAfterWorkEnd);
 
     public bool CanPunchInNow(AttendanceSettings settings, TimeZoneInfo timeZone, DateTime utcNow)
@@ -125,7 +128,8 @@ public sealed class AttendanceStatusCalculator
     {
         var localNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, timeZone);
         var currentTime = TimeOnly.FromDateTime(localNow);
-        return currentTime >= GetPunchOutEarliestTime(settings);
+        return currentTime >= GetPunchOutEarliestTime(settings)
+            && currentTime <= GetPunchOutLatestTime(settings);
     }
 
     public static bool IsWeekend(DateOnly date, int weekendDaysBitmask)

@@ -33,7 +33,8 @@ public record AttendanceMeDto(
     bool CanPunchIn = true,
     bool CanPunchOut = true,
     TimeOnly? PunchInEarliestTime = null,
-    TimeOnly? PunchOutEarliestTime = null);
+    TimeOnly? PunchOutEarliestTime = null,
+    TimeOnly? PunchOutLatestTime = null);
 
 public record AttendanceSettingsDto(
     TimeOnly WorkStartTime,

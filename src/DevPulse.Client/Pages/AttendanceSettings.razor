@@ -60,8 +60,8 @@
                             <span class="attendance-settings-summary-icon bi-fingerprint" aria-hidden="true"></span>
                             <div>
                                 <span class="attendance-settings-summary-label">Punch windows</span>
-                                <strong class="attendance-settings-summary-value">@FormatTime(GetPunchInEarliest()) · @FormatTime(GetPunchOutEarliest())</strong>
-                                <span class="attendance-settings-summary-meta">Earliest punch in · Earliest punch out</span>
+                                <strong class="attendance-settings-summary-value">@FormatTime(GetPunchInEarliest()) · @FormatTime(GetPunchOutLatest())</strong>
+                                <span class="attendance-settings-summary-meta">Earliest punch in · Latest punch out</span>
                             </div>
                         </div>
 
@@ -119,13 +119,13 @@
                                         <div class="attendance-settings-timeline-zone work"
                                              style="left:@GetTimelineLeft(_workStart)%; width:@GetTimelineWidth(_workStart, _workEnd)%"></div>
                                         <div class="attendance-settings-timeline-zone punch-out"
-                                             style="left:@GetTimelineLeft(_workEnd)%; width:@GetTimelineWidth(_workEnd, GetPunchOutEarliest())%"></div>
+                                             style="left:@GetTimelineLeft(_workEnd)%; width:@GetTimelineWidth(_workEnd, GetPunchOutLatest())%"></div>
                                         @RenderTimelineMarker(GetPunchInEarliest(), "Punch in", "punch-in")
                                         @RenderTimelineMarker(_workStart, "Start", "start")
                                         @RenderTimelineMarker(_bufferStart, "On-time", "buffer")
                                         @RenderTimelineMarker(_bufferEnd, "Full day", "buffer")
                                         @RenderTimelineMarker(_workEnd, "End", "end")
-                                        @RenderTimelineMarker(GetPunchOutEarliest(), "Punch out", "punch-out")
+                                        @RenderTimelineMarker(GetPunchOutLatest(), "Punch out", "punch-out")
                                     </div>
                                     <div class="attendance-settings-timeline-scale">
                                         <span>@FormatTime(_timelineStart)</span>
@@ -196,7 +196,7 @@
                                             <span class="attendance-settings-rule-icon bi-box-arrow-right" aria-hidden="true"></span>
                                             <div>
                                                 <span class="attendance-settings-rule-title">Punch out window</span>
-                                                <span class="attendance-settings-rule-desc">Opens after work end</span>
+                                                <span class="attendance-settings-rule-desc">Opens at work end, closes after this allowance</span>
                                             </div>
                                         </div>
                                         <div class="attendance-settings-rule-input">
@@ -209,7 +209,7 @@
                                         </div>
                                         <div class="attendance-settings-preview-pill punch-out">
                                             <span class="bi-clock" aria-hidden="true"></span>
-                                            Opens at <strong>@FormatTime(GetPunchOutEarliest())</strong>
+                                            Open <strong>@FormatTime(_workEnd)</strong> – <strong>@FormatTime(GetPunchOutLatest())</strong>
                                         </div>
                                     </div>
                                 </div>
@@ -266,7 +266,7 @@
     private Timer? _clockTimer;
 
     private TimeOnly _timelineStart => SubtractMinutes(GetPunchInEarliest(), 30);
-    private TimeOnly _timelineEnd => AddMinutes(GetPunchOutEarliest(), 30);
+    private TimeOnly _timelineEnd => AddMinutes(GetPunchOutLatest(), 30);
 
     protected override async Task OnInitializedAsync()
     {
@@ -383,7 +383,7 @@
 
     private TimeOnly GetPunchInEarliest() => SubtractMinutes(_workStart, _punchInAllowMinutesBefore);
 
-    private TimeOnly GetPunchOutEarliest() => AddMinutes(_workEnd, _punchOutAllowMinutesAfter);
+    private TimeOnly GetPunchOutLatest() => AddMinutes(_workEnd, _punchOutAllowMinutesAfter);
 
     private static TimeOnly AddMinutes(TimeOnly time, int minutes)
     {

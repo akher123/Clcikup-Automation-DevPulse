@@ -29,7 +29,8 @@ public class AttendanceSettings
     public int PunchInAllowMinutesBeforeWorkStart { get; set; } = 60;
 
     /// <summary>
-    /// How many minutes after work end punch out becomes available.
+    /// How many minutes after work end punch out remains available.
+    /// Punch out opens at work end and closes at work end plus this allowance.
     /// </summary>
     public int PunchOutAllowMinutesAfterWorkEnd { get; set; } = 120;
 

@@ -34,7 +34,7 @@ public sealed class AttendanceService : IAttendanceService
         var developer = await ResolveDeveloperAsync(userEmail, cancellationToken);
         if (developer is null)
         {
-            return new AttendanceMeDto(null, null, false, AttendanceNextActionDto.PunchIn, null, "Asia/Dhaka", true, true, null, null);
+            return new AttendanceMeDto(null, null, false, AttendanceNextActionDto.PunchIn, null, "Asia/Dhaka", true, true, null, null, null);
         }
 
         var settings = await GetSettingsEntityAsync(cancellationToken);
@@ -61,7 +61,8 @@ public sealed class AttendanceService : IAttendanceService
             canPunchIn,
             canPunchOut,
             _statusCalculator.GetPunchInEarliestTime(settings),
-            _statusCalculator.GetPunchOutEarliestTime(settings));
+            _statusCalculator.GetPunchOutEarliestTime(settings),
+            _statusCalculator.GetPunchOutLatestTime(settings));
     }
 
     public async Task<Result<AttendancePunchResultDto>> PunchAsync(string userEmail, CancellationToken cancellationToken = default)
@@ -114,8 +115,9 @@ public sealed class AttendanceService : IAttendanceService
             if (!_statusCalculator.CanPunchOutNow(settings, timeZone, nowUtc))
             {
                 var earliest = _statusCalculator.GetPunchOutEarliestTime(settings);
+                var latest = _statusCalculator.GetPunchOutLatestTime(settings);
                 return Result<AttendancePunchResultDto>.Failure(
-                    $"Punch out is available after {earliest:HH:mm} office time.");
+                    $"Punch out is available after {earliest:HH:mm} until {latest:HH:mm} office time.");
             }
 
             record.PunchOutUtc = nowUtc;

@@ -3,6 +3,7 @@
 @inject IAttendanceApiClient AttendanceApi
 @inject IDeveloperApiClient DeveloperApi
 @inject AuthenticationStateProvider AuthStateProvider
+@implements IDisposable
 
 <PageTitle>@AppBranding.PageTitle("Attendance")</PageTitle>
 
@@ -371,6 +372,7 @@
     private TimeOnly _correctionPunchInTime = new(9, 0);
     private TimeOnly _correctionPunchOutTime = new(18, 0);
     private string _correctionReason = string.Empty;
+    private Timer? _punchWindowTimer;
 
     protected override async Task OnInitializedAsync()
     {
@@ -379,6 +381,7 @@
         _historyTo = today;
         _adminFrom = today.AddDays(-30);
         _adminTo = today;
+        _punchWindowTimer = new Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
         await LoadAsync();
     }
 
@@ -441,8 +444,18 @@
         try
         {
             var tz = TimeZoneInfo.FindSystemTimeZoneById(_me.OfficeTimeZoneId);
-            var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
-            return TimeOnly.FromDateTime(localNow) >= _me.PunchOutEarliestTime.Value && _me.CanPunchOut;
+            var currentTime = TimeOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz));
+            if (currentTime < _me.PunchOutEarliestTime.Value)
+            {
+                return false;
+            }
+
+            if (_me.PunchOutLatestTime is not null && currentTime > _me.PunchOutLatestTime.Value)
+            {
+                return false;
+            }
+
+            return true;
         }
         catch
         {
@@ -644,8 +657,7 @@
         AttendanceNextActionDto.PunchIn when !IsPunchInAllowed() =>
             $"Punch in opens at {FormatPunchTime(_me.PunchInEarliestTime)}.",
         AttendanceNextActionDto.PunchIn => "Press and hold the fingerprint for about one second.",
-        AttendanceNextActionDto.PunchOut when !IsPunchOutAllowed() =>
-            $"Punch out is available after {FormatPunchTime(_me.PunchOutEarliestTime)}.",
+        AttendanceNextActionDto.PunchOut when !IsPunchOutAllowed() => GetPunchOutLockedHint(),
         AttendanceNextActionDto.PunchOut => "Hold again when you are ready to leave.",
         AttendanceNextActionDto.Complete => "You have already punched in and out today.",
         _ => string.Empty
@@ -727,4 +739,28 @@
         AttendanceDayStatusDto.Absent => "absent",
         _ => string.Empty
     };
+
+    private string GetPunchOutLockedHint()
+    {
+        try
+        {
+            var tz = TimeZoneInfo.FindSystemTimeZoneById(_me.OfficeTimeZoneId);
+            var currentTime = TimeOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz));
+            if (_me.PunchOutLatestTime is not null && currentTime > _me.PunchOutLatestTime.Value)
+            {
+                return $"Punch out closed at {FormatPunchTime(_me.PunchOutLatestTime)}.";
+            }
+        }
+        catch
+        {
+            // Fall through to the open-window message.
+        }
+
+        return $"Punch out is available after {FormatPunchTime(_me.PunchOutEarliestTime)} until {FormatPunchTime(_me.PunchOutLatestTime)}.";
+    }
+
+    public void Dispose()
+    {
+        _punchWindowTimer?.Dispose();
+    }
 }
