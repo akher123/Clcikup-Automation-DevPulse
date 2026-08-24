@@ -4516,7 +4516,8 @@ button.holiday-day:hover {
     display: flex;
     flex-direction: column;
     min-height: calc(100vh - 7.5rem);
-    padding-bottom: 1rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    touch-action: manipulation;
 }
 
 .attendance-hero {
@@ -5210,20 +5211,28 @@ button.holiday-day:hover {
 .attendance-today-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "main punch";
     gap: 1.25rem 2rem;
     align-items: center;
 }
 
 .attendance-today-main {
+    grid-area: main;
     min-width: 0;
 }
 
 .attendance-today-punch {
+    grid-area: punch;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 0.5rem 1rem;
     border-left: 1px dashed var(--dp-border);
+}
+
+.attendance-today-punch-meta {
+    display: none;
 }
 
 .attendance-today-punch .fingerprint-punch {
@@ -5670,6 +5679,9 @@ button.holiday-day:hover {
     cursor: pointer;
     touch-action: none;
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -5762,6 +5774,10 @@ button.holiday-day:hover {
     pointer-events: none;
 }
 
+.fingerprint-punch-btn * {
+    pointer-events: none;
+}
+
 .fingerprint-progress-track {
     fill: none;
     stroke: rgba(37, 99, 235, 0.12);
@@ -5774,7 +5790,16 @@ button.holiday-day:hover {
     stroke-width: 6;
     stroke-linecap: round;
     stroke-dasharray: 339.292;
-    transition: stroke-dashoffset 30ms linear;
+    stroke-dashoffset: 339.292;
+}
+
+.fingerprint-punch.pressing .fingerprint-progress-ring {
+    animation: fingerprint-hold 0.8s linear forwards;
+}
+
+@keyframes fingerprint-hold {
+    from { stroke-dashoffset: 339.292; }
+    to { stroke-dashoffset: 0; }
 }
 
 .fingerprint-label {
@@ -5798,14 +5823,81 @@ button.holiday-day:hover {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
+    .attendance-page {
+        min-height: calc(100dvh - 4.5rem);
+    }
+
+    main.app-content:has(.attendance-page) {
+        padding: 0.75rem 0.65rem max(1.25rem, env(safe-area-inset-bottom));
+    }
+
+    .attendance-today {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .attendance-today .card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 1rem 0.9rem 1.15rem;
+    }
+
     .attendance-today-layout {
         grid-template-columns: 1fr;
+        grid-template-areas: "punch" "main";
+        gap: 1rem;
     }
 
     .attendance-today-punch {
         border-left: none;
-        border-top: 1px dashed var(--dp-border);
-        padding: 1rem 0 0.25rem;
+        border-bottom: 1px dashed var(--dp-border);
+        padding: 0.15rem 0 1rem;
+    }
+
+    .attendance-today-punch-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.1rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .attendance-today-punch-day {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--dp-text-muted);
+    }
+
+    .attendance-today-punch-clock {
+        font-size: 1.65rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: var(--dp-primary);
+        font-variant-numeric: tabular-nums;
+        line-height: 1.15;
+    }
+
+    .attendance-today-punch .fingerprint-punch {
+        padding-top: 0.15rem;
+        padding-bottom: 0;
+        gap: 0.55rem;
+    }
+
+    .attendance-today-punch .fingerprint-punch-btn {
+        width: 9.75rem;
+        height: 9.75rem;
+    }
+
+    .attendance-today-punch .fingerprint-icon {
+        font-size: 3.65rem;
+    }
+
+    .attendance-today-header {
+        display: none;
     }
 
     .attendance-correction-layout {
@@ -5820,15 +5912,67 @@ button.holiday-day:hover {
     .attendance-filter-action {
         grid-column: 1 / -1;
     }
+
+    .attendance-tabs {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        overscroll-behavior-x: contain;
+        padding-bottom: 0.15rem;
+    }
+
+    .attendance-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .attendance-tabs .period-chip {
+        flex: 0 0 auto;
+        justify-content: center;
+        white-space: nowrap;
+        min-height: 2.5rem;
+    }
 }
 
 @media (max-width: 767.98px) {
+    .attendance-hero {
+        display: none;
+    }
+
     .attendance-skeleton-stats {
         grid-template-columns: 1fr;
     }
 
     .attendance-time-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.4rem;
+    }
+
+    .attendance-time-tile {
+        padding: 0.55rem 0.3rem;
+    }
+
+    .attendance-time-tile-icon {
+        font-size: 0.95rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .attendance-time-label {
+        font-size: 0.5625rem;
+        margin-bottom: 0.15rem;
+    }
+
+    .attendance-time-value {
+        font-size: 0.8125rem;
+    }
+
+    .attendance-time-tile .attendance-badge {
+        display: block;
+        margin: 0.3rem auto 0;
+        width: fit-content;
     }
 
     .attendance-analytics-kpi {
@@ -5837,30 +5981,58 @@ button.holiday-day:hover {
 
     .attendance-toolbar .card-body {
         align-items: stretch;
+        padding: 0.6rem 0.7rem;
+        gap: 0.6rem;
     }
 
     .attendance-tabs {
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: nowrap;
         align-items: stretch;
         width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        overscroll-behavior-x: contain;
+        padding-bottom: 0.15rem;
+    }
+
+    .attendance-tabs::-webkit-scrollbar {
+        display: none;
     }
 
     .attendance-tabs .period-chip {
+        flex: 0 0 auto;
         justify-content: center;
+        white-space: nowrap;
+        min-height: 2.5rem;
+        padding: 0.4rem 0.75rem;
     }
 
     .attendance-toolbar-stats {
         width: 100%;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.4rem;
     }
 
     .attendance-toolbar-stat {
-        flex: 1 1 0;
         min-width: 0;
+        padding: 0.3rem 0.4rem;
+    }
+
+    .attendance-toolbar-stat-value {
+        font-size: 0.75rem;
     }
 
     .attendance-filter-row,
     .attendance-filter-row-admin {
         grid-template-columns: 1fr;
+    }
+
+    .attendance-filter-action .btn,
+    .attendance-correction-actions .btn {
+        width: 100%;
     }
 
     .attendance-correction-grid {
@@ -5870,12 +6042,29 @@ button.holiday-day:hover {
     .attendance-table-scroll,
     .attendance-correction-scroll {
         max-height: none;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .attendance-page .form-control,
+    .attendance-page .form-select {
+        font-size: 16px;
+        min-height: 2.75rem;
     }
 }
 
 @media (max-width: 575.98px) {
     .attendance-analytics-kpi {
         grid-template-columns: 1fr;
+    }
+
+    .attendance-today-punch .fingerprint-punch-btn {
+        width: 10.25rem;
+        height: 10.25rem;
+    }
+
+    .attendance-today-punch .fingerprint-icon {
+        font-size: 3.85rem;
     }
 }
 

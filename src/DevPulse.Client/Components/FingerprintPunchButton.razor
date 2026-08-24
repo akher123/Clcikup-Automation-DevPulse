@@ -1,19 +1,19 @@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
 <div class="fingerprint-punch @GetStateClass() @(IsDisabled ? "disabled" : null) @(IsLocked ? "fingerprint-punch-locked" : null) @(IsPressing ? "pressing" : null)">
     <button type="button"
+            @ref="_button"
             class="fingerprint-punch-btn"
             disabled="@(IsDisabled || IsBusy || IsLocked)"
             aria-label="@GetLabel()"
+            draggable="false"
             @onpointerdown="StartPress"
             @onpointerup="CancelPress"
-            @onpointerleave="CancelPress"
             @onpointercancel="CancelPress">
         <svg class="fingerprint-progress" viewBox="0 0 120 120" aria-hidden="true">
             <circle class="fingerprint-progress-track" cx="60" cy="60" r="54" />
-            <circle class="fingerprint-progress-ring"
-                    cx="60"
-                    cy="60"
-                    r="54"
-                    style="stroke-dashoffset: @GetProgressOffset()" />
+            <circle class="fingerprint-progress-ring" cx="60" cy="60" r="54" />
         </svg>
         <span class="fingerprint-icon bi-fingerprint" aria-hidden="true"></span>
     </button>
@@ -45,9 +45,44 @@
     [Parameter]
     public EventCallback OnPunchComplete { get; set; }
 
+    private ElementReference _button;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _guards;
     private bool IsPressing { get; set; }
-    private double _progress;
+    private bool _renderedPressing;
     private CancellationTokenSource? _pressCts;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        _renderedPressing = IsPressing;
+
+        if (_guards is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/fingerprintPunch.js");
+            _guards = await _module.InvokeAsync<IJSObjectReference>("attachHoldGuards", _button);
+        }
+        catch
+        {
+            // Punch still works without capture; mobile WebViews just become less reliable.
+        }
+    }
+
+    protected override bool ShouldRender()
+    {
+        // Skip parent-driven rerenders while holding so mobile WebViews do not
+        // cancel the pointer or restart the hold animation.
+        if (IsPressing && _renderedPressing)
+        {
+            return false;
+        }
+
+        return true;
+    }
 
     private string GetStateClass() => NextAction switch
     {
@@ -67,12 +102,6 @@
         _ => "Hold to Punch"
     };
 
-    private string GetProgressOffset()
-    {
-        const double circumference = 339.292;
-        return (circumference * (1 - _progress)).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-    }
-
     private void StartPress(PointerEventArgs args)
     {
         if (IsDisabled || IsBusy || IsLocked || NextAction == AttendanceNextActionDto.Complete)
@@ -80,9 +109,14 @@
             return;
         }
 
+        if (args.PointerType == "mouse" && args.Button != 0)
+        {
+            return;
+        }
+
         CancelPressInternal();
         IsPressing = true;
-        _progress = 0;
+        _renderedPressing = false;
         _pressCts = new CancellationTokenSource();
         _ = RunHoldTimerAsync(_pressCts.Token);
     }
@@ -98,29 +132,21 @@
         _pressCts?.Dispose();
         _pressCts = null;
         IsPressing = false;
-        _progress = 0;
+        _renderedPressing = false;
     }
 
     private async Task RunHoldTimerAsync(CancellationToken cancellationToken)
     {
-        var started = DateTime.UtcNow;
         try
         {
-            while (!cancellationToken.IsCancellationRequested)
+            await Task.Delay(HoldDurationMs, cancellationToken);
+            if (cancellationToken.IsCancellationRequested)
             {
-                var elapsed = (DateTime.UtcNow - started).TotalMilliseconds;
-                _progress = Math.Clamp(elapsed / HoldDurationMs, 0, 1);
-                await InvokeAsync(StateHasChanged);
-
-                if (_progress >= 1)
-                {
-                    CancelPressInternal();
-                    await OnPunchComplete.InvokeAsync();
-                    return;
-                }
-
-                await Task.Delay(30, cancellationToken);
+                return;
             }
+
+            CancelPressInternal();
+            await OnPunchComplete.InvokeAsync();
         }
         catch (OperationCanceledException)
         {
@@ -128,10 +154,31 @@
         }
         finally
         {
-            if (!cancellationToken.IsCancellationRequested)
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        CancelPressInternal();
+
+        if (_guards is not null)
+        {
+            try
             {
-                await InvokeAsync(StateHasChanged);
+                await _guards.InvokeVoidAsync("dispose");
             }
+            catch
+            {
+                // Ignored during teardown.
+            }
+
+            await _guards.DisposeAsync();
+        }
+
+        if (_module is not null)
+        {
+            await _module.DisposeAsync();
         }
     }
 }

@@ -3,7 +3,6 @@
 @inject IAttendanceApiClient AttendanceApi
 @inject IDeveloperApiClient DeveloperApi
 @inject AuthenticationStateProvider AuthStateProvider
-@implements IDisposable
 
 <PageTitle>@AppBranding.PageTitle("Attendance")</PageTitle>
 
@@ -114,7 +113,7 @@
                         </div>
                         <div class="attendance-toolbar-stat">
                             <span class="attendance-toolbar-stat-label">Live clock</span>
-                            <span class="attendance-toolbar-stat-value attendance-toolbar-clock" aria-live="polite">@_liveClock</span>
+                            <LiveClock TimeZoneId="_me.OfficeTimeZoneId" CssClass="attendance-toolbar-stat-value attendance-toolbar-clock" />
                         </div>
                     </div>
                 </div>
@@ -126,6 +125,19 @@
                     <div class="attendance-today card form-card">
                         <div class="card-body">
                             <div class="attendance-today-layout">
+                                <div class="attendance-today-punch">
+                                    <div class="attendance-today-punch-meta">
+                                        <span class="attendance-today-punch-day">@GetOfficeToday().ToString("dddd")</span>
+                                        <LiveClock TimeZoneId="_me.OfficeTimeZoneId" CssClass="attendance-today-punch-clock" />
+                                    </div>
+                                    <FingerprintPunchButton NextAction="_me.NextAction"
+                                                          IsDisabled="!CanUsePunchButton()"
+                                                          IsLocked="@IsPunchLocked()"
+                                                          IsBusy="_isPunching"
+                                                          Hint="@GetPunchHint()"
+                                                          OnPunchComplete="PunchAsync" />
+                                </div>
+
                                 <div class="attendance-today-main">
                                     <div class="attendance-today-header">
                                         <div>
@@ -159,15 +171,6 @@
                                             <strong class="attendance-time-value">@(_me.TodayRecord?.WorkHours?.ToString("0.##") ?? "—")</strong>
                                         </div>
                                     </div>
-                                </div>
-
-                                <div class="attendance-today-punch">
-                                    <FingerprintPunchButton NextAction="_me.NextAction"
-                                                          IsDisabled="!CanUsePunchButton()"
-                                                          IsLocked="@IsPunchLocked()"
-                                                          IsBusy="_isPunching"
-                                                          Hint="@GetPunchHint()"
-                                                          OnPunchComplete="PunchAsync" />
                                 </div>
                             </div>
                         </div>
@@ -354,8 +357,6 @@
     private bool _isAdminLoading;
     private bool _isError;
     private string? _message;
-    private string _liveClock = "--:--";
-    private Timer? _clockTimer;
 
     private DateOnly _historyFrom;
     private DateOnly _historyTo;
@@ -378,31 +379,7 @@
         _historyTo = today;
         _adminFrom = today.AddDays(-30);
         _adminTo = today;
-        StartClock();
         await LoadAsync();
-    }
-
-    private void StartClock()
-    {
-        UpdateLiveClock();
-        _clockTimer = new Timer(_ => InvokeAsync(() =>
-        {
-            UpdateLiveClock();
-            StateHasChanged();
-        }), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
-    }
-
-    private void UpdateLiveClock()
-    {
-        try
-        {
-            var tz = TimeZoneInfo.FindSystemTimeZoneById(_me.OfficeTimeZoneId);
-            _liveClock = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).ToString("h:mm tt");
-        }
-        catch
-        {
-            _liveClock = DateTime.Now.ToString("h:mm tt");
-        }
     }
 
     private bool CanUsePunchButton()
@@ -516,7 +493,6 @@
         {
             _me = await AttendanceApi.GetMeAsync();
             _maxCorrectionDate = GetOfficeToday().ToString("yyyy-MM-dd");
-            UpdateLiveClock();
 
             var correctionsTask = AttendanceApi.GetMyCorrectionRequestsAsync();
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -751,9 +727,4 @@
         AttendanceDayStatusDto.Absent => "absent",
         _ => string.Empty
     };
-
-    public void Dispose()
-    {
-        _clockTimer?.Dispose();
-    }
 }
