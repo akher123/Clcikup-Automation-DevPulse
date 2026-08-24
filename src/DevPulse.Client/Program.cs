@@ -24,6 +24,7 @@ builder.Services.AddScoped(sp => new HttpClient
 });
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IViewportService, ViewportService>();
 builder.Services.AddScoped<IClickUpAccountApiClient, ClickUpAccountApiClient>();
 builder.Services.AddScoped<IDeveloperApiClient, DeveloperApiClient>();
 builder.Services.AddScoped<IReportApiClient, ReportApiClient>();

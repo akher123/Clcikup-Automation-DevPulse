@@ -4,6 +4,7 @@
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IViewportService Viewport
 
 <PageTitle>@AppBranding.PageTitle("Sign In")</PageTitle>
 
@@ -99,7 +100,7 @@
         var state = await AuthStateProvider.GetAuthenticationStateAsync();
         if (state.User.Identity?.IsAuthenticated == true)
         {
-            Navigation.NavigateTo(GetRedirectUrl(state.User), replace: true);
+            Navigation.NavigateTo(await GetRedirectUrlAsync(state.User), replace: true);
         }
     }
 
@@ -117,7 +118,7 @@
                 return;
             }
 
-            Navigation.NavigateTo(GetRedirectUrlForRole(user.Role), replace: true);
+            Navigation.NavigateTo(await GetRedirectUrlForRoleAsync(user.Role), replace: true);
         }
         catch (Exception ex)
         {
@@ -129,19 +130,22 @@
         }
     }
 
-    private string GetRedirectUrl(System.Security.Claims.ClaimsPrincipal user)
+    private async Task<string> GetRedirectUrlAsync(System.Security.Claims.ClaimsPrincipal user)
     {
-        if (!string.IsNullOrWhiteSpace(ReturnUrl) && ReturnUrl != "login")
+        if (!string.IsNullOrWhiteSpace(ReturnUrl) && !AppLanding.IsRoot(ReturnUrl))
         {
             return ReturnUrl;
         }
 
         var role = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-        return GetRedirectUrlForRole(role);
+        return await GetRedirectUrlForRoleAsync(role);
     }
 
-    private static string GetRedirectUrlForRole(string? role) =>
-        role == DevPulse.Shared.Constants.AppRoles.Admin ? "/" : "attendance";
+    private async Task<string> GetRedirectUrlForRoleAsync(string? role)
+    {
+        var isMobile = await Viewport.IsMobileAsync();
+        return AppLanding.DefaultPath(role, isMobile);
+    }
 
     private sealed class LoginFormModel
     {
