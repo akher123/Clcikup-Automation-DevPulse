@@ -87,4 +87,54 @@ public sealed class HubstaffDailyActivityRepository : IHubstaffDailyActivityRepo
 
         return await query.ToListAsync(cancellationToken);
     }
+
+    public async Task<(int Total, int Mapped)> GetCountsForPeriodAsync(
+        Guid hubstaffOrganizationId,
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default)
+    {
+        var baseQuery = _dbContext.HubstaffDailyActivities
+            .AsNoTracking()
+            .Where(a => a.HubstaffOrganizationId == hubstaffOrganizationId)
+            .Where(a => a.WorkDate >= fromDate && a.WorkDate <= toDate);
+
+        var total = await baseQuery.CountAsync(cancellationToken);
+        var mapped = await baseQuery.Where(a => a.DeveloperId != null).CountAsync(cancellationToken);
+        return (total, mapped);
+    }
+
+    public async Task<int> BackfillDeveloperIdsAsync(
+        Guid hubstaffOrganizationId,
+        IReadOnlyDictionary<int, Guid> userIdToDeveloper,
+        CancellationToken cancellationToken = default)
+    {
+        if (userIdToDeveloper.Count == 0)
+        {
+            return 0;
+        }
+
+        var hubstaffUserIds = userIdToDeveloper.Keys.ToList();
+        var activities = await _dbContext.HubstaffDailyActivities
+            .Where(a => a.HubstaffOrganizationId == hubstaffOrganizationId)
+            .Where(a => a.DeveloperId == null && hubstaffUserIds.Contains(a.HubstaffUserId))
+            .ToListAsync(cancellationToken);
+
+        var updated = 0;
+        foreach (var activity in activities)
+        {
+            if (userIdToDeveloper.TryGetValue(activity.HubstaffUserId, out var developerId))
+            {
+                activity.DeveloperId = developerId;
+                updated++;
+            }
+        }
+
+        if (updated > 0)
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return updated;
+    }
 }

@@ -8,6 +8,7 @@ public sealed class DeveloperService : IDeveloperService
     private readonly IClickUpApiClient _apiClient;
     private readonly IHubstaffOrganizationRepository _hubstaffOrganizationRepository;
     private readonly IHubstaffOrganizationService _hubstaffOrganizationService;
+    private readonly IHubstaffDailyActivityRepository _hubstaffDailyActivityRepository;
     private readonly ITokenProtector _tokenProtector;
     private readonly ILogger<DeveloperService> _logger;
 
@@ -18,6 +19,7 @@ public sealed class DeveloperService : IDeveloperService
         IClickUpApiClient apiClient,
         IHubstaffOrganizationRepository hubstaffOrganizationRepository,
         IHubstaffOrganizationService hubstaffOrganizationService,
+        IHubstaffDailyActivityRepository hubstaffDailyActivityRepository,
         ITokenProtector tokenProtector,
         ILogger<DeveloperService> logger)
     {
@@ -27,6 +29,7 @@ public sealed class DeveloperService : IDeveloperService
         _apiClient = apiClient;
         _hubstaffOrganizationRepository = hubstaffOrganizationRepository;
         _hubstaffOrganizationService = hubstaffOrganizationService;
+        _hubstaffDailyActivityRepository = hubstaffDailyActivityRepository;
         _tokenProtector = tokenProtector;
         _logger = logger;
     }
@@ -358,6 +361,11 @@ public sealed class DeveloperService : IDeveloperService
             HubstaffUserId = request.HubstaffUserId
         }, cancellationToken);
 
+        await BackfillHubstaffActivitiesAsync(
+            request.HubstaffOrganizationId,
+            new Dictionary<int, Guid> { [request.HubstaffUserId] = developerId },
+            cancellationToken);
+
         var updated = await _developerRepository.GetByIdWithMappingsAsync(developerId, cancellationToken);
         return Result<DeveloperDto>.Success(MapToDto(updated!));
     }
@@ -487,9 +495,35 @@ public sealed class DeveloperService : IDeveloperService
                     mappingsAdded++;
                 }
             }
+
+            var developersWithMappings = await _developerRepository.GetAllWithHubstaffMappingsAsync(cancellationToken);
+            var userIdToDeveloper = developersWithMappings
+                .SelectMany(d => d.HubstaffMappings.Where(m => m.HubstaffOrganizationId == organization.Id))
+                .ToDictionary(m => m.HubstaffUserId, m => m.DeveloperId);
+
+            await BackfillHubstaffActivitiesAsync(organization.Id, userIdToDeveloper, cancellationToken);
         }
 
         return Result<SyncFromHubstaffResult>.Success(new SyncFromHubstaffResult(created, updated, mappingsAdded));
+    }
+
+    private async Task BackfillHubstaffActivitiesAsync(
+        Guid hubstaffOrganizationId,
+        IReadOnlyDictionary<int, Guid> userIdToDeveloper,
+        CancellationToken cancellationToken)
+    {
+        var backfilled = await _hubstaffDailyActivityRepository.BackfillDeveloperIdsAsync(
+            hubstaffOrganizationId,
+            userIdToDeveloper,
+            cancellationToken);
+
+        if (backfilled > 0)
+        {
+            _logger.LogInformation(
+                "Backfilled developer mapping on {Count} Hubstaff daily activity row(s) for organization {OrganizationId}",
+                backfilled,
+                hubstaffOrganizationId);
+        }
     }
 
     private static Result ValidateDeveloperRequest(string name, string? email)

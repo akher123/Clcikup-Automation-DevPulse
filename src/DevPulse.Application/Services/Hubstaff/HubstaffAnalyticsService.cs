@@ -51,7 +51,12 @@ public sealed class HubstaffAnalyticsService : IHubstaffAnalyticsService
 
         if (activities.Count == 0)
         {
-            return Result<HubstaffAnalyticsResponse>.Failure("No synced Hubstaff activity data found for the selected period.");
+            var message = await BuildNoDataMessageAsync(
+                organization,
+                request.FromDate,
+                request.ToDate,
+                cancellationToken);
+            return Result<HubstaffAnalyticsResponse>.Failure(message);
         }
 
         var developerNames = await LoadDeveloperNamesAsync(activities, cancellationToken);
@@ -155,4 +160,34 @@ public sealed class HubstaffAnalyticsService : IHubstaffAnalyticsService
     }
 
     private static decimal ToHours(int seconds) => Math.Round(seconds / 3600m, 2);
+
+    private async Task<string> BuildNoDataMessageAsync(
+        HubstaffOrganization organization,
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken)
+    {
+        if (organization.LastSyncedToDate is null)
+        {
+            return "Hubstaff is connected but activity has not been synced yet. Click Sync now on this page (Admin), then Generate again.";
+        }
+
+        var (total, mapped) = await _activityRepository.GetCountsForPeriodAsync(
+            organization.Id,
+            fromDate,
+            toDate,
+            cancellationToken);
+
+        if (total > 0 && mapped == 0)
+        {
+            return "Synced Hubstaff activity exists for this period, but no developers are mapped. Open Developers, click Sync from Hubstaff to map by email, run Sync now here, then Generate again.";
+        }
+
+        if (total == 0)
+        {
+            return "No synced Hubstaff activity data found for the selected period. Try widening the date range or run Sync now to pull the latest tracked hours.";
+        }
+
+        return "No synced Hubstaff activity data found for the selected period.";
+    }
 }

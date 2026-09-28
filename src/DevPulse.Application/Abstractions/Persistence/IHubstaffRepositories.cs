@@ -32,6 +32,17 @@ public interface IHubstaffDailyActivityRepository
         IReadOnlyList<Guid>? developerIds,
         bool includeUnmapped,
         CancellationToken cancellationToken = default);
+
+    Task<(int Total, int Mapped)> GetCountsForPeriodAsync(
+        Guid hubstaffOrganizationId,
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default);
+
+    Task<int> BackfillDeveloperIdsAsync(
+        Guid hubstaffOrganizationId,
+        IReadOnlyDictionary<int, Guid> userIdToDeveloper,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IHubstaffSyncRunRepository

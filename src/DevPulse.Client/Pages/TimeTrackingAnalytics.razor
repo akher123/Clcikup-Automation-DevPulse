@@ -21,6 +21,14 @@
         <div class="alert @(_isInfoMessage ? "alert-info" : "alert-danger") leave-alert" role="alert">@_error</div>
     }
 
+    @if (ShowSetupHint())
+    {
+        <div class="alert alert-info leave-alert" role="status">
+            Hubstaff is connected. To see analytics: (1) go to <a href="/developers">Developers</a> and click <strong>Sync from Hubstaff</strong> to map team members,
+            (2) click <strong>Sync now</strong> below to pull tracked hours, then (3) click <strong>Generate</strong>.
+        </div>
+    }
+
     @if (!string.IsNullOrWhiteSpace(_syncMessage))
     {
         <div class="alert alert-success leave-alert" role="status">@_syncMessage</div>
@@ -215,7 +223,7 @@
         catch (Exception ex)
         {
             _error = ex.Message;
-            _isInfoMessage = ex.Message.Contains("No synced Hubstaff activity", StringComparison.OrdinalIgnoreCase);
+            _isInfoMessage = IsAnalyticsInfoMessage(ex.Message);
             _analytics = null;
         }
         finally
@@ -226,14 +234,28 @@
 
     private async Task RunSyncAsync()
     {
+        if (!Guid.TryParse(_selectedOrgId, out var orgId))
+        {
+            _error = "Select a Hubstaff organization before syncing.";
+            return;
+        }
+
         _isSyncing = true;
         _syncMessage = null;
         _error = null;
+        _isInfoMessage = false;
         try
         {
-            var result = await HubstaffSyncApi.TriggerSyncAsync();
+            var request = new HubstaffSyncTriggerRequest(
+                orgId,
+                DateOnly.FromDateTime(_fromDate),
+                DateOnly.FromDateTime(_toDate));
+
+            var result = await HubstaffSyncApi.TriggerSyncAsync(request);
             _syncMessage = result?.Message ?? "Sync completed.";
             await LoadSyncStatusAsync();
+            await LoadOrganizationsAsync();
+            await LoadAnalyticsAsync();
         }
         catch (Exception ex)
         {
@@ -244,4 +266,20 @@
             _isSyncing = false;
         }
     }
+
+    private bool ShowSetupHint()
+    {
+        if (!Guid.TryParse(_selectedOrgId, out var orgId))
+        {
+            return false;
+        }
+
+        var org = _organizations.FirstOrDefault(o => o.Id == orgId);
+        return org is { LastSyncedToDate: null };
+    }
+
+    private static bool IsAnalyticsInfoMessage(string message) =>
+        message.Contains("No synced Hubstaff activity", StringComparison.OrdinalIgnoreCase)
+        || message.Contains("Hubstaff is connected but activity has not been synced", StringComparison.OrdinalIgnoreCase)
+        || message.Contains("Synced Hubstaff activity exists for this period, but no developers are mapped", StringComparison.OrdinalIgnoreCase);
 }
